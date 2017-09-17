@@ -1,11 +1,8 @@
-as63.txt ‚ð•K‚¸‚Ý‚Ä‚­‚¾‚³‚¢B
+as63
 
-“¯«‚Ì
-as63.exe ‚Í, win32ƒRƒ“ƒ\[ƒ‹—p‚ÅAbcc32 v5.5 ‚ÅƒRƒ“ƒpƒCƒ‹‚³‚ê‚Ä‚¢‚Ü‚·B
-as63_dos.exe ‚ÍA16ƒrƒbƒgDOS—p‚ÅAlsic86 v3.3ŽŽH”Å‚ÅƒRƒ“ƒpƒCƒ‹‚³‚ê‚Ä‚¢‚Ü‚·B
+6809 / 6309 ç”¨ã‚¢ã‚»ãƒ³ãƒ–ãƒ©. 
+PDS ã§é…å¸ƒã•ã‚Œã¦ã„ãŸ 6809/6309 ã‚¢ã‚»ãƒ³ãƒ–ãƒ© ã‚’è§£åƒã—ãŸã‚‚ã®ã€‚
 
-‚Æ‚è‚ ‚¦‚¸B
+ãªã®ã§ãƒ©ã‚¤ã‚»ãƒ³ã‚¹ã¯ PDS.
 
-tenk*
-NBB00541@nifty.ne.jp
-2000-05-30
+as63.txt ã‚’å‚ç…§ã®ã“ã¨ã€‚
