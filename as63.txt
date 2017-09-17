@@ -1,251 +1,251 @@
-�`�r�U�R
+ＡＳ６３
 
-	�g�c�U�R�O�X�E�N���X�E�A�Z���u��	Version 1.20T
-
-
-
-��  �͂��߂�
-
-    as63 �� msdos �œ��삷�� 6809/6309 �N���X�E�A�Z���u���ł��B
-    �ȉ��̂悤�ȓ���������܂�.
-
-    �E������A�u�\�����[�g�E�A�Z���u���ŁA���ڃo�C�i���t�@�C�������g���[
-      �� s-format �t�@�C���𐶐����܂��B
-      �܂艽�������� .obj�t�@�C���������ă��C�u���������ă����J�Ō��
-      �����N���ăo�C�i���𐶐��A�Ƃ������x�Ȃ��Ƃ͂ł��܂���B
-      �i�ł������A�Z���u�����x������d�g�݂��ꉞ����܂�)
-      �����Ƃ�(1997�N)���݂̃p�\�R����(CPU,HDD)���v���΁A���񉽏\���̃t�@
-      �C����include ���܂����Ă������������ƂȂ��悤�Ɏv����:)
-
-    �Eos9/6809 �̕W�� asm�p�̃\�[�X���A�Z���u�����Aos9�̃��W���[���𐶐���
-      ���܂�.
-      �܂�A�����A�Z���u���͂���܂����A�}�N���͖����ł��B
-      �܂��A���͈̔͂�os9/6809 �p�� microware-c �� c.asm�̃\�[�X�������A�Z
-      ���u���ł��܂��i.rof �t�@�C���𐶐��ł���킯�ł͂���܂���j
-
-    �E�Â��̕x�m�ʂ̂W�r�b�g�p�\�R��, FM7/8/11�̃}�V����t�@�C���𐶐��ł�
-      �܂�:)
-
-    �E���̃v���O�����͂o�c�r�Ƃ��Ĕz�z����Ă������̂������������̂ł��̃v
-      ���O�������o�c�r�ł��B
-      �\�[�X�����Ă���̂ŁA�ăR���p�C������� MSDOS �ȊO�ł����삷��
-      �ł��傤.
+	ＨＤ６３０９・クロス・アセンブラ	Version 1.20T
 
 
 
-��  �g������
+■  はじめに
 
-��  as63 [-opts] SRC_FILE ...
+    as63 は msdos で動作する 6809/6309 クロス・アセンブラです。
+    以下のような特徴があります.
 
-    �w�肳�ꂽ�\�[�X���A�Z���u�����܂��B
+    ・いわゆるアブソリュート・アセンブラで、直接バイナリファイルかモトロー
+      ラ s-format ファイルを生成します。
+      つまり何がしかの .objファイルをつくってライブラリ化してリンカで後で
+      リンクしてバイナリを生成、という高度なことはできません。
+      （でも分割アセンブルを支援する仕組みが一応あります)
+      もっとも(1997年)現在のパソコン環境(CPU,HDD)を思えば、毎回何十ものファ
+      イルをinclude しまくってもたいしたことないように思える:)
 
-    �����̃t�@�C�����w�肷��΂�������Ȃ���̃\�[�X�Ƃ��ăA�Z���u����
-  �܂��B�킩�ꂽ�t�@�C���Ԃł̃��x���̎Q�Ƃ̓O���[�o���E���x���w�肳�ꂽ��
-  �̂̂ݗL���ŁA�����łȂ����x���̓t�@�C�����ł̂ݎQ�Ɖ\�ł�  �i�������A
-  include ���ꂽ�t�@�C���� include �����t�@�C���̂P���Ƃ��Ĉ����܂��j�B
+    ・os9/6809 の標準 asm用のソースをアセンブルし、os9のモジュールを生成で
+      きます.
+      つまり、条件アセンブリはありますが、マクロは無しです。
+      また、その範囲でos9/6809 用の microware-c の c.asmのソースを試しアセ
+      ンブルできます（.rof ファイルを生成できるわけではありません）
 
+    ・古えの富士通の８ビットパソコン, FM7/8/11のマシン語ファイルを生成でき
+      ます:)
 
-��  �I�v�V����
-    -?             �w���v
-    -9             os9 �W�� asm ���[�h
-    -8             6809 ���[�h
-    -s             �V���{���E�e�[�u�� ��\��
-    -v             �r���o�߂̕\��
-    -y             �����O�u�����`���\�Ȃ�V���[�g�u�����`�ɒu��(���p�X)
-    -q             org,rmb �ŃA�h���X����є�тɂȂ�̂�����
-    -m<mod_name>   $modnam ������ϐ���ݒ�
-    -d<LBL>[=Val]  ���x�� LBL ��l Val �Œ�`.  LBL: set Val(�ȗ�:1)
-    -u             ���x���̑召��������ʂ���
-    -n             ���x���̑召��������ʂ��Ȃ�
-    -l[lst_file]   �A�Z���u���E���X�g��lst_file�ɏo��
-    -o[obj_file]   obj_file �ɃI�u�W�F�N�g���o�C�i���ŏo��
-    -f[obj_file]   obj_file �ɃI�u�W�F�N�g�� S-Format �ŏo��
-    -a[obj_file]   obj_file �ɃI�u�W�F�N�g�� FCB �̃f�[�^�̌`�ŏo��
-    -e[err_file]   err_file �Ƀ\�[�X�̃G���[���o��
-    -i[lib_file]   $INC �ŎQ�Ƃ���f�B���N�g��
-    -k[Start[,Enter]]  F-BASIC �}�V����t�@�C���`���ŏo��
-    -r                 F-BASIC�@�B��t�@�C���`����, rmb�ł��̌�ɃR�[�h��
-                       �������0���o�͂��Ȃ�
-
-  -o,-f,-a �������Ɏw�肳���ƌ�Ŏw�肳�ꂽ���̂��L���ɂȂ�܂��B
-  -u,-n �������Ɏw�肳���ƌ�Ŏw�肳�ꂽ���̂��L���ɂȂ�܂��B
-  -u,-n �̎w��̂Ȃ��Ƃ��� -n ���w�肳�ꂽ���ƂɂȂ�܂��B
+    ・このプログラムはＰＤＳとして配布されていたものを改造したものでこのプ
+      ログラムもＰＤＳです。
+      ソースがついているので、再コンパイルすれば MSDOS 以外でも動作する
+      でしょう.
 
 
-���I�v�V�����̐���
+
+■  使いかた
+
+□  as63 [-opts] SRC_FILE ...
+
+    指定されたソースをアセンブルします。
+
+    複数のファイルを指定すればそれらを一つながりのソースとしてアセンブルし
+  ます。わかれたファイル間でのラベルの参照はグローバル・ラベル指定されたも
+  ののみ有効で、そうでないラベルはファイル内でのみ参照可能です  （ただし、
+  include されたファイルは include したファイルの１部として扱われます）。
+
+
+□  オプション
+    -?             ヘルプ
+    -9             os9 標準 asm モード
+    -8             6809 モード
+    -s             シンボル・テーブル を表示
+    -v             途中経過の表示
+    -y             ロングブランチを可能ならショートブランチに置換(多パス)
+    -q             org,rmb でアドレスが飛び飛びになるのを許す
+    -m<mod_name>   $modnam 文字列変数を設定
+    -d<LBL>[=Val]  ラベル LBL を値 Val で定義.  LBL: set Val(省略:1)
+    -u             ラベルの大小文字を区別する
+    -n             ラベルの大小文字を区別しない
+    -l[lst_file]   アセンブリ・リストをlst_fileに出力
+    -o[obj_file]   obj_file にオブジェクトをバイナリで出力
+    -f[obj_file]   obj_file にオブジェクトを S-Format で出力
+    -a[obj_file]   obj_file にオブジェクトを FCB のデータの形で出力
+    -e[err_file]   err_file にソースのエラーを出力
+    -i[lib_file]   $INC で参照するディレクトリ
+    -k[Start[,Enter]]  F-BASIC マシン語ファイル形式で出力
+    -r                 F-BASIC機械語ファイル形式時, rmbでその後にコードが
+                       無ければ0を出力しない
+
+  -o,-f,-a が同時に指定されると後で指定されたものが有効になります。
+  -u,-n が同時に指定されると後で指定されたものが有効になります。
+  -u,-n の指定のないときは -n が指定されたことになります。
+
+
+□オプションの説明
   -?  -
-      �I�v�V�����̃w���v�E���b�Z�[�W��\���B
+      オプションのヘルプ・メッセージを表示。
 
   -l[lst_file]
-      �A�Z���u���E���X�g�� lst_file �ɏo�͂��܂��B
-      lst_file �̎w��̂Ȃ��ꍇ�͕W���o�͂��܂��B
+      アセンブリ・リストを lst_file に出力します。
+      lst_file の指定のない場合は標準出力します。
 
   -e[err_file]
-      �\�[�X�Ɋւ���G���[���b�Z�[�W�� err_file �ɏo�͂��܂��B err_file ��
-    �w��̂Ȃ��ꍇ�̓\�[�X�̊g���q�� ".err" �ɂ��ďo�͂��܂��B���̃I�v�V
-    �����̎w�肪�Ȃ������Ƃ��͕W���G���[�o�͂���܂��B
+      ソースに関するエラーメッセージを err_file に出力します。 err_file の
+    指定のない場合はソースの拡張子を ".err" にして出力します。このオプシ
+    ョンの指定がなかったときは標準エラー出力されます。
 
   -o[obj_file]
-      obj_file �ɃI�u�W�F�N�g���o�C�i���ŏo�͂��܂��Bobj_file �̎w��̂Ȃ�
-    �ꍇ�̓\�[�X�̊g���q�� ".o" �ɂ��ďo�͂��܂��B
+      obj_file にオブジェクトをバイナリで出力します。obj_file の指定のない
+    場合はソースの拡張子を ".o" にして出力します。
 
   -f[obj_file]
-      obj_file �ɃI�u�W�F�N�g�� S-Format �ŏo�͂��܂��Bobj_file �̎w��̂�
-    ���ꍇ�̓\�[�X�̊g���q��".s"�ɂ��ďo�͂��܂��B
+      obj_file にオブジェクトを S-Format で出力します。obj_file の指定のな
+    い場合はソースの拡張子を".s"にして出力します。
 
   -q
-      ���̃I�v�V�����̎w��̂Ȃ��Ƃ��́A org �� rmb �ɂ���ăA�h���X�ɋ�
-    ���ł���� $00 �Ŗ��߂܂����A���̃I�v�V�������w�肳��AS-Format �o�͂�
-    os9 ���[�h�łȂ��Ƃ��́A S-Format �Ɉˑ����ăA�h���X����є�тɂȂ��
-    �������܂��B
+      このオプションの指定のないときは、 org や rmb によってアドレスに空き
+    ができると $00 で埋めますが、このオプションが指定され、S-Format 出力で
+    os9 モードでないときは、 S-Format に依存してアドレスが飛び飛びになるの
+    を許します。
 
   -m<mod_name>
-      fcc,fcs�ŗ��p�ł��܂�ϐ�$modnam�ɕ������ݒ肵�܂��B
+      fcc,fcsで利用できまる変数$modnamに文字列を設定します。
 
   -d<LBL>[=Val]
-      ���x��LBL��lVal�Œ�`���܂��B�l��10�i����16�i���Ŏw�肵�܂��B
+      ラベルLBLを値Valで定義します。値は10進数か16進数で指定します。
         -dLBL=$100 ->  LBL: set $100
-        -dLBL      ->  LBL: set 1	�l���ȗ�������1���ݒ肳��܂��B
+        -dLBL      ->  LBL: set 1	値が省略されると1が設定されます。
  
   -i[lib_file]
-      use(lib) �ŗ��p����ϐ�$INC�Ƀf�B���N�g������ݒ肵�܂��B
+      use(lib) で利用する変数$INCにディレクトリ名を設定します。
 
   -v
-      �r���o�߂̕\��.
+      途中経過の表示.
 
   -n
-      ���x���̑召��������ʂ��Ȃ��悤�ɂ��܂��B
+      ラベルの大小文字を区別しないようにします。
 
   -u
-      ���x���̑召��������ʂ���悤�ɂ��܂��B
+      ラベルの大小文字を区別するようにします。
 
   -y
-      �����O�E�u�����`���\�Ȃ�V���[�g�E�u�����`�ɒu������悤�ɂ��܂��B
+      ロング・ブランチを可能ならショート・ブランチに置換するようにします。
 
   -s
-      ���X�g�\���̂Ƃ��A�\�[�X�̌�ɁA���x���ꗗ��\�����܂��B
+      リスト表示のとき、ソースの後に、ラベル一覧を表示します。
 
   -8
-      6309 �̖��߂��g���Ȃ��悤�ɂ��܂��B �`�F�b�N�͕s���S�ł��̂ŁA6309��
-    ���߂��g���Ă��G���[�ɂȂ�Ȃ��ꍇ������܂��B
+      6309 の命令を使えないようにします。 チェックは不完全ですので、6309の
+    命令を使われてもエラーにならない場合もあります。
 
   -9
-      os9 Asm �p�̃\�[�X���A�Z���u������Ƃ��Ɏw�肵�܂��B
-      ������-n�I�v�V�������ݒ肳�ꂽ���ƂɂȂ�܂��B
+      os9 Asm 用のソースをアセンブルするときに指定します。
+      同時に-nオプションが設定されたことになります。
 
-      org,rmb�̈����� os9 Asm �Ɠ����悤�ɂ��A�ϐ�'.' ��L���ɂ��܂��B
+      org,rmbの扱いを os9 Asm と同じようにし、変数'.' を有効にします。
 
-      �A�h���b�V���O�E���[�h�̃`�F�b�N�� mod,emod �̂������ʒu�̃`�F�b
-    �N�Ȃǂ͎���ʂ��Ă����Ȃ��Ă܂���̂ŁA�e���ŋC��t���Ă��������B
+      アドレッシング・モードのチェックや mod,emod のあらわれる位置のチェッ
+    クなどは手をぬいておこなってませんので、各自で気を付けてください。
 
-      os9 Asm �͎��̂悤�ȏꍇ�A
+      os9 Asm は次のような場合、
            leax LABEL,pcr
-    ������ �����O�E�I�t�Z�b�g�ɂȂ�܂����Aas63 �͉\�Ȃ�V���[�g�ɂȂ��
-    ���B����āA�����\�[�X�ł��Ⴄ�I�u�W�F�N�g�ɂȂ�ACRC ������Ȃ��Ȃ��
-    ����������܂��B
+    たえず ロング・オフセットになりますが、as63 は可能ならショートになりま
+    す。よって、同じソースでも違うオブジェクトになり、CRC があわなくなるば
+    あいがあります。
 
-      os9 Asm �p�̃\�[�X���A�Z���u������Ƃ��͕K���w�肵�Ă��������B�w�肵
-    �Ȃ��Ă��G���[�ɂȂ�Ȃ����Ƃ�����܂����A���҂����I�u�W�F�N�g�ɂȂ��
-    ���ł��傤�B
+      os9 Asm 用のソースをアセンブルするときは必ず指定してください。指定し
+    なくてもエラーにならないこともありますが、期待したオブジェクトにならな
+    いでしょう。
 
   -a[obj_file]
-      .OBJ(.r)�t�@�C�����o�͂ł��Ȃ��̂ŁA���̕ς��ƂȂ邩������Ȃ��@�\
-    �ł��B
+      .OBJ(.r)ファイルを出力できないので、その変わりとなるかもしれない機能
+    です。
 
-      �O���[�o���E���x����`�̍s�Ɩ���`���x�����g�p�����s�͂��̂܂܂̍s�ŁA
-    ���̑��̃A�Z���u���ł����s��  FCB �f�[�^�̌`�ɕϊ������A�Z���u���E�\�[
-    �X�� obj_file �ɏo�͂��܂��i�܂薢��`���x���͂��ׂăO���[�o���E���x
-    �������ł��j�B
-      obj_file �̎w��̂Ȃ��ꍇ�̓\�[�X�̊g���q�� ".oa" �ɂ��ďo�͂��܂��B
+      グローバル・ラベル定義の行と未定義ラベルを使用した行はそのままの行で、
+    その他のアセンブルできた行は  FCB データの形に変換したアセンブリ・ソー
+    スを obj_file に出力します（つまり未定義ラベルはすべてグローバル・ラベ
+    ル扱いです）。
+      obj_file の指定のない場合はソースの拡張子を ".oa" にして出力します。
 
-      ���C�u����������ꍇ�ɁA�t�@�C���T�C�Y������������̂ƃ��[�J���E
-    ���x�������炷���߂ɗp�ӂ��܂����B
-    �����P�[�^�u���ȃT�u���[�`����Ώۂɍl���Ă��܂��̂Ń����P�[�^�u���ł�
-    ���T�u���[�`���͕s�K�ł��傤�B
-      �܂������t�@�C���̎w����l���ĂȂ��̂ŁA���ƕs�s�������邱�Ƃł���
-    ���B
+      ライブラリをつくる場合に、ファイルサイズを小さくするのとローカル・
+    ラベルを減らすために用意しました。
+    リロケータブルなサブルーチンを対象に考えていますのでリロケータブルでな
+    いサブルーチンは不幸でしょう。
+      また複数ファイルの指定を考えてないので、やると不都合があることでしょ
+    う。
 
-      ���ƂŁi���C�u�����Ɂj�ҏW���Ȃ����̂�O��ɂ��Ă��܂��̂ŏo�͂�����
-    �܂܂܍ăA�Z���u������̂��s�K�ł��B�v������_�Ƃ��ẮA
+      あとで（ライブラリに）編集しなおすのを前提にしていますので出力をその
+    ままま再アセンブルするのも不幸です。思い当る点としては、
 
-    �E����`���x���̂���s�����̂܂܏o�͂��邽�߁A�����s�ɂ��関��`�łȂ�
-      �������x�������l�ɕϊ����ꂸ���̂܂܂ł��B
+    ・未定義ラベルのある行をそのまま出力するため、同じ行にある未定義でなか
+      ったラベルも数値に変換されずそのままです。
 
-    �E�O���[�o���E���x����`�̍s�ɖ���`���x�����g�p�����ꍇ, ���̍s�͂�
-      �Ԃ��ďo�͂���Ă��܂��܂��B
+    ・グローバル・ラベル定義の行に未定義ラベルを使用した場合, その行はだ
+      ぶって出力されてしまいます。
 
-    �E�s���̕s�v�ȃR�����g�͍폜����܂���B
+    ・行末の不要なコメントは削除されません。
 
-    ���ƁA����`���x�����܂ޖ��߂͕K������ 16 �r�b�g�w��� '>' ������ 8 �r
-    �b�g�w��� '<' ��t���܂��傤�B �łȂ��ƃI�u�W�F�N�g�T�C�Y���ω����邱
-    �Ƃ�������ł��B
+    あと、未定義ラベルを含む命令は必ず強制 16 ビット指定の '>' か強制 8 ビ
+    ット指定の '<' を付けましょう。 でないとオブジェクトサイズが変化するこ
+    とおおありです。
 
   -k[Start[,Enter]]
-      F-BASIC�@�B��t�@�C���`���ŏo�͂��܂��B
+      F-BASIC機械語ファイル形式で出力します。
 
-      ��������I�u�W�F�N�g�̓��ɁA
-	  $00				(1�o�C�g),
-	  �I�u�W�F�N�g�E�T�C�Y		(2�o�C�g)
-	  Start(���[�h�E�A�h���X)	(2�o�C�g)
-    ��5�o�C�g��t�����A�I�u�W�F�N�g�̌�ɁA
-	  $FF,$00,$00			(3�o�C�g)
-	  Enter(���s�J�n�A�h���X)	(2�o�C�g)
-	  $1a				(1�o�C�g)
-    ��6�o�C�g��t�����܂��B
+      生成するオブジェクトの頭に、
+	  $00				(1バイト),
+	  オブジェクト・サイズ		(2バイト)
+	  Start(ロード・アドレス)	(2バイト)
+    の5バイトを付加し、オブジェクトの後に、
+	  $FF,$00,$00			(3バイト)
+	  Enter(実行開始アドレス)	(2バイト)
+	  $1a				(1バイト)
+    の6バイトを付加します。
 
-      Start ���ȗ����ꂽ�ꍇ�́A �ŏ��� org �Ŏw�肳�ꂽ�A�h���X�ɂȂ��
-    ���Borg�ł̎w��̂Ȃ��ꍇ�́A0 �ɂȂ�܂��B
-      Entry ���ȗ����ꂽ�ꍇ�́A end �Ŏw�肳�ꂽ�A�h���X�ɂȂ�܂��Bend
-    �ł̎w����Ȃ��ꍇ�� Start �Ɠ����ɂȂ�܂��B
+      Start が省略された場合は、 最初に org で指定されたアドレスになりま
+    す。orgでの指定のない場合は、0 になります。
+      Entry が省略された場合は、 end で指定されたアドレスになります。end
+    での指定もない場合は Start と同じになります。
 
   -r
-    -k�w���F-BASIC�@�B��t�@�C���`����, �\�[�X����rmb�����肻�̌�ɃR�[�h��
-    �������rmb�� 0���o�͂��܂���B
+    -k指定のF-BASIC機械語ファイル形式時, ソース中にrmbがありその後にコードが
+    無ければrmbの 0を出力しません。
 
 
-��  �萔��
+■  定数式
 
-��  �萔
-    10�i���͐����ł͂��܂萔�����Ȃ�񂾂��́B
+□  定数
+    10進数は数字ではじまり数字がならんだもの。
 
-    16�i���� '$' �ł͂��܂�A'0'�`'9', 'A'�`'F' �����񂾂��́i�召�����̋�
-    �ʖ��j�B
+    16進数は '$' ではじまり、'0'～'9', 'A'～'F' が並んだもの（大小文字の区
+    別無）。
 
-    2�i���� '%' �ł͂��܂�A'0', '1' ���Ȃ�񂾂��́B
+    2進数は '%' ではじまり、'0', '1' がならんだもの。
 
-    �'��ɑ���1�����̒l�i�����R�[�h�F�V�t�g�i�h�r�����ɑΉ��j�B
+    ｢'｣に続く1文字の値（文字コード：シフトＪＩＳ文字に対応）。
 
-    �"� �ɑ���2����(2�o�C�g)�B1�o�C�g�ڂ����, 2�o�C�g�ڂ����ʂƂ���B
-    �ios9 Asm �Ŕ����(?)�ɃT�|�[�g����Ă�@�\�ł��B�̂̃U�x�ŏЉ���
-      �܂����B�j
+    ｢"｣ に続く2文字(2バイト)。1バイト目を上位, 2バイト目を下位とする。
+    （os9 Asm で非公式(?)にサポートされてる機能です。昔のザベで紹介されて
+      ました。）
 
-��  ���x��
-    'A'�`'Z' 'a'�`'z' '_' '.'
-  �Ŏn�܂�A
-    'A'�`'Z' 'a'�`'z' '0'�`'9' '_' '.' '@' '$' '@'
-  �����Ԗ��O�B�i�Ƃ肠����21�����܂ŗL���ɂ��Ă���܂��j
+□  ラベル
+    'A'～'Z' 'a'～'z' '_' '.'
+  で始まり、
+    'A'～'Z' 'a'～'z' '0'～'9' '_' '.' '@' '$' '@'
+  が並ぶ名前。（とりあえず21文字まで有効にしてあります）
 
-��  ���x����`
-    �s���ɋ󔒂��󂯂��Ƀ��x�������������΂��̃A�h���X��l�Ƃ��郉�x����
-  ��`����܂��B
+□  ラベル定義
+    行頭に空白を空けずにラベル名が書かれればそのアドレスを値とするラベルが
+  定義されます。
 
-    �܂��Aequ,set �^�����߂� csect�`endsect, os9 ���[�h���� org �^�����߂�
-  �A�h���X�ȊO�̒l��ݒ肷�邱�Ƃ��ł��܂��B
+    また、equ,set 疑似命令や csect～endsect, os9 モード時の org 疑似命令で
+  アドレス以外の値を設定することができます。
 
-    ���x�����̌�� ':' �����Ē�`�������O�� �O���[�o���E���x�����ƂȂ��
-  �̃t�@�C���ł��Q�Ƃł���悤�ɂȂ�܂��B':' ��t�����ɒ�`�������x������
-  �t�@�C�����ł̂ݗL���ł��B
-    ���[�J�����x�����܂߃��x�����͎w�肳�ꂽ�t�@�C�����ׂĂ̂��̂���x�ɓo
-  �^���A���x���̐�������������H���܂��B�t�@�C���Ԃ̃��[�J���E���x���̏Փ�
-  �������邽�߂ɗp�ӂ��������ł��̂�...�B
+    ラベル名の後に ':' をつけて定義した名前は グローバル・ラベル名となり別
+  のファイルでも参照できるようになります。':' を付けずに定義したラベル名は
+  ファイル内でのみ有効です。
+    ローカルラベルを含めラベル名は指定されたファイルすべてのものを一度に登
+  録し、ラベルの数だけメモリを食います。ファイル間のローカル・ラベルの衝突
+  をさけるために用意しただけですので...。
 
 
-��  �萔���Z
-    ���� 2�o�C�g�����t�������Ōv�Z����A���̓r���ɋ󔒂�u���܂���B
+□  定数演算
+    式は 2バイト負号付き整数で計算され、式の途中に空白を置けません。
 
-    ���Z�q�ɂ͈ȉ��̂悤�Ȃ��̂�����A��̒i�قǐ�ɕ]������A�����i�̂���
-  �Ȃ��ɕ\�ꂽ���̂���ɕ]������܂��B
-     1.�P��-  �P��!  �P��~  �P��^  (��)  �ϐ�*  �ϐ�.  used()  defined()
+    演算子には以下のようなものがあり、上の段ほど先に評価され、同じ段のもの
+  なら先に表れたものが先に評価されます。
+     1.単項-  単項!  単項~  単項^  (式)  変数*  変数.  used()  defined()
      2. *  /  %
      3. +  -
      4. >>  <<
@@ -257,49 +257,49 @@
     10. &&
     11. ||
 
-    ��{�I�ɂb�̉��Z�q�Ɠ����ł��B
-    �ϐ� '.'�E�P�� '^'�E�� '!'�E�񍀉��Z�q '?' �́A os9 Asm �Ƃ̌݊�����
-  ���߂ɂ���܂��B�b�̂��̂���{�Ƃ��Ă܂��̂ŁAos9 Asm �̃\�[�X���A�Z���u
-  ������ȊO�ł͂���Ȃ��ق�������ł��B  �i�Ƃ��ɁA'?' �͔�����̉��Z�q
-  (�̂̃U�x�ŏЉ��Ă�����) �Ŏg���Ă邱�Ƃ͂܂��Ȃ��������A���� �b��
-  �O�����Z�q '?' ���T�|�[�g����悤�Ȃ��Ƃ�����΁A�Փ˂��Ă��܂��̂Łj
+    基本的にＣの演算子と同じです。
+    変数 '.'・単項 '^'・二項 '!'・二項演算子 '?' は、 os9 Asm との互換性の
+  ためにあります。Ｃのものを基本としてますので、os9 Asm のソースをアセンブ
+  ルする以外ではつかわないほうが無難です。  （とくに、'?' は非公式の演算子
+  (昔のザベで紹介されてたもの) で使われてることはまあなさそだし、もし Ｃの
+  三項演算子 '?' をサポートするようなことがあれば、衝突してしまうので）
 
-  ����͈ȉ��̂悤�ɂȂ�܂��iLBL�����x�����AX,Y��萔(��)�Ƃ���j
-    �E*     ���Z�q�łȂ��A���̖��߂̒u�����A�h���X��l�Ƃ��܂��B
-    �E.     os9 Asm ���[�h�̂Ƃ��̂ݗL���ŁAorg,rmb�œ�����l�̌��ݒl�
-    �E-X    �������]
-    �E!X    X �� 0 �̂Ƃ� 1�AX �� 0 �łȂ���� 0
-    �E~X    X�̊e�r�b�g�𔽓]
-    �E^X    X�̊e�r�b�g�𔽓]  (os9 Asm)
-    �E(��)  ()�����Ɍv�Z
-    �Edefined(LBL)  LBL���\�[�X�̂ǂ����Œ�`����Ă����1, �łȂ���� 0
-    �Eused(LBL)     �\�[�X���Ŏg��ꂽ���`����Ă����1,�łȂ���� 0
-    �EX*Y   ��Z
-    �EX/Y   ���Z
-    �EX%Y   �]�Z
-    �EX+Y   ���Z
-    �EX-Y   ���Z
-    �EX&Y   �r�b�g���Ƃ̘_����
-    �EX^Y   �r�b�g���Ƃ̔r���I�_���a
-    �EX?Y   �r�b�g���Ƃ̔r���I�_���a  (os9 Asm)
-    �EX|Y   �r�b�g���Ƃ̘_���a
-    �EX!Y   �r�b�g���Ƃ̘_���a  (os9 Asm )
-    �EX>>Y  �E�V�t�g
-    �EX<<Y  ���V�t�g
-    �EX==Y  ����������� 1, �����łȂ���� 0
-    �EX!=Y  �������Ȃ���� 1, �����łȂ���� 0
-    �EX>Y   �傫����� 1, �����łȂ���� 0
-    �EX>=Y  �傫�����������Ȃ���� 1, �����łȂ���� 0
-    �EX<Y   ��������� 1, �����łȂ���� 0
-    �EX<=Y  ���������������Ȃ���� 1, �����łȂ���� 0
-    �EX&&Y  X,Y�Ƃ��� 0 �łȂ���� 1, �����łȂ���� 0
-    �EX||Y  X,Y�Ƃ��� 0 �Ȃ�� 0, �����łȂ���� 1
+  動作は以下のようになります（LBLをラベル名、X,Yを定数(式)とする）
+    ・*     演算子でなく、その命令の置かれるアドレスを値とします。
+    ・.     os9 Asm モードのときのみ有効で、org,rmbで得られる値の現在値｡
+    ・-X    負号反転
+    ・!X    X が 0 のとき 1、X が 0 でなけらば 0
+    ・~X    Xの各ビットを反転
+    ・^X    Xの各ビットを反転  (os9 Asm)
+    ・(式)  ()内を先に計算
+    ・defined(LBL)  LBLがソースのどこかで定義されていれば1, でなければ 0
+    ・used(LBL)     ソース中で使われたり定義されていれば1,でなければ 0
+    ・X*Y   乗算
+    ・X/Y   除算
+    ・X%Y   余算
+    ・X+Y   加算
+    ・X-Y   減算
+    ・X&Y   ビットごとの論理積
+    ・X^Y   ビットごとの排他的論理和
+    ・X?Y   ビットごとの排他的論理和  (os9 Asm)
+    ・X|Y   ビットごとの論理和
+    ・X!Y   ビットごとの論理和  (os9 Asm )
+    ・X>>Y  右シフト
+    ・X<<Y  左シフト
+    ・X==Y  等しいければ 1, そうでなければ 0
+    ・X!=Y  等しくなければ 1, そうでなければ 0
+    ・X>Y   大きければ 1, そうでなければ 0
+    ・X>=Y  大きいか等しくなければ 1, そうでなければ 0
+    ・X<Y   小さければ 1, そうでなければ 0
+    ・X<=Y  小さいか等しくなければ 1, そうでなければ 0
+    ・X&&Y  X,Yともに 0 でなければ 1, そうでなければ 0
+    ・X||Y  X,Yともに 0 ならば 0, そうでなければ 1
 
-��  used()
-      used(LBL) �̓\�[�X���̂ǂ����Ń��x�� LBL �� ��`����邩�g���邩��
-    ��� 1 ���A�����łȂ���� 0 ��l�Ƃ��܂��Bused(LBL) ���������邽��, �p
-    �X�P�Ō���郉�x�����͂��ׂēo�^���Ă��܂��iused() �� defined()�� �w��
-    ���郉�x���͂������o�^����܂���j�B
+□  used()
+      used(LBL) はソース中のどこかでラベル LBL が 定義されるか使われるかす
+    ると 1 を、そうでなければ 0 を値とします。used(LBL) を実現するため, パ
+    ス１で現れるラベル名はすべて登録しています（used() や defined()で 指定
+    するラベルはもちろん登録されません）。
 
      |          :  (1)
      |       if  used(LBL)
@@ -308,340 +308,340 @@
      |       endif
      |       	:  (3)
 
-     (1) �͈̔͂� LBL ���g����i���Ƃ��� lbsr LBL�j�Ə�����������, LBL��
-    ��`�������[�`�������ꐶ������܂��BLBL �� (1), (3) �Ŏg���Ă��Ȃ���
-    �� �����͐��������A����Ɋւ��ĉ����������܂���Bused() �͂��̂悤�Ȏg
-    �������l���ėp�ӂ��܂����B
-      ����肪����A(1)�Ŏg��ꂸ(3)�Ŏg��ꂽ�ꍇ�A�p�X1 �ł͏���������
-    ���� (2) �͐������܂��񂪁A�Q��ڈȌ�̃p�X����͏������������Ă��܂��A
-    (2) ����������邱�ƂɂȂ�܂��B�������A�I�u�W�F�N�g�����������Ζ�
-    ���������G���[�ƂȂ�܂����A(2) �����x����`��ύX�������Ƃ킩��Ȃ���
-    ���������肦�܂��B
+     (1) の範囲で LBL が使われる（たとえば lbsr LBL）と条件が成立し, LBLを
+    定義したルーチンが現れ生成されます。LBL が (1), (3) で使われていなけれ
+    ば 条件は成立せず、それに関して何も生成しません。used() はこのような使
+    い方を考えて用意しました。
+      が問題があり、(1)で使われず(3)で使われた場合、パス1 では条件が成立
+    せず (2) は生成しませんが、２回目以後のパスからは条件が成立してしまい、
+    (2) が生成されることになります。もちろん、オブジェクトが生成されれば矛
+    盾が生じエラーとなりますが、(2) がラベル定義や変更だけだとわからないば
+    あいがありえます。
 
-      defined() �� used() �Ɠ����悤�ɁA if defined(LBL) �Ƃ����Ƃ��ALBL��
-    ����������Œ�`����Ă���ƁA�p�X�P�Ƃ���ȍ~�ŏ������ς���Ă��܂�
-    �̂ŋC�����Ă��������B
+      defined() も used() と同じように、 if defined(LBL) としたとき、LBLが
+    条件文より後で定義されていると、パス１とそれ以降で条件が変わってしまう
+    ので気をつけてください。
 
 
 
-��  �����t�A�Z���u��
-    ���̒l�ɂ���āA�A�Z���u�����镔�������������ł��܂��B
+■  条件付アセンブル
+    式の値によって、アセンブルする部分を条件分けできます。
 
-    �E�� �� 0�łȂ���� (���ߌQ) �� �A�Z���u�����A0 �Ȃ�΂��Ȃ��B
-      if  ��
-	(���ߌQ)
+    ・式 が 0でなければ (命令群) を アセンブルし、0 ならばしない。
+      if  式
+	(命令群)
       endif
 
-    �E�� �� 0�łȂ���� (���ߌQ1) �� �A�Z���u�����A0 �Ȃ�� (���ߌQ2)���A
-      �Z���u������B
-      if  ��
-	(���ߌQ1)
+    ・式 が 0でなければ (命令群1) を アセンブルし、0 ならば (命令群2)をア
+      センブルする。
+      if  式
+	(命令群1)
       else
-	(���ߌQ2)
+	(命令群2)
       endif
 
-    �E�� �� 0 �łȂ���� (���ߌQ1) ���A�Z���u�����A0 �Ȃ�Ύ���elsif�̎���
-      �]�����A0 �łȂ����(���ߌQ2) ���A �����łȂ���� (���ߌQ3) ���A�Z��
-      �u������B�ielsif �߂� else �� endif �������܂ł�����������j
-      if  ��
-	(���ߌQ1)
-      elsif ��
-	(���ߌQ2)
+    ・式 が 0 でなければ (命令群1) をアセンブルし、0 ならば次のelsifの式を
+      評価し、0 でなけらば(命令群2) を、 そうでなければ (命令群3) をアセン
+      ブルする。（elsif 節は else か endif が現れるまでいくつもおける）
+      if  式
+	(命令群1)
+      elsif 式
+	(命令群2)
       else
-	(���ߌQ3)
+	(命令群3)
       endif
 
-  �܂��Aos9 Asm  �Ƃ̌݊����̂��� �ȉ��̂��̂�����܂��B
-    �Eifne ��	���̒l�� 0 �ȊO�̂Ƃ��A�Z���u��
-    �Eifeq ��	���̒l�� 0 �̂Ƃ��A�Z���u��
-    �Eiflt ��	���̒l�� 0 �����̂Ƃ��A�Z���u��
-    �Eifle ��	���̒l�� 0 �ȉ��̂Ƃ��A�Z���u��
-    �Eifgt ��	���̒l�� 0 ���傫���Ƃ��A�Z���u��
-    �Eifge ��	���̒l�� 0 �ȏ�̂Ƃ��A�Z���u��
-    �Eifp1      �p�X1�̂Ƃ��̂݃A�Z���u�� �i�����ɒ萔���x���o�^�p�j
-    �Eendc	endif �Ɠ���
+  また、os9 Asm  との互換性のため 以下のものもあります。
+    ・ifne 式	式の値が 0 以外のときアセンブル
+    ・ifeq 式	式の値が 0 のときアセンブル
+    ・iflt 式	式の値が 0 未満のときアセンブル
+    ・ifle 式	式の値が 0 以下のときアセンブル
+    ・ifgt 式	式の値が 0 より大きいときアセンブル
+    ・ifge 式	式の値が 0 以上のときアセンブル
+    ・ifp1      パス1のときのみアセンブル （おもに定数ラベル登録用）
+    ・endc	endif と同じ
 
 
 
-��  �^������
+■  疑似命令
 
-��  end  [��]
-    �\�[�X�̏I���������܂��B [��] �͏ȗ��\�ŁA�G���g���[�A�h���X������
-  �܂��BS-Format �o�͂̂Ƃ��� F-Basic �}�V����t�@�C���o�͂̂Ƃ��݈̂Ӗ���
-  �����܂��B
+□  end  [式]
+    ソースの終わりを示します。 [式] は省略可能で、エントリーアドレスを示し
+  ます。S-Format 出力のときや F-Basic マシン語ファイル出力のときのみ意味を
+  もちます。
 
-��  <LABEL> equ  <��>
-    ���x��<LABEL>��<��>�̒l�����蓖�Ă܂��B
-  �\�[�X���A�������x���ɑ΂���1�x�����s���A2�x�ȏ�s�����Ƃ͂ł��܂���B
+□  <LABEL> equ  <式>
+    ラベル<LABEL>に<式>の値を割り当てます。
+  ソース中、同じラベルに対して1度だけ行え、2度以上行うことはできません。
 
-��  <LABEL> set  <��>
-    ���x��<LABEL>��<��>�̒l�����蓖�Ă܂��B
-  equ �ƈႢ�A�������x���ɑ΂��ĉ��x���l��ݒ肵�Ȃ����܂����A�O���Q�Ƃ���
-  ��ƒl���s����ł��B
+□  <LABEL> set  <式>
+    ラベル<LABEL>に<式>の値を割り当てます。
+  equ と違い、同じラベルに対して何度も値を設定しなおせますが、前方参照をす
+  ると値が不安定です。
 
-��  csect <��>  �`  endsect
-    �A�����郉�x�����`����̂Ɏg���܂��B
-    csect �` endsect �̊Ԃɂ� rmb �ȊO�̖��߂͒u�����A<��>�̒l����n�܂�A
-  rmb�̃T�C�Y���Ƃɒl���X�V���܂��B�Ȃ��A<��> �͏ȗ��s�ł��B
-  ���Ƃ��΁A
+□  csect <式>  ～  endsect
+    連続するラベルを定義するのに使います。
+    csect ～ endsect の間には rmb 以外の命令は置けず、<式>の値から始まり、
+  rmbのサイズごとに値を更新します。なお、<式> は省略不可です。
+  たとえば、
 		csect	0
       LBL1	rmb	1
       LBL2	rmb	10
 		rmb	2
       LBL3	rmb	0
 		endsect
-  �́A
+  は、
       LBL1	equ	0
       LBL2	equ	1
       LBL3	equ	13
-  �Ɠ������ƂɂȂ�܂��B
+  と同じことになります。
 
-��  org  <��>
-  ��  os9 ���[�h�łȂ��ꍇ
-    �A�Z���u���̐�������I�u�W�F�N�g�̃A�h���X��<��>�ɕύX���܂��B
-    S-Format �o�͂łȂ��ꍇ�� org �𕡐��w�肷��Ƃ��́A�w�肷��A�h���X��
-  org ���s�O�̃A�h���X���������A�h���X�łȂ��Ƃ����܂���B�w�肪�L���Ȃ�
-  �����͋󂢂��A�h���X�̕����� $00 ���o�͂���܂��B
+□  org  <式>
+  ＊  os9 モードでない場合
+    アセンブラの生成するオブジェクトのアドレスを<式>に変更します。
+    S-Format 出力でない場合に org を複数指定するときは、指定するアドレスは
+  org 実行前のアドレスよりも高いアドレスでないといけません。指定が有効なば
+  あいは空いたアドレスの分だけ $00 が出力されます。
 
-    S-Format �o�͂̏ꍇ�� S-Format �̎d�l�Ɉˑ��ł���̂ŁA-q �I�v�V������
-  �w�肵�Ă���΁A�󂢂������� $00 �Ŗ��߂�悤�Ȃ��Ƃ͂��܂���B
+    S-Format 出力の場合は S-Format の仕様に依存できるので、-q オプションが
+  指定してあれば、空いた部分を $00 で埋めるようなことはしません。
 
-  ��  os9���[�h�̏ꍇ
-    org �̓I�u�W�F�N�g�̃A�h���X�Ƃ͊֌W�Ȃ��A csect �Ɠ����悤�� rmb ��p
-  ���ĘA�����郉�x�����`����̂ɗ��p����܂��Bcsect �Ƃ͈Ⴂ�A�\�[�X����
-  ���ׂĂ�rmb�ɉe�����܂��B
+  ＊  os9モードの場合
+    org はオブジェクトのアドレスとは関係なく、 csect と同じように rmb を用
+  いて連続するラベルを定義するのに利用されます。csect とは違い、ソース中の
+  すべてのrmbに影響します。
 
-��  rmb  <��>
-  �� os9 ���[�h�łȂ��ꍇ
-    <��> �̃o�C�g�����A�f�[�^�̈���m�ۂ���̂Ɏg���܂��B
-    S-Format �o�͂łȂ��ꍇ�A �̈���m�ۂ��邽�߂� �̈敪�� $00 �𐶐�����
-  �����AS-Format�o�͂̏ꍇ�� S-Format �̎d�l�Ɉˑ��ł���̂� -q �I�v�V����
-  ���w�肵�Ă���΃I�u�W�F�N�g�͐������܂���B
-    ��{�I�ɂ̓f�[�^�̈�̏������͍s���Ȃ����ƂɂȂ��Ă���̂ŁA $00�Ŗ�
-  �߂�ꂽ�̈�𐶐��������ꍇ�� rzb ���g���Ă��������B
+□  rmb  <式>
+  ＊ os9 モードでない場合
+    <式> のバイト数分、データ領域を確保するのに使います。
+    S-Format 出力でない場合、 領域を確保するために 領域分の $00 を生成しま
+  すが、S-Format出力の場合は S-Format の仕様に依存できるので -q オプション
+  が指定してあればオブジェクトは生成しません。
+    基本的にはデータ領域の初期化は行われないことになっているので、 $00で埋
+  められた領域を生成したい場合は rzb を使ってください。
 
-  �� os9���[�h�̏ꍇ��Acsect �` endsect�Ɉ͂܂�Ă���ꍇ
-    �A������萔���x�����`����̂Ɏg���܂��B
+  ＊ os9モードの場合や、csect ～ endsectに囲まれている場合
+    連続する定数ラベルを定義するのに使います。
 
-��  rzb  <��>
-  <��>�̃o�C�g�����A$00�𐶐����܂��B
+□  rzb  <式>
+  <式>のバイト数分、$00を生成します。
 
-��  fcb  <��> {,<��>}
-    <��> �̒l�� 1 �o�C�g�̃f�[�^�Ƃ��ăR���}�ŋ�؂�ꂽ�������������܂��B
-    <��> �� 1 �o�C�g�͈̔͂ɔ[�܂�Ȃ��Ƃ����܂����A �f�[�^�̓��� '>' ��t
-  ����� 2 �o�C�g�f�[�^�������ł��܂��B
-    ���� ���̑���� '"' �ň͂܂ꂽ�����񂪂���΁A������f�[�^�Ƃ��Đ���
-  ���܂��B
+□  fcb  <式> {,<式>}
+    <式> の値を 1 バイトのデータとしてコンマで区切られた分だけ生成します。
+    <式> は 1 バイトの範囲に納まらないといけませが、 データの頭に '>' を付
+  ければ 2 バイトデータが生成できます。
+    もし 式の代わりに '"' で囲まれた文字列があれば、それをデータとして生成
+  します。
 
-��  fdb  <��> {,<��>}
-    <��>�̒l��2�o�C�g�̃f�[�^�Ƃ��ăR���}�ŋ�؂�ꂽ�������������܂��B
+□  fdb  <式> {,<式>}
+    <式>の値を2バイトのデータとしてコンマで区切られた分だけ生成します。
 
-��  fcc  "������" {,"������"}
-��  fcs  "������" {,"������"}
-    �f���~�^�ł����܂ꂽ������𐶐����܂��B
-    fcs �̂ق��́A os9 �̃��W���[������t�@�C�����̂��߂� bit 7 �������I��
-  �Z�b�g����������𐶐����܂��i�������Ή��j�B
-    �f���~�^�͂Q�Ƃ����������ł���A�����񒆂Ɋ܂܂�Ă͂����܂���B
-    �f���~�^�Ƃ��Ď�Ɉȉ��̂��̂��g���܂��i���ɂ��g���镶��������^^;�j�B
+□  fcc  "文字列" {,"文字列"}
+□  fcs  "文字列" {,"文字列"}
+    デリミタでかこまれた文字列を生成します。
+    fcs のほうは、 os9 のモジュール名やファイル名のために bit 7 を強制的に
+  セットした文字列を生成します（漢字未対応）。
+    デリミタは２つとも同じ文字であり、文字列中に含まれてはいけません。
+    デリミタとして主に以下のものが使えます（他にも使える文字がある^^;）。
 
 	"  /   '  #  !  -  +  *  &
 
-  ���ۂɂ͍ŏ���3�ȊO�͂Ȃ�ׂ��g��Ȃ��ق�������Ǝv���܂��B
+  実際には最初の3つ以外はなるべく使わないほうが無難だと思います。
 
-    fcc,fcs �ł̂ݗL���ȕϐ��Ƃ��� $modnam ���g���܂��B-m �Ŏw�肳��Ă���
-  �Ύw�肳�ꂽ���O���A�w��̂Ȃ��ꍇ�̓\�[�X�t�@�C��������f�B���N�g����
-  �Ɗg���q�����������O�𕶎���Ƃ��Đ������܂��B
+    fcc,fcs でのみ有効な変数として $modnam が使えます。-m で指定されていれ
+  ば指定された名前を、指定のない場合はソースファイル名からディレクトリ名
+  と拡張子を除いた名前を文字列として生成します。
 
-    ���Ɛ����t���ł����A������ȊO�ɂ������w�肷�邱�Ƃ��ł��܂��B
-    ���x�����A�����A'$'�A'%'�A'(' �̉��ꂩ�Ŏn�܂�ꍇ���Ɖ��߂��Afcb ��
-  �����悤�ɂP�o�C�g�̃f�[�^�𐶐����܂��B
-    fcs �������Ȃ̂ł����A��؂�ꂽ�����񂲂Ƃɕ�����̍Ō�̕����̃r�b�g
-  �V���Z�b�g����A�܂����̒l�ɑ΂��Ă͉e�����܂���B
+    あと制限付きですが、文字列以外にも式を指定することができます。
+    ラベル名、数字、'$'、'%'、'(' の何れかで始まる場合式と解釈し、fcb と
+  同じように１バイトのデータを生成します。
+    fcs もそうなのですが、区切られた文字列ごとに文字列の最後の文字のビット
+  ７がセットされ、また式の値に対しては影響しません。
 
-��  lib     �t�@�C����
-��  use     �t�@�C����
-��  include �t�@�C����
-    �w�肳�ꂽ�t�@�C�����\�[�X��ǂݍ��݂܂��B
-  �t�@�C�����̓��i�f�B���N�g�����j�� $INC �Ȃ�ݒ肳�ꂽ�f�B���N�g�����ɒu
-  �����Ă��̃t�@�C����ǂݍ��݂܂��i'INC'�͑啶���j�B �i�t�@�C�����̓r����
-  ����ꍇ�͔F�����܂���j
+□  lib     ファイル名
+□  use     ファイル名
+□  include ファイル名
+    指定されたファイルよりソースを読み込みます。
+  ファイル名の頭（ディレクトリ名）が $INC なら設定されたディレクトリ名に置
+  換してそのファイルを読み込みます（'INC'は大文字）。 （ファイル名の途中に
+  ある場合は認識しません）
 
-��  opt  {-l|l}
-    �\�[�X���ŃI�v�V������ύX���܂��B���܂̂Ƃ��A�ȉ��̂��̂����Ή����Ă�
-  ����B����ȊO�̂��͖̂������܂��B�i�G���[�ɂ͂Ȃ�܂���j
-    opt  l	�\�[�X��\�����܂��B    
-    opt  -l	�\�[�X�̕\����}�����܂��B
-		���m�ɂ͓����̃J�E���^�� l ���w�肳���� +1, -l �Ȃ� -1��
-		�āA�J�E���^�̒l���� 0 ���傫����Ε\���A0�ȉ��Ȃ�}����
-		�܂��ios9 Asm �Ɠ����͂��ł��j�B
+□  opt  {-l|l}
+    ソース中でオプションを変更します。いまのとこ、以下のものしか対応してま
+  せん。これ以外のものは無視します。（エラーにはなりません）
+    opt  l	ソースを表示します。    
+    opt  -l	ソースの表示を抑制します。
+		正確には内部のカウンタを l が指定されれば +1, -l なら -1し
+		て、カウンタの値がが 0 より大きければ表示、0以下なら抑制し
+		ます（os9 Asm と同じはずです）。
 
-��  ��������^������
-    �ȉ��̖��߂̓T�|�[�g����Ă��܂��񂪁A�\�[�X�ɂ�����Ă��G���[�ɂ͂�
-  ��܂���B
+□  無視する疑似命令
+    以下の命令はサポートされていませんが、ソースにあらわれてもエラーにはな
+  りません。
       vsect,psect, spc, nam, ttl, pag, fail
 
-    ���̂��� vsect,psect,fail �� c.asm ���߂Ȃ̂ŁAc.asm�̃\�[�X��������
-  �������邱�Ƃ͂ł��܂��񂪁A���߂��ɃA�Z���u�����邭�炢�͂ł��邩������
-  �܂���B
+    このうち vsect,psect,fail は c.asm 命令なので、c.asmのソースをちゃんと
+  生成することはできませんが、ためしにアセンブルするくらいはできるかもしれ
+  ません。
 
 
 
-��  �j�[���j�b�N
+■  ニーモニック
 
-    �ꉞ�A�ʃt�@�C���Ŗ��߈ꗗ��t�����܂����A�ڂ����� 6809 �̖��߂� 6809 
-  �֌W�̏��Ђ��Q�l�ɂ��Ă��������B6309 �Ǝ��̖��߂́ANIFTY OS9�t�H�[����(FOS9)
-  �� DL �ɂ���h�L�������g�� 'Oh! FM 1988 4����'�A'I/O�ʍ�6809���p����' ����
-  �Ă�������(^_^;)�B
+    一応、別ファイルで命令一覧を付属しますが、詳しくは 6809 の命令は 6809 
+  関係の書籍を参考にしてください。6309 独自の命令は、NIFTY OS9フォーラム(FOS9)
+  の DL にあるドキュメントや 'Oh! FM 1988 4月号'、'I/O別冊6809活用研究' をみ
+  てください(^_^;)。
   
-  �ȉ��� ���� as63 �ŗL�̓s���ł��B
+  以下は この as63 固有の都合です。
 
 
-��  ???_i�ł̃C�~�f�B�G�C�g�w��
-    ??? �� #�C�~�f�B�G�C�g�w��\�Ȗ��߂Ƃ���Ƃ��A
-      ???    #�萔��	( ldw  #10 )
-    ��
-      ???_i  �萔��	( ldw_i 10 )
-    �̂悤�� c.asm �p 6309 �}�N���ł̕\�L���ł��܂��B
+□  ???_iでのイミディエイト指定
+    ??? を #イミディエイト指定可能な命令とするとき、
+      ???    #定数式	( ldw  #10 )
+    を
+      ???_i  定数式	( ldw_i 10 )
+    のように c.asm 用 6309 マクロでの表記もできます。
 
-��  ldq �̃C�~�f�B�G�C�g�E�A�h���b�V���O
-    ldq �̃C�~�f�B�G�C�g�E�A�h���b�V���O�́A
-      ldq  #H,L   (H:��ʂQ�o�C�g  L:���ʂQ�o�C�g  �萔��)
-    �ł����A�w�肷��l���Q�o�C�g�����t�����͈̔͂Ȃ�
+□  ldq のイミディエイト・アドレッシング
+    ldq のイミディエイト・アドレッシングは、
+      ldq  #H,L   (H:上位２バイト  L:下位２バイト  定数式)
+    ですが、指定する値が２バイト符号付整数の範囲なら
       ldq  #L
-    �Ƃ����ӂ��� 'H,' �̕������ȗ��ł��A H �̕����� L �𕄍��g�����ē����
-    �����̂��ݒ肳��܂��i0 �܂��� $FFFF)�B
-    �Q�o�C�g�����t�����͈̔͊O�̂Ƃ��i���Ƃ��� $8000 ��$ fd00 �Ȃǁj�͒l��
-    �s����ł��̂ŏȗ������Ɏw�肵�Ă��������B
+    というふうに 'H,' の部分を省略でき、 H の部分は L を符号拡張して得られ
+    たものが設定されます（0 または $FFFF)。
+    ２バイト符号付整数の範囲外のとき（たとえば $8000 や$ fd00 など）は値が
+    不安定ですので省略せずに指定してください。
 
-��  �����O�E�u�����`�ł̋��������O�w��
-    �����O�E�u�����`�� -y �I�v�V�����ɂ��\�Ȃ��̂��V���[�g�ɂł��܂����A
-  ���̂Ƃ��V���[�g�ɕύX�����炱�܂郉�x���ɑ΂��ă��x���̓���'>' ��t����
-  �΃V���[�g�ɕύX�ł���Ƃ��ł��ύX���Ȃ��Ȃ�܂��B�iex:  lbra >InitTbl�j
+□  ロング・ブランチでの強制ロング指定
+    ロング・ブランチは -y オプションにより可能なものをショートにできますが、
+  このときショートに変更したらこまるラベルに対してラベルの頭に'>' を付けれ
+  ばショートに変更できるときでも変更しなくなります。（ex:  lbra >InitTbl）
 
 
-��  ��������
-    �������߂Ƃ��Ĉȉ��̂��̂�����܂��B
+□  合成命令
+    合成命令として以下のものがあります。
 
-  �E�j�[���j�b�N�݂̖̂���
-    �i�t���O�ω�  * �ω�  X �j��  � �s��  1 set   0 clr�j
-		(��������閽��)	    NZVC	�T�C�Y
+  ・ニーモニックのみの命令
+    （フラグ変化  * 変化  X 破壊  ･ 不変  1 set   0 clr）
+		(生成される命令)	    NZVC	サイズ
 	negw	comw;incw		    **X1	 4
 	lslw	andcc #$fe;rolw		    ****	 4
 	asrw	pshw;asl ,s++;rorw	    **X*	 6
 
-	tstq	stq -4,s		    **��	 3
+	tstq	stq -4,s		    **･･	 3
 	clrq	clrw;clrd		    0100	 4
 	comq	comw;comd		    *X01	 4
 	negq	comd;comw;incw;bne*+4;incd  *XX1	10
-	lsrq	lsrd;rorw		    XX�*	 4
-	asrq	asrd;rorw		    XX�*	 4
-	rorq	rord;rorw		    XX�*	 4
+	lsrq	lsrd;rorw		    XX･*	 4
+	asrq	asrd;rorw		    XX･*	 4
+	rorq	rord;rorw		    XX･*	 4
 	rolq	rolw;rold		    *XX*	 4
 	lslq	andcc #$fe;rolw;rold	    *XX*	 6
-	incq	incw;bne *+4;incd	    *XX�	 6
-	decq	tstw;bne *+4;decd;decw	    *X0�	 8
+	incq	incw;bne *+4;incd	    *XX･	 6
+	decq	tstw;bne *+4;decd;decw	    *X0･	 8
 
-      �X�s�[�h�����T�C�Y�����������Ƃ�D�悵�܂����B
+      スピードよりもサイズが小さいことを優先しました。
 
-      decq �� c �t���u��ω����������Ȃ������̂ł������܂������A�X�s�[�h��
-      addq #1(addw #1;adcd #0) �̂ق��������ł��i�T�C�Y�͕ς�炸)�B
+      decq は c フラブを変化させたくなかったのでこうしましたが、スピードは
+      addq #1(addw #1;adcd #0) のほうが速いです（サイズは変わらず)。
 
-  �Eaddq,subq
-      �\�ȃA�h���b�V���O�E���[�h
-	�C�~�f�B�G�C�g
-	�G�N�X�e���h
-	�_�C���N�g($00�`$fd �܂�)
-	�[��,5�r�b�g(x,y,u,s),
-	8�r�b�g,16�r�b�g(x,y,u,s,pc,pcr)
-	�I�[�g�E�C���N�������g�A�I�[�g�E�f�N�������g
+  ・addq,subq
+      可能なアドレッシング・モード
+	イミディエイト
+	エクステンド
+	ダイレクト($00～$fd まで)
+	ゼロ,5ビット(x,y,u,s),
+	8ビット,16ビット(x,y,u,s,pc,pcr)
+	オート・インクリメント、オート・デクリメント
 
-      �s�\�ȃA�h���b�V���O�E���[�h
-	�C���_�C���N�g�E���[�h
-	���W�X�^�E�I�t�Z�b�g
-	W���W�X�^�ɂ��C���f�b�N�X
+      不可能なアドレッシング・モード
+	インダイレクト・モード
+	レジスタ・オフセット
+	Wレジスタによるインデックス
 
-  �Epsh,pul
-      psh,pul �� w ���W�X�^���w��ł��܂��B
-      �w�肳�ꂽ�ꍇ�Aw ���X�^�b�N�E�g�b�v�ɂȂ�悤�ɂ܂�܂��B
-      pshs w �Ȃ� pshsw�A
-      pulu w �Ȃ� puluw�A
-      pshu w,d,x,y �Ȃ�Apshu d,x,y;pshuw�A
-      puls w,d,x,y,pc �Ȃ� pulsw;puls d,x,y,pc
-      �ƂȂ�܂��B
-
-
-��  6809���[�h���̍�������
-    6809���[�h�ɂ����Ĉȉ��̖��߂�6809�Ő������邱�Ƃ��ł��܂��B
-
-  �E�j�[���j�b�N�݂̖̂���
-	(��������閽��)		NZVC	6309�Ƃ̌݊���	(�T�C�Y)
-	clrd	clrb;clra		0100	n,z,v,c�L��	2    ����
-	tstd	std  -2,s		**0�	n,z,v,c�L��	2    ����
-	comd	comb;coma		*X01	n,c�L��		2    ����
-	negd	nega;negb;sbca #0       *XXX	n�L��		4    �Ⴄ
-	incd	addd #1			****	n,z,v�L��	3    �Ⴄ
-	decd	subd #1			****	n,z,v�L��	3    �Ⴄ
-	asld	lslb;rola		*XX*	n,c�L��		2    ����
-	lsld	lslb;rola		*XX*	n,c�L��		2    ����
-	rold	rolb;rola		*XX*	n,c�L��		2    ����
-	asrd	asra;rorb		XX�*	v,c�L��		2    ����
-	lsrd	lsra;rorb		XX�*	v,c�L��		2    ����
-	rord	rora;rorb		XX�*	v,c�L��		2    ����
-
-  �Eadcd,sbcd,andd,ord,eord
-      �\�ȃA�h���b�V���O�E���[�h
-	�C�~�f�B�G�C�g
-	�G�N�X�e���h
-	�_�C���N�g($00�`$fe�܂�)
-	�[��,5�r�b�g(x,y,u,s)
-	8�r�b�g, 16�r�b�g(x,y,u,s,pc,pcr)
-	�I�[�g�E�C���N�������g�A�I�[�g�E�f�N�������g�B
-
-      �s�\�ȃA�h���b�V���O�E���[�h
-	�C���_�C���N�g�E���[�h
-	���W�X�^�E�I�t�Z�b�g
-
-    ���W�X�^�ɑ΂��铮�삪�����Ȃ����Ńt���O�ω��␶�������T�C�Y�͈قȂ�
-    �܂��̂ŋC�����Ďg���Ă��������B
+  ・psh,pul
+      psh,pul で w レジスタを指定できます。
+      指定された場合、w がスタック・トップになるようにつまれます。
+      pshs w なら pshsw、
+      pulu w なら puluw、
+      pshu w,d,x,y なら、pshu d,x,y;pshuw、
+      puls w,d,x,y,pc なら pulsw;puls d,x,y,pc
+      となります。
 
 
+□  6809モード時の合成命令
+    6809モードにおいて以下の命令は6809で生成することができます。
 
-��  ���܂���
+  ・ニーモニックのみの命令
+	(生成される命令)		NZVC	6309との互換性	(サイズ)
+	clrd	clrb;clra		0100	n,z,v,c有効	2    同じ
+	tstd	std  -2,s		**0･	n,z,v,c有効	2    同じ
+	comd	comb;coma		*X01	n,c有効		2    同じ
+	negd	nega;negb;sbca #0       *XXX	n有効		4    違う
+	incd	addd #1			****	n,z,v有効	3    違う
+	decd	subd #1			****	n,z,v有効	3    違う
+	asld	lslb;rola		*XX*	n,c有効		2    同じ
+	lsld	lslb;rola		*XX*	n,c有効		2    同じ
+	rold	rolb;rola		*XX*	n,c有効		2    同じ
+	asrd	asra;rorb		XX･*	v,c有効		2    同じ
+	lsrd	lsra;rorb		XX･*	v,c有効		2    同じ
+	rord	rora;rorb		XX･*	v,c有効		2    同じ
 
-�� �z�z������
+  ・adcd,sbcd,andd,ord,eord
+      可能なアドレッシング・モード
+	イミディエイト
+	エクステンド
+	ダイレクト($00～$feまで)
+	ゼロ,5ビット(x,y,u,s)
+	8ビット, 16ビット(x,y,u,s,pc,pcr)
+	オート・インクリメント、オート・デクリメント。
 
-      �������ƃ\�[�X�� Nifty-Serve OS9�t�H�[�����Ŕz�z����Ă���Gigo��
-    ��� as63 �ŁA����ɂ��̃v���O������ Masataka Ohta, Hiroshi Tezuka
-    ������PDS��6809�A�Z���u�� AS09 ���Q�l�ɂ������̂炵���ł��B
-      �Ƃ������ƂŁA���� as63 ��PDS�Ȃ̂ŁA�\�[�X�̔z�z�A�����͎��R�ł��B
+      不可能なアドレッシング・モード
+	インダイレクト・モード
+	レジスタ・オフセット
 
-      �Ȃ��A�R���p�C���� lsi-c86���H�ł�p���Ă��܂��B
-      �̂ŁA�����ɂ͎��s�t�@�C��(as63.exe)���̂́Alsi-c86���H�łł̔z�z
-    �����ɏ]���t���[�\�t�g�ƂȂ�܂��i�ڂ����� lsi-c86�̔z�z�������݂�
-    ���������B�c���g�p�͕s�������͂��ł�...�܂��ăR���p�C�����ĂˁA���Ɓj
+    レジスタに対する動作が同じなだけでフラグ変化や生成されるサイズは異なり
+    ますので気をつけて使ってください。
 
-    �Ƃ肠�����A�ڂ��������̂��Ƃɂ��� �\�[�X�� DL �̕⑫�����ƁAAS09 
-    �ɓ����Ă��R�s�[���C�g�̃t�@�C�����ʂ��Ƃ��܂� �i���m�ɂ� AS09 ��
-    �t�@�C���ł� PDS �Ƃ������t�͎g���Ă܂���...�R�s�[���C�g������
-    �悤�ɂȂ��Ă���̂ł����� PDS �Ƃ������t���g���Ă��܂��j�B
 
-    --- Gigo�t��� as63 ----------------------------------------------
-    �f�[�^���Fas63(use ish & ar 3.x)
-          ID�FPAH00712
-    �o�^���t�F89/10/21
-        �����F�e�L�X�g
-      �o�C�g�F17353
-        �Q�ƁF23
-    �⑫����
-      OS9�̃��W���[�����AROF���o�͏o���Ȃ��u���ʂ́v6309�Ή�
-    �A�Z���u���ł��B�\�[�X�����ł��̂�C�R���p�C�����K�v�ł��B
 
-      ���̂܂܂ł́Asubsystem�̉��ǂ��炢�����g����������܂�
-    ��B�Ȃ��AUnix��MS�|DOS�ł����̂܂܃R���p�C���o���܂��B
+■  こまごま
+
+□ 配布条件等
+
+      改造もとソースは Nifty-Serve OS9フォーラムで配布されていたGigo氏
+    作の as63 で、さらにこのプログラムは Masataka Ohta, Hiroshi Tezuka
+    両氏のPDSの6809アセンブラ AS09 を参考にしたものらしいです。
+      ということで、この as63 もPDSなので、ソースの配布、改造は自由です。
+
+      なお、コンパイルは lsi-c86試食版を用いています。
+      ので、厳密には実行ファイル(as63.exe)自体は、lsi-c86試食版での配布
+    条件に従いフリーソフトとなります（詳しくは lsi-c86の配布条件をみて
+    ください。営利使用は不可だったはずです...まあ再コンパイルしてね、っと）
+
+    とりあえず、ぼくが改造のもとにした ソースの DL の補足説明と、AS09 
+    に入ってたコピーライトのファイルを写しときます （正確には AS09 の
+    ファイルでは PDS という言葉は使われてませんが...コピーライトがこの
+    ようになっているのであえて PDS という言葉を使っています）。
+
+    --- Gigo師作の as63 ----------------------------------------------
+    データ名：as63(use ish & ar 3.x)
+          ID：PAH00712
+    登録日付：89/10/21
+        属性：テキスト
+      バイト：17353
+        参照：23
+    補足説明
+      OS9のモジュールも、ROFも出力出来ない「普通の」6309対応
+    アセンブラです。ソースだけですのでCコンパイラが必要です。
+
+      このままでは、subsystemの改良ぐらいしか使い道がありませ
+    ん。なお、UnixやMS－DOSでもそのままコンパイル出来ます。
 
                                         from  Gigo
     ------------------------------------------------------------------
-    --- AS09 ��copyright �t�@�C����� --------------------------------
+    --- AS09 のcopyright ファイルより --------------------------------
     COPYRIGHT (c) 1981, 1987 Masataka Ohta, Hiroshi Tezuka
 
     No rights reserved. Everyone is permitted to do anything
@@ -651,72 +651,72 @@
 
 
 
-�� �������e
+□ 改造内容
 
-    Gigo���̃I���W�i������̕ύX�_�͈ȉ��̂Ƃ���ł�.
+    Gigo氏のオリジナルからの変更点は以下のとおりです.
 
-    1.  S�t�H�[�}�b�g�E�t�@�C�������łȂ��A�o�C�i���ł̏o�͂��ł���B
-    2.  �萔���Z�̋����iC�̂��̂Ɏ������j�B
-    3.  �����t�A�Z���u���@�\��t���B
-    4.  csect,endsect,rzb �̎����B
-    5.  OS9�t��Asm �̃\�[�X���A�Z���u���ł���悤�ɉ���
-        set, mod, emod, fcs �̒ǉ�, org,rmb �̑Ή� etc...
-          emod �ł� crc �v�Z�� osk �p 6309 �N���X�E�A�Z���u�� asm6309
-          �� C �̃\�[�X�� crc9 ���[�`�����ʂ����Ă��������܂���^^;
-    6.  FBasic �@�B��t�@�C�����o�͉B
-    7.  �����̃t�@�C�����w�肷��΂�������Ȃ���̃\�[�X�Ƃ��ăA�Z
-        ���u�����邪�A�킩�ꂽ�t�@�C�����ƂɃ��[�J���E���x�����g�����
-        ���ɂ����B
-    8.  defined(LBL), used(LBL) �Ƃ����֐��������t�A�Z���u���@�\�ƂƂ�
-        �ɂ����΃��C�u����(���ǂ�)���Ȃ�Ƃ������(�͂�..)
-    9.  �O���[�o���E���x����`�̍s�Ɩ���`���x�����g�p�����s�͂��̂܂�
-        �̍s�ŁA���̑��̃A�Z���u�� �ł����s�� FCB �̃f�[�^�̌`�ɕϊ���
-        ���A�Z���u���E�\�[�X���o�͂ł���悤�ɂ����B
-    10. ����炵���������߂�t��(comq,��addq�Ȃ�...)
+    1.  Sフォーマット・ファイルだけでなく、バイナリでの出力もできる。
+    2.  定数演算の強化（Cのものに似せた）。
+    3.  条件付アセンブル機能を付加。
+    4.  csect,endsect,rzb の実装。
+    5.  OS9付属Asm のソースをアセンブルできるように改造
+        set, mod, emod, fcs の追加, org,rmb の対応 etc...
+          emod での crc 計算は osk 用 6309 クロス・アセンブラ asm6309
+          の C のソースの crc9 ルーチンを写させていただきました^^;
+    6.  FBasic 機械語ファイルを出力可。
+    7.  複数のファイルを指定すればそれらを一つながりのソースとしてアセ
+        ンブルするが、わかれたファイルごとにローカル・ラベルを使えるよ
+        うにした。
+    8.  defined(LBL), used(LBL) という関数を条件付アセンブル機能ととも
+        につかえばライブラリ(もどき)がなんとかつくれる(はず..)
+    9.  グローバル・ラベル定義の行と未定義ラベルを使用した行はそのまま
+        の行で、その他のアセンブル できた行は FCB のデータの形に変換し
+        たアセンブリ・ソースを出力できるようにした。
+    10. それらしい合成命令を付加(comq,やaddqなど...)
     11. etc
 
-    ���͉������Ă݂������Ŏg���ĂȂ����Ă��Ƃł�... �ł����āA�`�F�b
-    �N�炵���`�F�b�N�����ĂȂ��̂ő傫�������K�����邱�Ƃł��傤.
-    1-5 �܂ł̉����� os9 asm �p�̃\�[�X���A�Z���u������ crc �������Ă�
-    ��΂܂����v���낤�Ƃ������̂ł����A���̑��͊ȒP�Ȋm�F���������
-    ���Ȃ����̂�����A���Ȃ�d�����ł��傤�B ������ Sformat �o�͂�����
-    �����ł��B������g���Ă�������ȕ��͎g���Ē��������Ă��������B��
-    �����āA�C�����Ă���������Ƃ����Ƃ����ł�^_^.
+    問題は改造してみただけで使ってないってことです... でもって、チェッ
+    クらしいチェックをしてないので大きい虫が必ずいることでしょう.
+    1-5 までの改造は os9 asm 用のソースをアセンブルして crc があってい
+    ればまず大丈夫だろうとおもうのですが、その他は簡単な確認さえやって
+    いないものもあり、かなり妖しいでしょう。 あっと Sformat 出力もあや
+    しいです。だから使ってくれる奇特な方は使って虫をだしてください。で
+    もって、修正していだだけるともっといいです^_^.
 
-   ����, �ڂ����z�z����v1.11T�̂���, �������ɂ����F-BASIC�@�B��t�@�C��
-   �����ł̕s�s������(-r�֌W�̒ǉ�)�A����� MS-C v5 �ł̍ăR���p�C���p��
-   �蒼�������ꂽ v1.12Ta �� NIFTY �� FFMHOB �ɃA�b�v���[�h����Ă��܂��B
-
-
-�� �ăR���p�C��
-
-    ANSI-C �łȂ�΂����Ă��ăR���p�C���ł���Ƃ������܂��B
-    �������Aint �� 16�r�b�g���O��ŁA int ��32�r�b�g�̏ꍇ�ăR���p�C��
-    ����� ldq #$12345678 �Ƃ��������Ƌ@�\�����Ⴄ�ł���:)
-
-    as63 v1.12Ta �܂ł�K&R�X�^�C���̃\�[�X�ł���, ���͂�os9/09 ���
-    �R���p�C�����邱�Ƃ��Ȃ����낤�����̎Q�l�̉\�����v���� ANSI-C ��
-    �ق����܂��������ȁi�Ƃ�����肷�łɎ����� old-c �ɂ������Ȃ�^^;)
-    �Ǝv���Aos9�̓s���̕������蒼�����܂����B
-�@�@�iT.Kobayashi���� kran �����p)
-
-    ���� char �̓R���p�C���I�v�V������ unsigned �����ɂ����ق������S�ł���.
+   あと, ぼくが配布したv1.11Tのあと, あき氏によってF-BASIC機械語ファイル
+   生成での不都合部分(-r関係の追加)、および MS-C v5 での再コンパイル用の
+   手直しをされた v1.12Ta が NIFTY の FFMHOB にアップロードされています。
 
 
-��  as63 �՗�
-    (1981-1987 AS09  6809/6800�N���X�E�A�Z���u��  for UNIX,FLEX)
+□ 再コンパイル
+
+    ANSI-C でならばたいてい再コンパイルできるとおもいます。
+    ただし、int は 16ビットが前提で、 int が32ビットの場合再コンパイル
+    すると ldq #$12345678 とかがちゃんと機能しちゃうでせう:)
+
+    as63 v1.12Ta まではK&Rスタイルのソースですが, もはやos9/09 上で
+    コンパイルすることもないだろうし他の参考の可能性を思うと ANSI-C の
+    ほうがまだいいかな（というよりすでに自分が old-c にたえられない^^;)
+    と思い、os9の都合の部分を手直ししました。
+　　（T.Kobayashi氏の kran を活用)
+
+    あと char はコンパイルオプションで unsigned 扱いにしたほうが安全でせう.
+
+
+□  as63 遍歴
+    (1981-1987 AS09  6809/6800クロス・アセンブラ  for UNIX,FLEX)
     (                Masataka Ohta, Hiroshi Tezuka)
-    1988       AS63 ver 1.00 6309�N���X�E�A�Z���u�� for OS9,MSDOS,UNIX
+    1988       AS63 ver 1.00 6309クロス・アセンブラ for OS9,MSDOS,UNIX
                      Gigo
     1991-1992  AS63 ver 1.11T  for OS9,MSDOS
-                     M.Kitamura(�Ă񂩁��ӂ�)
-                     OS9asm�݊�����
+                     M.Kitamura(てんか☆ふん)
+                     OS9asm互換化等
     1992       AS63 ver 1.12Ta for MSDOS
-                     ����
-                     MS-C�ւ̑Ή���F-BASIC�@�B��t�@�C���p�ύX
+                     あき
+                     MS-Cへの対応とF-BASIC機械語ファイル用変更
     1997       AS63 ver 1.20T  for MSDOS
-                     M.Kitamura(�Ă񂩁�)
-                     �\�[�X�� ANSI-C ��. !=,==�̗D�揇�ʂ̎蒼��.
+                     M.Kitamura(てんか☆)
+                     ソースの ANSI-C 化. !=,==の優先順位の手直し.
 
 
 
