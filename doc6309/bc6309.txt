@@ -1,0 +1,108 @@
+6309 Native mode‚Å‚ÌÊŞ²Ä”‚ÆÏ¼İ¥»²¸Ù
+
+  ”  ÊŞ²Ä”
+  `  Ï¼İ¥»²¸Ù
+
+ ±ÄŞÚ¯¼İ¸Ş¥Ó°ÄŞ‚ª1ŒÂ‚Ì–½—ß
+” `   –½—ß
+1  1    abx sex nop
+        (a,b):clr neg com inc dec tst lsl|asl lsr asr rol ror
+1  2    sync daa
+1  4    rts sexw
+1  6|17 rti
+1  10   mul
+1  21   swi
+2  2    (d):lsl|asl asr neg
+        (d,w):rol ror lsr
+        (e,f,d,w):clr com inc dec tst
+2  3    bra brn bhi bls bcc|bhs bcs|blo bne beq
+        bvc bvs bpl bmi bge blt bgt ble
+        orcc andcc
+2  4    tfr pshs pshu puls pulu
+2+ 4+   (x,y,u,s):lea
+2  5    exg
+2  6    pshsw pshuw pulsw puluw
+        bsr
+2  20   cwai
+2  22   swi2 swi3
+3  4    addr adcr subr sbcr cmpr andr orr eorr
+        lbra tstmd
+3  5    ldmd
+3  7    lbsr
+3  6+3n tfm
+4  5    lbrn lbhi lbls lbcc|lbhs lbcs|lblo lbne lbeq
+        lbvc lbvs lbpl lbmi lbge lblt lbgt lble
+4  6    band biand bor bior beor bieor ldbt
+4  7    stbt
+
+
+ •¡”‚Ì±ÄŞÚ¯¼İ¸Ş¥Ó°ÄŞ‚ğ‚Â–½—ß
+   ” `    ” `    ” `     ” `
+Dir 2 2  Ext 3 3  Imm - -  Ind 2+ 3+
+        jmp
+
+Dir 2 3  Ext 3 4  Imm 2 2  Ind 2+ 4+
+        (a,b):ld add adc sub sbc cmp and or eor bit st(Imm–³)
+
+Dir 2 4  Ext 3 5  Imm 3 3  Ind 2+ 5+
+        (d,x,u):ld st(Imm–³)
+        (d):add sub
+        cmpx tst(Imm–³)
+
+Dir 2 5  Ext 3 6  Imm - -  Ind 2+ 6+
+        lsl|asl lsr asr rol ror clr com neg dec inc
+
+Dir 2 6  Ext 3 7  Imm - -  Ind 2+ 6+
+        jsr
+
+Dir 3 4  Ext 4 5  Imm 3 3  Ind 3+ 5+
+        (e,f):ld add sub cmp st(Imm–³)
+        tim(Imm–³)
+
+Dir 3 5  Ext 4 6  Imm 4 4  Ind 3+ 6+
+        (y,s,w):ld st(Imm–³)
+        (d,y,u,s,w):cmp
+        (d):adc sbc and or eor bit
+        (w):add sub
+
+Dir 3 6  Ext 4 7  Imm - -  Ind 3+ 7+
+        aim oim eim
+
+Dir 3 7  Ext 4 8  Imm 5 5  Ind 3+ 8+
+        (q):ld st(Im-)
+
+Dir 3 26 Ext 4 27 Imm 3 25 Ind 3+ 27+
+        divd
+
+Dir 3 29 Ext 4 30 Imm 4 28 Ind 3+ 30+
+        muld
+
+Dir 3 35 Ext 4 36 Imm 4 34 Ind 3+ 36+
+        divq
+
+’   (Imm–³)‚Ì‚Â‚¢‚Ä‚¢‚é–½—ß‚É‚Í²ĞÃŞ¨´²Ä¥±ÄŞÚ¯¼İ¸Ş¥Ó°ÄŞ‚ª‚ ‚è‚Ü‚¹‚ñ
+
+
+
+ ²İÃŞ¯¸½¥±ÄŞÚ¯¼İ¸Ş¥Ó°ÄŞ‚ÌÎß½Ä¥ÊŞ²Ä
+” `
++0 +0  ,r ,w
++0 +1  n5,r a,r b,r e,r f,r w,r ,r+ ,-r ,w++ ,--w
++0 +2  d,r ,r++ ,--r
++0 +3  [,r] [,w]
++0 +4  [a,r] [b,r] [e,r] [f,r] [w,r] [,w++] [,--w]
++0 +5  [d,r] [,r++] [,--r]
++1 +1  n8,r n8,pcr
++1 +4  [n8,r] [n8,pcr]
++2 +2  n16,w
++2 +3  n16,r n16,pcr
++2 +4  [n16]
++2 +5  [n16,w]
++2 +6  [n16,r] [n16,pcr]
+
+’   r      x y u s
+     n5     5ËŞ¯Ä¥µÌ¾¯Ä
+     n8     8ËŞ¯Ä¥µÌ¾¯Ä
+     n16    16ËŞ¯Ä¥µÌ¾¯Ä
+     [n16]  ²İÀŞ²Ú¸Ä‚Ì´¸½ÃİÄŞ¥±ÄŞÚ¯¼İ¸Ş
+

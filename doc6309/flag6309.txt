@@ -1,0 +1,34 @@
+命令実行直後のﾌﾗｸﾞの変化
+
+    .  変化しない
+    *  条件によって変化
+    0  ﾘｾｯﾄ
+    1  ｾｯﾄ
+
+n z v c   命令( * は 0文字以上の任意の文字列)
+. . . .   nop abx leas leau ldmd rts jmp jsr sync swi* psh*
+          pul* tfr exg band biand bor bior beor bieor ldbt <ﾌﾞﾗﾝﾁ命令>
+. 1 . .   tfm
+. * . .   leax leay
+. * . *   mul (c 演算後AccBのbit7が1ならｾｯﾄ)
+* * . .   sex* muld stq ldq stbt
+* * * .   inc*
+* * 0 .   dec* ld* st* tst* and* or* bit* aim oim tim
+* * . *   asr* ror*
+0 * . *   lsr*
+* * * *   add* adc* sub* sbc* cmp* lsl*/asl* rol* neg*
+          div* (c 0:商が偶数 1:奇数)
+          daa ?(v 不定)(c bit7からｷｬﾘｰが生じたか演算前にｾｯﾄされていた時ｾｯﾄ)
+0 1 0 0   clr*
+* * 0 1   com*
+
+ 直接ccを変化させる命令
+   andcc orcc
+   cwai(e ｵﾍﾟﾗﾝﾄﾞに関係なくｾｯﾄ)
+   （ｵﾍﾟﾗﾝﾄﾞに ccを指定したときのみ
+     tfr exg band biand bor bior beor bieor ldbt
+     ( addr adcr subr sbcr andr orr eorr cmpr ) ）
+
+ ｽｯﾀｸからccをpullする命令
+   rti
+   (ccを指定したときの puls pulu)

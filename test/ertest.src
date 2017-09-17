@@ -1,0 +1,318 @@
+*
+*   Check TFM
+*
+        tfm     x,y+
+        tfm     x,y-    /* Error */
+        tfm     x,y     /* Error */
+        tfm     x+,y+
+        tfm     x+,y-   /* Error */
+        tfm     x+,y
+        tfm     x-,y+   /* Error */
+        tfm     x-,y-
+        tfm     x-,y    /* Error */
+*
+*   Check Register Addressing
+*
+        tfr     a,a
+        tfr     a,b
+        tfr     a,cc
+        tfr     a,dp
+        tfr     a,e
+        tfr     a,f
+
+        exg     a,a
+        exg     b,a
+        exg     cc,a
+        exg     dp,a
+        exg     e,a
+        exg     f,a
+
+        tfr     d,d
+        tfr     x,d
+        tfr     y,d
+        tfr     u,d
+        tfr     s,d
+        tfr     pc,d
+        tfr     w,d
+        tfr     v,d
+
+        exg     d,d
+        exg     d,x
+        exg     d,y
+        exg     d,u
+        exg     d,s
+        exg     d,pc
+        exg     d,w
+        exg     d,v
+
+        exg     d,e     /* Error */
+        exg     w,a     /* Error */
+
+        addr    d,w
+        adcr    d,w
+        subr    d,w
+        sbcr    d,w
+        andr    d,w
+        orr     d,w
+        eorr    d,w
+        cmpr    d,w
+*
+*   Check immdiate memory
+*
+        bim     #$7f,<$50    direct
+        oim     #$7f,<$50    direct
+        eim     #$7f,<$50    direct
+*
+*   Check Addressing mode
+*
+        aim     #$7f,<$50    direct
+        aim     #$7f,>$FD00  extend
+        aim     #$7f,,x      no offset
+        aim     #$7f,,w      no offset (W)
+        aim     #$7f,<2,x    5 bit offset
+        aim     #$7f,<2,w    5 bit offset (W) /* Error */
+        aim     #$7f,<16,x   8 bit offset
+        aim     #$7f,<16,w   8 bit offset (W) /* Error */
+        aim     #$7f,>128,x  16 bit offset
+        aim     #$7f,>128,w  16 bit offset (W)
+        aim     #$7f,a,x     a reg offset
+        aim     #$7f,a,w     a reg offset (W) /* Error */
+        aim     #$7f,b,x     b reg offset
+        aim     #$7f,d,x     d reg offset
+        aim     #$7f,e,x     e reg offset
+        aim     #$7f,f,x     f reg offset
+        aim     #$7f,w,x     w reg offset
+        aim     #$7f,,x+     increment
+        aim     #$7f,,w+     increment (W) /* Error */
+        aim     #$7f,,x++    increment +2
+        aim     #$7f,,w++    increment +2 (W)
+        aim     #$7f,,-x     decrement
+        aim     #$7f,,-w     decrement (W) /* Error */
+        aim     #$7f,,--x    decrement -2
+        aim     #$7f,,--w    decrement -2 (W)
+        aim     #$7f,<16,PCR 8 bit offset PCR
+        aim     #$7f,>128,PCR 16 bit offset PCR
+        aim     #$7f,[,x]    no offset
+        aim     #$7f,[,w]    no offset (W)
+        aim     #$7f,[<16,x] 8 bit offset
+        aim     #$7f,[>128,x]  16 bit offset
+        aim     #$7f,[>128,w]  16 bit offset (W)
+        aim     #$7f,[a,x]     a reg offset
+        aim     #$7f,[b,x]     b reg offset
+        aim     #$7f,[d,x]     d reg offset
+        aim     #$7f,[e,x]     e reg offset
+        aim     #$7f,[f,x]     f reg offset
+        aim     #$7f,[w,x]     w reg offset
+        aim     #$7f,[,x++]    increment +2
+        aim     #$7f,[,--x]    decrement -2
+        aim     #$7f,[,w++]    increment +2 (W)
+        aim     #$7f,[,--w]    decrement -2 (W)
+        aim     #$7f,[<16,PCR] 8 bit offset PCR
+        aim     #$7f,[>128,PCR] 16 bit offset PCR
+*
+*   Check Byte OP Code
+*
+        bitmd    #50    imm
+        bitmd   <$50    /* error */
+        bitmd    >$FD00  /* error */
+        bitmd    ,x      /* error */
+
+        sube    #50     imm
+        sube    <$50    direct
+        sube    >$FD00  extend
+        sube    ,x      index 1
+        sube    2,s     index 2
+
+        subf    #50
+        subf    <$50
+        subf    >$FD00
+        subf    ,x
+        subf    2,s
+
+        cmpe    #50
+        cmpe    <$50
+        cmpe    >$FD00
+        cmpe    ,x
+        cmpe    2,s
+
+        cmpf    #50
+        cmpf    <$50
+        cmpf    >$FD00
+        cmpf    ,x
+        cmpf    2,s
+
+        lde     #50
+        lde     <$50
+        lde     >$FD00
+        lde     ,x
+        lde     2,s
+
+        ldf     #50
+        ldf     <$50
+        ldf     >$FD00
+        ldf     ,x
+        ldf     2,s
+
+        ste     <$50
+        ste     >$FD00
+        ste     ,x
+        ste     2,s
+
+        stf     <$50
+        stf     >$FD00
+        stf     ,x
+        stf     2,s
+
+        adde    #50
+        adde    <$50
+        adde    >$FD00
+        adde    ,x
+        adde    2,s
+
+        addf    #50
+        addf    <$50
+        addf    >$FD00
+        addf    ,x
+        addf    2,s
+*
+*   Check Word OP code
+*
+        subw    #$50
+        subw    <$50
+        subw    >$FD00
+        subw    ,x
+        subw    2,s
+
+        cmpw    #$50
+        cmpw    <$50
+        cmpw    >$FD00
+        cmpw    ,x
+        cmpw    2,s
+
+        sbcd    #$50
+        sbcd    <$50
+        sbcd    >$FD00
+        sbcd    ,x
+        sbcd    2,s
+
+        andd    #$50
+        andd    <$50
+        andd    >$FD00
+        andd    ,x
+        andd    2,s
+
+        bitd    #$50
+        bitd    <$50
+        bitd    >$FD00
+        bitd    ,x
+        bitd    2,s
+
+        ldw     #$50
+        ldw     <$50
+        ldw     >$FD00
+        ldw     ,x
+        ldw     2,s
+
+        stw     <$50
+        stw     >$FD00
+        stw     ,x
+        stw     2,s
+
+        eord    #$50
+        eord    <$50
+        eord    >$FD00
+        eord    ,x
+        eord    2,s
+
+        adcd    #$50
+        adcd    <$50
+        adcd    >$FD00
+        adcd    ,x
+        adcd    2,s
+
+        ord     #$50
+        ord     <$50
+        ord     >$FD00
+        ord     ,x
+        ord     2,s
+
+        addw    #$50
+        addw    <$50
+        addw    >$FD00
+        addw    ,x
+        addw    2,s
+*
+*    Check Long Word OP Code
+*
+        ldq     #$1000,$0000
+        ldq     <$50
+        ldq     >$FD00
+        ldq     ,x
+        ldq     2,s
+
+        stq     <$50
+        stq     >$FD00
+        stq     ,x
+        stq     2,s
+*
+*   Mul & Div Check
+*
+        muld    #$50
+        muld    <$50
+        muld    >$FD00
+        muld    ,x
+        muld    2,s
+
+        divd    #$50
+        divd    <$50
+        divd    >$FD00
+        divd    ,x
+        divd    2,s
+
+        divq    #$50
+        divq    <$50
+        divq    >$FD00
+        divq    ,x
+        divq    2,s
+
+*
+*   Check Inhernt
+*
+        sexw
+        clre
+        clrf
+        ince
+        incf
+        dece
+        decf
+        tste
+        tstf
+        come
+        comf
+        negd
+        asld
+        asrd
+        lsld
+        lsrd
+        lsrw
+        rord
+        rorw
+        rold
+        rolw
+        comd
+        comw
+        decd
+        decw
+        incd
+        incw
+        tstd
+        tstw
+        clrd
+        clrw
+        pshsw
+        pulsw
+        pshuw
+        puluw
+
+        END
+
