@@ -36,8 +36,13 @@
         aim     #$7f,>$FD00  extend
         aim     #$7f,,x      no offset
         aim     #$7f,,w      no offset (W)
-        aim     #$7f,<2,x    5 bit offset
-        aim     #$7f,<16,x   8 bit offset
+        aim     #$7f,2,x     5 bit offset
+        aim     #$7f,<2,x    forced 8 bit offset
+        aim     #$7f,>2,x    forced 16 bit offset
+        aim     #$7f,16,x    8 bit offset
+        aim     #$7f,<16,x   force 8 bit offset
+        aim     #$7f,>16,x   force 16 bit offset
+        aim     #$7f,128,x   16 bit offset
         aim     #$7f,>128,x  16 bit offset
         aim     #$7f,>128,w  16 bit offset (W)
         aim     #$7f,a,x     a reg offset

@@ -46,7 +46,7 @@ typedef int  val_t;             /* int<->long  定数演算のint/long化     */
 #define OE                      /* 定義すると-eｵﾌﾟｼｮﾝ関係を生成         */
 #define OA                      /* 定義すると-aｵﾌﾟｼｮﾝ関係を生成         */
 #define OPTIM                   /* 定義するとｵﾌﾟﾃｨﾏｲｽﾞ(-y)を行える      */
-#define OPTS_FBAS               /* 定義すると-k(FBASICﾏｼﾝ語ﾌｧｲﾙ出力)を生成*/
+#define OPTS_FBAS               /* 定義すると-k(FBASICﾏｼﾝ語ﾌｧｲﾙ出力)を生成 */
 #define FILSTK2                 /* 定義するとｴﾗｰ時にﾌｧｲﾙ名,行番号を表示 */
 #define OPED                    /* 6809用合成命令を使用可能にする       */
 #define OPEQ                    /* 6309用合成命令を使用可能にする       */
@@ -184,7 +184,7 @@ EXTERN word gDp;
 EXTERN word gLc, gLinLc, gObjLc;
 EXTERN byte gValid_f, gEOF_f;
 EXTERN byte gOs9_f, gOrg_f, gOrgSFmt_f;
-EXTERN byte gByte_f, gWord_f;
+EXTERN byte gByte_f, gWord_f, gIdxOfs_f;
 EXTERN char gModName[MODNAMSZ+1];
 #ifndef M6809
  EXTERN byte gM68_f;
@@ -226,7 +226,7 @@ EXTERN char gLineBuf[MAXCHAR+2];
 #endif
 
 #ifdef OPTIM
- /* ｵﾌﾟﾃｨﾏｲｽﾞ(long->short branch)用*/
+ /* ｵﾌﾟﾃｨﾏｲｽﾞ(long->short branch)用 */
  EXTERN int *gOptStk, gOpt_sp, gOptChg, gOptCount;
  EXTERN byte gOpt_f;
 #endif

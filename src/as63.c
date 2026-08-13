@@ -1203,9 +1203,11 @@ static void operand(int grp, int mode)
 #ifndef M6809
             case W:
 #endif
-				if (gValid_f && val == 0) {
+                if (gValid_f && val == 0
+                         && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
                     indexM(0x84, reg);
                 } else if (gValid_f && -16 <= val && val <= 15
+                         && (!gIdxOfs_f || (!gByte_f && !gWord_f))
                          && !gIndirect && reg != W) {
                     indexM(val & 0x1f, reg);
                 } else if (checkByte(val)) {
@@ -2080,7 +2082,8 @@ void    oped(void)
             case S:
                 for (++val, i = 1; i >= 0; --i, --val) {
                     put1Byte(gOprPtr->opcode + 0x20 + i * 0x40);
-					if (gValid_f && -16 <= val && val <= 15) {
+                    if (gValid_f && -16 <= val && val <= 15
+                            && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
                         put1Byte(index0(val ? (val & 0x1f) : 0x84, reg));
                     } else if (checkByte(val)) {
                         put1Byte(index0(0x88, reg));
@@ -2234,7 +2237,8 @@ void        opeq(void)  /* addq  subq */
             case S:
                 for (val+=2, i = 1; i >= 0; --i, val-= 2) {
                     put1Word(op[i] + 0x20);
-					if (gValid_f && -16 <= val && val <= 15) {
+                    if (gValid_f && -16 <= val && val <= 15
+                            && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
                         put1Byte(index0(val ? (val & 0x1f) : 0x84, reg));
                     } else if (checkByte(val)) {
                         put1Byte(index0(0x88, reg));
@@ -2671,6 +2675,7 @@ static void usage(void)
     e_puts(" -s  シンボル・テーブルを表示    -v  途中経過の表示\n");
     e_puts(" -u  ラベルの大小文字を区別する  -n  ラベルの大小文字を区別しない\n");
     e_puts(" -q  org,rmbでアドレスが飛び飛びになるのを許す\n");
+    e_puts(" -p  <,>8,16bitオフセット強制(未指定: <>付でも5bit自動判定)\n");
   #ifdef OPTIM
     e_puts(" -y  ロング・ブランチを可能ならショート・ブランチに置換\n");
   #endif
@@ -2756,6 +2761,9 @@ static void options(byte *p)
             gDebug_f = 1;
             break;
       #endif
+        case 'P':
+            gIdxOfs_f = 1;
+            break;
         case '?':
             usage();
         case 'D':
