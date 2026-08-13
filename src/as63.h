@@ -1,7 +1,7 @@
 /********************************
- *								*
- *		HD6309 cross assembler	*
- *								*
+ *                              *
+ *      HD6309 cross assembler  *
+ *                              *
  ********************************/
 
 #ifdef EXT
@@ -10,22 +10,22 @@
  #define EXTERN extern
 #endif
 
-typedef unsigned char  byte;/* 1ÊŞ²Ä•„†–³®”Œ^ */
-typedef unsigned short word;/* 2ÊŞ²Ä•„†–³®”Œ^ */
-typedef short	shrt;		/* 2ÊŞ²Ä•„†•t®”Œ^ */
-#define __(x)	x
+typedef unsigned char  byte;/* 1ï¾Šï¾ï½²ï¾„ç¬¦å·ç„¡æ•´æ•°å‹ */
+typedef unsigned short word;/* 2ï¾Šï¾ï½²ï¾„ç¬¦å·ç„¡æ•´æ•°å‹ */
+typedef short   shrt;       /* 2ï¾Šï¾ï½²ï¾„ç¬¦å·ä»˜æ•´æ•°å‹ */
+#define __(x)   x
 
-#define STDERR		stderr
-#define isKanji(c)	((unsigned)((c)^0x20) - 0xa1 < 0x3cU)
+#define STDERR      stderr
+#define isKanji(c)  ((unsigned)((c)^0x20) - 0xa1 < 0x3cU)
 #define isKanji2(c) ((byte)(c) >= 0x40 && (byte)(c) <= 0xfc && (c) != 0x7f)
 #define toXDigit(c) (isdigit(c) ? (c - '0') : (toupper(c) - 'A' + 10))
-#define e_puts(s)	fprintf(STDERR,s)
+#define e_puts(s)   fprintf(STDERR,s)
 #ifndef OS9
-#define stpcpy(d,s)	(strcpy((d),(s)),(d)+strlen(d))
+#define stpcpy(d,s) (strcpy((d),(s)),(d)+strlen(d))
 #endif
 
-#ifdef	DEBUG
- #define DEBMSGF(x) 	if (gDebug_f) (fprintf x)
+#ifdef  DEBUG
+ #define DEBMSGF(x)     if (gDebug_f) (fprintf x)
 #else
  #define DEBMSGF(x)
 #endif
@@ -33,33 +33,33 @@ typedef short	shrt;		/* 2ÊŞ²Ä•„†•t®”Œ^ */
 /*---------------------------------------------------------------------------*/
 
 /* buffer size */
-#define LINEHEAD		24		/* Ø½Ä•\¦‚Å‚Ì¿°½s‚Ì•\¦ˆÊ’u           */
-#define OBJSIZE 		32		/* obj‚Ìo—ÍÊŞ¯Ì§‚Ì»²½Ş(byte):S®‚Å‚Ì‚Ps•ª */
-#define MNEMOSIZE		8		/* Æ°ÓÆ¯¸‚ÌÅ‘å•¶š”                   */
-#define MAXCHAR 		1024	/* “ü—Í‚·‚és‚ÌÅ‘å•¶š”               */
-#define MAXLABEL		256 	/* –¼‘O•\—p‚ÌÒÓØE“¾‚ÌÌŞÛ¯¸¥»²½Ş(node”)*/
-#define MODNAMSZ		29		/* module name ‚ÌÅ‘å•¶š”             */
+#define LINEHEAD        24      /* ï¾˜ï½½ï¾„è¡¨ç¤ºã§ã®ï½¿ï½°ï½½è¡Œã®è¡¨ç¤ºä½ç½®           */
+#define OBJSIZE         32      /* objã®å‡ºåŠ›ï¾Šï¾ï½¯ï¾Œï½§ã®ï½»ï½²ï½½ï¾(byte):Så¼ã§ã®ï¼‘è¡Œåˆ† */
+#define MNEMOSIZE       8       /* ï¾†ï½°ï¾“ï¾†ï½¯ï½¸ã®æœ€å¤§æ–‡å­—æ•°                   */
+#define MAXCHAR         1024    /* å…¥åŠ›ã™ã‚‹è¡Œã®æœ€å¤§æ–‡å­—æ•°               */
+#define MAXLABEL        256     /* åå‰è¡¨ç”¨ã®ï¾’ï¾“ï¾˜æ‹¾å¾—ã®ï¾Œï¾ï¾›ï½¯ï½¸ï½¥ï½»ï½²ï½½ï¾(nodeæ•°)*/
+#define MODNAMSZ        29      /* module name ã®æœ€å¤§æ–‡å­—æ•°             */
 
-typedef int  val_t; 			/* int<->long  ’è”‰‰Z‚Ìint/long‰»     */
-/*#define M6809 */				/* ’è‹`‚·‚é‚Æ6309‚Ì–½—ß‚ğ¶¬‚µ‚È‚¢     */
-#define HE						/* ’è‹`‚·‚é‚Æ—]Œv‚È‚à‚Ì‚ğ¶¬‚·‚é       */
-#define OE						/* ’è‹`‚·‚é‚Æ-eµÌß¼®İŠÖŒW‚ğ¶¬         */
-#define OA						/* ’è‹`‚·‚é‚Æ-aµÌß¼®İŠÖŒW‚ğ¶¬         */
-#define OPTIM					/* ’è‹`‚·‚é‚ÆµÌßÃ¨Ï²½Ş(-y)‚ğs‚¦‚é      */
-#define OPTS_FBAS				/* ’è‹`‚·‚é‚Æ-k(FBASICÏ¼İŒêÌ§²Ùo—Í)‚ğ¶¬*/
-#define FILSTK2 				/* ’è‹`‚·‚é‚Æ´×°‚ÉÌ§²Ù–¼,s”Ô†‚ğ•\¦ */
-#define OPED					/* 6809—p‡¬–½—ß‚ğg—p‰Â”\‚É‚·‚é       */
-#define OPEQ					/* 6309—p‡¬–½—ß‚ğg—p‰Â”\‚É‚·‚é       */
-#define FNAMESZ 		127 	/* Ì§²Ù–¼(Êß½Ø½Ä)‚ÌÅ‘å•¶š”           */
-#define MAXLIB			16		/* include‚ÅƒlƒXƒg‚Å‚«‚é[‚³            */
-#define LBLSIZE 		21		/* ƒ‰ƒxƒ‹–¼‚Ì•¶š”                     */
-#define MAXOPTIM		3000	/* longÌŞ×İÁ‚ğ¼®°Ä‚É•ÏX‚Å‚«‚éÅ‘å”    */
-#define GCO_MAX 		40		/* ifÈ½Ä‚ÌÅ‘å‚Ì[‚³ */
-#define GP1_MAX 		100 	/* ifp1‚Ìg‚¦‚é‰ñ” */
+typedef int  val_t;             /* int<->long  å®šæ•°æ¼”ç®—ã®int/longåŒ–     */
+/*#define M6809 */              /* å®šç¾©ã™ã‚‹ã¨6309ã®å‘½ä»¤ã‚’ç”Ÿæˆã—ãªã„     */
+#define HE                      /* å®šç¾©ã™ã‚‹ã¨ä½™è¨ˆãªã‚‚ã®ã‚’ç”Ÿæˆã™ã‚‹       */
+#define OE                      /* å®šç¾©ã™ã‚‹ã¨-eï½µï¾Œï¾Ÿï½¼ï½®ï¾é–¢ä¿‚ã‚’ç”Ÿæˆ         */
+#define OA                      /* å®šç¾©ã™ã‚‹ã¨-aï½µï¾Œï¾Ÿï½¼ï½®ï¾é–¢ä¿‚ã‚’ç”Ÿæˆ         */
+#define OPTIM                   /* å®šç¾©ã™ã‚‹ã¨ï½µï¾Œï¾Ÿï¾ƒï½¨ï¾ï½²ï½½ï¾(-y)ã‚’è¡Œãˆã‚‹      */
+#define OPTS_FBAS               /* å®šç¾©ã™ã‚‹ã¨-k(FBASICï¾ï½¼ï¾èªï¾Œï½§ï½²ï¾™å‡ºåŠ›)ã‚’ç”Ÿæˆ*/
+#define FILSTK2                 /* å®šç¾©ã™ã‚‹ã¨ï½´ï¾—ï½°æ™‚ã«ï¾Œï½§ï½²ï¾™å,è¡Œç•ªå·ã‚’è¡¨ç¤º */
+#define OPED                    /* 6809ç”¨åˆæˆå‘½ä»¤ã‚’ä½¿ç”¨å¯èƒ½ã«ã™ã‚‹       */
+#define OPEQ                    /* 6309ç”¨åˆæˆå‘½ä»¤ã‚’ä½¿ç”¨å¯èƒ½ã«ã™ã‚‹       */
+#define FNAMESZ         127     /* ï¾Œï½§ï½²ï¾™å(ï¾Šï¾Ÿï½½ï¾˜ï½½ï¾„)ã®æœ€å¤§æ–‡å­—æ•°           */
+#define MAXLIB          16      /* includeã§ãƒã‚¹ãƒˆã§ãã‚‹æ·±ã•            */
+#define LBLSIZE         21      /* ãƒ©ãƒ™ãƒ«åã®æ–‡å­—æ•°                     */
+#define MAXOPTIM        3000    /* longï¾Œï¾ï¾—ï¾ï¾ã‚’ï½¼ï½®ï½°ï¾„ã«å¤‰æ›´ã§ãã‚‹æœ€å¤§æ•°    */
+#define GCO_MAX         40      /* ifï¾ˆï½½ï¾„ã®æœ€å¤§ã®æ·±ã• */
+#define GP1_MAX         100     /* ifp1ã®ä½¿ãˆã‚‹å›æ•° */
 #ifdef OA
 # define OA_MAX 500
 #endif
-#define INCLUDIR		"."
+#define INCLUDIR        "."
 
 #ifdef M6809
  #ifdef OPEQ
@@ -68,64 +68,64 @@ typedef int  val_t; 			/* int<->long  ’è”‰‰Z‚Ìint/long‰»     */
 #endif
 
 /* register notation */
-#define NONE			0
-#define CC				0x01
-#define A				0x02
-#define B				0x04
-#define D				0x06
-#define DP				0x08
-#define X				0x10
-#define Y				0x20
-#define U				0x40
-#define S				0x80
-#define PC				0x100
-#define PCR 			0x200
-#define E				0x400
-#define F				0x800
-#define W				0xC00
-#define V				0x1000
-#define N				0x2000
-#define INDEXREG		(X|Y|U|S)
-#define OFFSETRG		(A|B|E|F)
-#define ALLREG			(CC|A|B|D|DP|X|Y|U|S|PC)
-#define X63REG			(E|F|W|V|N)
+#define NONE            0
+#define CC              0x01
+#define A               0x02
+#define B               0x04
+#define D               0x06
+#define DP              0x08
+#define X               0x10
+#define Y               0x20
+#define U               0x40
+#define S               0x80
+#define PC              0x100
+#define PCR             0x200
+#define E               0x400
+#define F               0x800
+#define W               0xC00
+#define V               0x1000
+#define N               0x2000
+#define INDEXREG        (X|Y|U|S)
+#define OFFSETRG        (A|B|E|F)
+#define ALLREG          (CC|A|B|D|DP|X|Y|U|S|PC)
+#define X63REG          (E|F|W|V|N)
 
 /* addressing mode */
-#define IMMEDIATE		0x01
-#define IMMEDIATE2		0x02
-#define DIRECT			0x04
-#define INDEX			0x08
-#define EXTEND			0x10
-#define LOAD			(IMMEDIATE|DIRECT|INDEX|EXTEND)
-#define LOAD2			(IMMEDIATE2|DIRECT|INDEX|EXTEND)
-#define STORE			(DIRECT|INDEX|EXTEND)
-#define MEMORY			(DIRECT|INDEX|EXTEND)
+#define IMMEDIATE       0x01
+#define IMMEDIATE2      0x02
+#define DIRECT          0x04
+#define INDEX           0x08
+#define EXTEND          0x10
+#define LOAD            (IMMEDIATE|DIRECT|INDEX|EXTEND)
+#define LOAD2           (IMMEDIATE2|DIRECT|INDEX|EXTEND)
+#define STORE           (DIRECT|INDEX|EXTEND)
+#define MEMORY          (DIRECT|INDEX|EXTEND)
 
 /* addressing mode variation group */
-#define GROUP0			0
-#define GROUP1			1
-#define GROUP2			2
-#define GROUP3			3		/* tfm */
+#define GROUP0          0
+#define GROUP1          1
+#define GROUP2          2
+#define GROUP3          3       /* tfm */
 
 /* mode offset */
-#define NO_MODE 		0
-#define IMMEDIATE_MODE	0
-#define DIRECT_MODE 	1
-#define INDEX_MODE		2
-#define EXTEND_MODE 	3
+#define NO_MODE         0
+#define IMMEDIATE_MODE  0
+#define DIRECT_MODE     1
+#define INDEX_MODE      2
+#define EXTEND_MODE     3
 
 
-/* ğŒƒAƒZƒ“ƒuƒ‰ */
-	#define CO_ELSE 	1
-	#define CO_ENDC 	2
-	#define CO_IFP1 	3
-	#define CO_IF		4
-	#define CO_IFN		5
-	#define CO_ELIF 	6
-	#define CO_IFGE 	7
-	#define CO_IFGT 	8
-	#define CO_IFLE 	9
-	#define CO_IFLT 	10
+/* æ¡ä»¶ã‚¢ã‚»ãƒ³ãƒ–ãƒ© */
+    #define CO_ELSE     1
+    #define CO_ENDC     2
+    #define CO_IFP1     3
+    #define CO_IF       4
+    #define CO_IFN      5
+    #define CO_ELIF     6
+    #define CO_IFGE     7
+    #define CO_IFGT     8
+    #define CO_IFLE     9
+    #define CO_IFLT     10
 
 /* none_wq */
 #define WQ_TSTQ 0
@@ -143,30 +143,30 @@ typedef int  val_t; 			/* int<->long  ’è”‰‰Z‚Ìint/long‰»     */
 #define WQ_DECQ (13*4+2)
 #define WQ_NEGQ (15*4+2)
 
-/* o—Í‚·‚éƒtƒ@ƒCƒ‹‚Ìí—Ş */
-#define OB_BIN		1
-#define OB_SFMT 	2
-/*#define OBJ_ROF	*/
-#define OB_ASM		4
+/* å‡ºåŠ›ã™ã‚‹ãƒ•ã‚¡ã‚¤ãƒ«ã®ç¨®é¡ */
+#define OB_BIN      1
+#define OB_SFMT     2
+/*#define OBJ_ROF   */
+#define OB_ASM      4
 
 /* opcode table */
 typedef struct optbl_t {
-		char *mnemonic;
-		byte prefix;
-		byte opcode;
-		byte option;
-		void (*process)(void);
-		struct optbl_t *nl;
+        char *mnemonic;
+        byte prefix;
+        byte opcode;
+        byte option;
+        void (*process)(void);
+        struct optbl_t *nl;
 } OPTBL_T;
 
 /* label table */
 typedef struct lbltbl_t {
-		int    line;
-		val_t  value;
-		struct lbltbl_t *left,*right;
-		char   flg;			/* 0:used  1:EQU  2:SET */
-		byte   grp;
-		char   name[LBLSIZE + 1];
+        int    line;
+        val_t  value;
+        struct lbltbl_t *left,*right;
+        char   flg;         /* 0:used  1:EQU  2:SET */
+        byte   grp;
+        char   name[LBLSIZE + 1];
 } LBLTBL_T;
 
 
@@ -175,7 +175,7 @@ typedef struct lbltbl_t {
  EXTERN byte gDebug_f;
 #endif
 
-/* ƒAƒZƒ“ƒuƒ‹ */
+/* ã‚¢ã‚»ãƒ³ãƒ–ãƒ« */
 EXTERN FILE *gSrcFp;
 EXTERN OPTBL_T *gOprPtr;
 EXTERN int  gErrors, gPass;
@@ -190,7 +190,7 @@ EXTERN char gModName[MODNAMSZ+1];
  EXTERN byte gM68_f;
 #endif
 
-/* objecto—Í */
+/* objectå‡ºåŠ› */
 EXTERN FILE *gObjFp;
 EXTERN word gObjSiz, gObjCnt;
 EXTERN word gStartAddr, gEntryAddr;
@@ -204,14 +204,14 @@ EXTERN int  gRmb_sp,gRmb_f;
  EXTERN byte gFBasic_f;
 #endif
 
-/* ƒ‰ƒxƒ‹ */
+/* ãƒ©ãƒ™ãƒ« */
 EXTERN LBLTBL_T *gLblPtr;
 EXTERN int  gLabels, gLineNo;
 EXTERN word gCSectBase;
 EXTERN byte gGrp, gCSectSw;
 EXTERN byte gUpLo_f, gPSect_f;
 
-/* ƒŠƒXƒgAƒƒbƒZ[ƒW•\¦ */
+/* ãƒªã‚¹ãƒˆã€ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸è¡¨ç¤º */
 EXTERN char *gCmdName;
 EXTERN int  gList;
 EXTERN FILE *gLstFp;
@@ -226,36 +226,36 @@ EXTERN char gLineBuf[MAXCHAR+2];
 #endif
 
 #ifdef OPTIM
- /* µÌßÃ¨Ï²½Ş(long->short branch)—p*/
+ /* ï½µï¾Œï¾Ÿï¾ƒï½¨ï¾ï½²ï½½ï¾(long->short branch)ç”¨*/
  EXTERN int *gOptStk, gOpt_sp, gOptChg, gOptCount;
  EXTERN byte gOpt_f;
 #endif
 
-/* 'if'(ğŒ±¾İÌŞÙ)‚ÌŠÇ— */
-EXTERN int	gCo_sp;
-EXTERN int	gCoStk[GCO_MAX+1];
-EXTERN int	gP1_sp;
-EXTERN int	gP1Stk[GP1_MAX+1];
+/* 'if'(æ¡ä»¶ï½±ï½¾ï¾ï¾Œï¾ï¾™)ã®ç®¡ç† */
+EXTERN int  gCo_sp;
+EXTERN int  gCoStk[GCO_MAX+1];
+EXTERN int  gP1_sp;
+EXTERN int  gP1Stk[GP1_MAX+1];
 
 /* use for library inclusion */
 EXTERN FILE *gFileStk[MAXLIB];
-EXTERN int	gFile_sp;
+EXTERN int  gFile_sp;
 EXTERN char gSrcFName[FNAMESZ+1];
 #ifdef FILSTK2
  EXTERN int  gSrcLine;
  EXTERN struct FILSTK2_tag {
-			int  srcline;
-			char srcname[FNAMESZ+1];
-		} gFilStk2[MAXLIB];
+            int  srcline;
+            char srcname[FNAMESZ+1];
+        } gFilStk2[MAXLIB];
 #endif
 #ifdef INCLUDIR
  EXTERN char *gIncDirName;
 #endif
 
-#ifdef OA  /* -a µÌß¼®İ */
+#ifdef OA  /* -a ï½µï¾Œï¾Ÿï½¼ï½®ï¾ */
  typedef struct {
-	 int  ll;
-	 byte nn;
+     int  ll;
+     byte nn;
  } OATBL_T;
  EXTERN OATBL_T *gOAStk;
  EXTERN byte gOAchk_f;
@@ -269,23 +269,23 @@ extern OPTBL_T gOpTab[];
 /*-- Function --*/
 #if 10
 void
-	none(void), load(void), load2(void),	store(void),
-	ccr(void),	lea(void),	memory(void),	transfer(void),
-	pshs(void), puls(void), pshu(void), 	pulu(void),
-	mod(void),	emod(void), branch(void),	lbranch(void),
-	equ(void),	set(void),	rmb(void),		os9svc(void),
-	rzb(void),	fcb(void),	fdb(void),		library(void),
-	fcc(void),	fcs(void),	org(void),		setdp(void),
-	vsct(void), psct(void), csct(void), 	endsct(void),
-	opt(void),	nam(void),	page(void), 	spc(void),
-	endop(void);
+    none(void), load(void), load2(void),    store(void),
+    ccr(void),  lea(void),  memory(void),   transfer(void),
+    pshs(void), puls(void), pshu(void),     pulu(void),
+    mod(void),  emod(void), branch(void),   lbranch(void),
+    equ(void),  set(void),  rmb(void),      os9svc(void),
+    rzb(void),  fcb(void),  fdb(void),      library(void),
+    fcc(void),  fcs(void),  org(void),      setdp(void),
+    vsct(void), psct(void), csct(void),     endsct(void),
+    opt(void),  nam(void),  page(void),     spc(void),
+    endop(void);
 #ifndef M6809
-  void	tfm(void),	load4(void),immemory(void);
+  void  tfm(void),  load4(void),immemory(void);
  #ifdef OPEQ
-  void	opeq(void), none_wq(void);
+  void  opeq(void), none_wq(void);
  #endif
 #endif
 #ifdef OPED
-  void	oped(void),	none_d(void);
+  void  oped(void), none_d(void);
 #endif
 #endif
