@@ -13,6 +13,10 @@
 #define EXT
 #include    "as63.h"
 
+#ifdef _MSC_VER
+#define stricmp    _stricmp
+#define itoa       _itoa
+#endif
 
 /*--------------------------------------------------------------------------*/
 
@@ -90,8 +94,9 @@ char    *FIL_BaseName(char *adr)
  #if 1  /* #ifdef MSDOS */
          || *p == ':' || *p == '\\'
  #endif
-        )
+        ) {
             adr = p + 1;
+        }
       #if 0 /* MS全角チェック */
         if (isKanji((*(byte*)p)) && *(p+1) )
             p++;
@@ -1188,6 +1193,10 @@ static void operand(int grp, int mode)
                 val = 0x8e;
                 break;
 #endif
+            default:
+                //error("Invalid register.");
+                val = 0x86;
+                break;
             }
             indexM(val, getReg(INDEXREG));
         }
@@ -1400,7 +1409,7 @@ static void pshpul(byte u, byte h)
 {
     word    m1, m2;
 
-    m1 = 0;
+    m1 = m2 = 0;
     skipSpace();
     do {
 #ifdef OPEQ
@@ -1448,6 +1457,8 @@ static void pshpul(byte u, byte h)
             m2 = 0x100;
             break;
 #endif
+        default:
+            break;
         }
         if (m1 & m2)
             error("同じレジスタが指定されている");
