@@ -2407,7 +2407,7 @@ static int  getMnemonic(void)
     OPTBL_T *q;
 
     skipSpace();
-	if (*gLinPtr == '\n')
+    if (*gLinPtr == '\n' || *gLinPtr == '\0')
         return 0;
     if (!isSymbl2(*gLinPtr)) {
         error("ニーモニックの指定がおかしい");
@@ -2478,7 +2478,7 @@ static byte oneLine(void)
  #endif
         f = getMnemonic();
         if (temp[0] && gCoStk[gCo_sp] >= 0)
-			defLabel(temp, strcmp(gOprPtr->mnemonic,"SET") ? 1 : 2, gf);
+            defLabel(temp, f && !strcmp(gOprPtr->mnemonic,"SET") ? 2 : 1, gf);
         return f;
     }
     return 0;
