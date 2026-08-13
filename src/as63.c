@@ -18,6 +18,9 @@
 #define itoa       _itoa
 #endif
 
+#define isKanji(c)  ((unsigned)((c)^0x20) - 0xa1 < 0x3cU)
+//#define isKanji2(c) ((uint8_t)(c) >= 0x40 && (uint8_t)(c) <= 0xfc && (c) != 0x7f)
+
 /*--------------------------------------------------------------------------*/
 
 FILE    *fopenE(char *fname, char *atr)
@@ -98,7 +101,7 @@ char    *FIL_BaseName(char *adr)
             adr = p + 1;
         }
       #if 0 /* MS全角チェック */
-        if (isKanji((*(byte*)p)) && *(p+1) )
+        if (isKanji((*(uint8_t*)p)) && *(p+1) )
             p++;
       #endif
         p++;
@@ -125,9 +128,9 @@ char    *FIL_ChgExt(char filename[], char *ext)
 
 /*---------------------------------------------------------------------------*/
 
-static word oChkSum;            /* S-formatの各行ごとのチェック・サム */
+static uint16_t oChkSum;            /* S-formatの各行ごとのチェック・サム */
 
-static byte hexDigit(byte x)
+static uint8_t hexDigit(uint8_t x)
 {
     return ((x &= 0x0f) < 10) ? x + '0' : x - 10 + 'A';
 }
@@ -136,7 +139,7 @@ static void put2hex(int b)
 {
     if (!gObjct)
         return;
-    b = (byte)b;
+    b = (uint8_t)b;
     putc(hexDigit(b >> 4), gObjFp);
     putc(hexDigit(b), gObjFp);
     oChkSum += b;
@@ -144,7 +147,7 @@ static void put2hex(int b)
 
 static void put4hex(int w)
 {
-    w = (word)w;
+    w = (uint16_t)w;
     put2hex(w >> 8);
     put2hex(w);
 }
@@ -194,12 +197,12 @@ static void crc(int b)
 {
     int     w;
 
-    b = (byte)b;
+    b = (uint8_t)b;
     w = b ^ gCrcBuf[0];
     gCrcBuf[0] =  gCrcBuf[1];
     gCrcBuf[1] =  gCrcBuf[2];
     gCrcBuf[1] ^= w >> 7;
-    gCrcBuf[2] =  (byte)(w << 1);
+    gCrcBuf[2] =  (uint8_t)(w << 1);
     gCrcBuf[1] ^= w >> 2;
     gCrcBuf[2] ^= w << 6;
     w ^= w << 1;
@@ -217,36 +220,36 @@ void    putObj(int b)
         return;
     if (gObjPos >= gObjBufSz)
         flushObj();
-    gObjBuf[gObjPos++] = (byte)b;
+    gObjBuf[gObjPos++] = (uint8_t)b;
 }
 
 void    put2obj(int w)
 {
-    w = (word)w;
+    w = (uint16_t)w;
     putObj(w >> 8);
     putObj(w);
 }
 
-byte    putB(int b)
+uint8_t    putB(int b)
 {
     if (gRmb_f && gFBasic_f && gObjct == OB_BIN && gRmb_sp){
         while(gRmb_sp-- > 0)
             putObj(0);
         gRmb_sp++;
     }
-    b = (byte)b;
+    b = (uint8_t)b;
     putObj(b);
     ++gObjCnt;
     ++gLc;
     if (gOs9_f && gPass == 2)
         crc(b);
-    return (byte)b;
+    return (uint8_t)b;
 }
 
-int     put2B(word w)
+int     put2B(uint16_t w)
 {
-    putB((byte)(w >> 8));
-    putB((byte)w);
+    putB((uint8_t)(w >> 8));
+    putB((uint8_t)w);
     return w;
 }
 
@@ -270,7 +273,7 @@ void    printByte(int b, int c)
 {
     if (gPass != 2)
         return;
-    b = (byte)b;
+    b = (uint8_t)b;
     gLineBuf[c] = hexDigit(b >> 4);
     gLineBuf[c + 1] = hexDigit(b);
 }
@@ -279,14 +282,14 @@ void    printWord(int w, int c)
 {
     if (gPass != 2)
         return;
-    w = (word)w;
+    w = (uint16_t)w;
     printByte((w >> 8), c);
     printByte(w, c + 2);
 }
 
 void    putByte(int b)
 {
-    b = (byte)b;
+    b = (uint8_t)b;
     printByte(putB(b), oPostf);
 }
 
@@ -320,7 +323,7 @@ void    printAddress(int a)
 
 void    printChar(int c, int p)
 {
-    gLineBuf[p] = (byte)c;
+    gLineBuf[p] = (uint8_t)c;
 }
 
 void    initLine(void)
@@ -431,7 +434,7 @@ void    initNode(void)
     oLabel->right = oLabel->left = NULL;
 }
 
-void    defLabel(char *temp, byte f, byte gf)
+void    defLabel(char *temp, uint8_t f, uint8_t gf)
 {
     LBLTBL_T *lp;
     int     i;
@@ -524,26 +527,26 @@ static LBLTBL_T *refLabel(char *lbl)
 
 int     isSymbl(int c)
 {
-    c = (byte)c;
+    c = (uint8_t)c;
     return (isalnum(c) || (c == '_') || (c == '.') || (c == '@'));
 }
 
 int     isSymbl2(int c)
 {
-    c = (byte)c;
+    c = (uint8_t)c;
     return (isalpha(c) || (c == '_') || (c == '.'));
 }
 
 int     isSymbl3(int c)
 {
-    c = (byte)c;
+    c = (uint8_t)c;
     return (isalnum(c) || c == '_' || c == '.' || c == '@' || c == '$');
 }
 
-byte    getLabel(char *buf)
+uint8_t    getLabel(char *buf)
 {
-    byte    *p;
-    byte    gf;
+    uint8_t    *p;
+    uint8_t    gf;
 
     gf = 0;
     if (!isSymbl2(*gLinPtr))
@@ -571,7 +574,7 @@ void    skipSpace(void)
         gLinPtr++;
 }
 
-int     checkChar(byte c)
+int     checkChar(uint8_t c)
 {
     if (toupper(*gLinPtr) == c) {
         gLinPtr++;
@@ -580,7 +583,7 @@ int     checkChar(byte c)
     return 0;
 }
 
-int     checkCh_e(byte c)
+int     checkCh_e(uint8_t c)
 {
     static char buf[] = "Expected ' '.";
 
@@ -602,7 +605,7 @@ static  val_t   term(void)
     char    temp[LBLSIZE + 1];
     LBLTBL_T *lp;
     val_t   tv;
-    word    c;
+    uint16_t    c;
 
     switch (c = *gLinPtr++) {
     case '+':
@@ -626,7 +629,7 @@ static  val_t   term(void)
             return gCSectBase;
         break;
     case '\'':
-        if (isKanji(*(byte*)gLinPtr))
+        if (isKanji(*(uint8_t*)gLinPtr))
             goto DC;
         return *gLinPtr++;
     case '"':
@@ -772,7 +775,7 @@ static  val_t   expSHIFT(void)
 static  val_t   expCO(void)
 {
     val_t   val;
-    byte    c;
+    uint8_t    c;
 
     val = expSHIFT();
     for (;;) {
@@ -808,7 +811,7 @@ static  val_t   expCO(void)
 static  val_t   expEQEQ(void)
 {
     val_t   val;
-    byte    c;
+    uint8_t    c;
 
     val = expCO();
     for (;;) {
@@ -923,14 +926,14 @@ val_t   expression(void)
     return val;
 }
 
-byte    bytExpr(void)
+uint8_t    bytExpr(void)
 {
     val_t   val;
 
     val = expression();
     if (val < -128 || 255 < val)
-        error("Value does not fit in one byte.");
-    return (byte)(val & 0xff);
+        error("Value does not fit in one uint8_t.");
+    return (uint8_t)(val & 0xff);
 }
 
 val_t   invExpr(void)
@@ -944,17 +947,17 @@ val_t   invExpr(void)
 }
 
 #ifndef M6809
-void    imm4Expr(shrt *v1, shrt *v2)
+void    imm4Expr(int16_t *v1, int16_t *v2)
 {
     val_t   val;
 
     val = expression();
     if (checkChar(',')) {
-        *v1 = (shrt) val;
-        *v2 = (shrt) expression();
+        *v1 = (int16_t) val;
+        *v2 = (int16_t) expression();
     } else {
-        *v1 = (shrt) (val >> 16);
-        *v2 = (shrt) val;
+        *v1 = (int16_t) (val >> 16);
+        *v2 = (int16_t) val;
     }
 }
 
@@ -987,8 +990,8 @@ void    putCode(int grp, int mode)
 int     getReg(int r)
 {
     int reg;
-    byte    c, b, d;
-    byte   *l_p;
+    uint8_t    c, b, d;
+    uint8_t   *l_p;
 
     reg = 0;
     l_p = gLinPtr;
@@ -1251,7 +1254,7 @@ static void operand(int grp, int mode)
             postByte(0x9f);
             putWord(val);
         } else if ((mode & DIRECT) && (gByte_f
-            || ((word) (val - (gDp << 8)) <= 255 && gValid_f && !gWord_f))) {
+            || ((uint16_t) (val - (gDp << 8)) <= 255 && gValid_f && !gWord_f))) {
             putCode(grp, DIRECT_MODE);
             putByte(val - (gDp << 8));
         } else if (mode & EXTEND) {
@@ -1300,7 +1303,7 @@ void    ccr(void)
 #ifndef M6809
 void    load4(void)
 {
-    shrt    val, val2;
+    int16_t    val, val2;
 
     skipSpace();
     if (checkChar('#')) {
@@ -1363,7 +1366,7 @@ void    transfer(void)
 void    tfm(void)
 {
     int     r1, r2;
-    byte    md;
+    uint8_t    md;
 
     md = ' ';
     skipSpace();
@@ -1405,9 +1408,9 @@ void    tfm(void)
 
 #endif
 
-static void pshpul(byte u, byte h)
+static void pshpul(uint8_t u, uint8_t h)
 {
-    word    m1, m2;
+    uint16_t    m1, m2;
 
     m1 = m2 = 0;
     skipSpace();
@@ -1523,7 +1526,7 @@ void    lbranch(void)
     OPTBL_T shortop;
     val_t   val;
 #endif
-    byte    f;
+    uint8_t    f;
 
     skipSpace();
     f = checkChar('>');
@@ -1596,9 +1599,9 @@ void    os9svc(void)
 
 void    mod(void)
 {
-    word    os9hdr[4];
-    byte    sum, l;
-    byte    *p;
+    uint16_t    os9hdr[4];
+    uint8_t    sum, l;
+    uint8_t    *p;
 
     gOs9_f = 1;
     gObjLc = gLc = 0;
@@ -1614,7 +1617,7 @@ void    mod(void)
     checkCh_e(',');
     put1Byte(os9hdr[3] = (expression() & 0xFF));
     os9hdr[3] |= l * 0x100;
-    for (p = (byte *) os9hdr, sum = (byte)~0, l = 8; l-- > 0;) {
+    for (p = (uint8_t *) os9hdr, sum = (uint8_t)~0, l = 8; l-- > 0;) {
         sum ^= *p++;
     }
     put1Byte(sum & 0xff);
@@ -1644,7 +1647,7 @@ void    fdb(void)
         if (checkChar('"')) {
             while (((*gLinPtr != '"') || (*++gLinPtr == '"'))
                    && (*gLinPtr != '\n')) {
-                if (isKanji(*(byte*)gLinPtr)) {
+                if (isKanji(*(uint8_t*)gLinPtr)) {
                     put1Byte(*gLinPtr++);
                     put1Byte(*gLinPtr++);
                 } else {
@@ -1672,7 +1675,7 @@ void    fcb(void)
 #ifdef HE
         } else if (checkChar('#')) {
             for (;;) {
-                byte    b, c;
+                uint8_t    b, c;
                 b = *gLinPtr;
                 if (!isxdigit(b))
                     break;
@@ -1693,12 +1696,12 @@ void    fcb(void)
     } while (checkChar(','));
 }
 
-static void fccs(byte a)
+static void fccs(uint8_t a)
 {
-    byte    temp[MNEMOSIZE + 1];
-    byte *p;
-    byte    b;
-    byte    c;
+    uint8_t    temp[MNEMOSIZE + 1];
+    uint8_t *p;
+    uint8_t    b;
+    uint8_t    c;
 
     skipSpace();
     do {
@@ -1759,7 +1762,7 @@ void    rzb(void)
 
 void    rmb(void)
 {
-    word    base;
+    uint16_t    base;
     val_t   b;
 
     skipSpace();
@@ -1816,10 +1819,10 @@ void    set(void)
 
 void    org(void)
 {
-    word    origin;
+    uint16_t    origin;
 
     skipSpace();
-    origin = (word) invExpr();
+    origin = (uint16_t) invExpr();
     if (gStartAddr == 0xFFFF && gOrg_f == 0)
         gStartAddr = origin;
     if (gOs9_f) {
@@ -1833,7 +1836,7 @@ void    org(void)
             error("Invalid ORG operand.");
             return;
         } else if (gLc < origin) {
-            word    i;
+            uint16_t    i;
             i = origin - gLc;
             while (i-- > 0)
                 putB(0);
@@ -1878,11 +1881,11 @@ void    vsct(void)
 
 void    library(void)
 {
-    byte    fname[FNAMESZ + 1];
+    uint8_t    fname[FNAMESZ + 1];
     FILE   *fp;
-    byte    c;
+    uint8_t    c;
     int     i;
-    byte *p;
+    uint8_t *p;
 
     clearAddress();
     skipSpace();
@@ -1956,7 +1959,7 @@ int     popFile(void)
 
 void    endop(void)
 {
-    word    w;
+    uint16_t    w;
 
     clearAddress();
     fclose(gSrcFp);
@@ -2004,9 +2007,9 @@ void    page(void)
 #ifdef OPED
 void    none_d(void)
 {
-    byte *p;
-    byte i,l;
-    static byte tbl[16][5] = {
+    uint8_t *p;
+    uint8_t i,l;
+    static uint8_t tbl[16][5] = {
         {4,0x40,0x50,0x82,0x00},    /* negd 0x1040 */
         {0,0,0,0,0},
         {0,0,0,0,0},
@@ -2031,12 +2034,12 @@ void    none_d(void)
         return;
     }
  #endif
-    p = (byte *)(tbl[gOprPtr->opcode - 0x40]);
+    p = (uint8_t *)(tbl[gOprPtr->opcode - 0x40]);
     for (i = 10,l = *p++; l--; i += 2)
         printByte(putB(*p++),i);
 }
 
-static void putOped(byte o1, byte d1, byte o2, byte d2)
+static void putOped(uint8_t o1, uint8_t d1, uint8_t o2, uint8_t d2)
 {
     put1Byte(gOprPtr->opcode + o1);
     put1Byte(d1);
@@ -2044,7 +2047,7 @@ static void putOped(byte o1, byte d1, byte o2, byte d2)
     put1Byte(d2);
 }
 
-static void putOpedR(byte d1, byte d2, int reg)
+static void putOpedR(uint8_t d1, uint8_t d2, int reg)
 {
     putOped(0x40+0x20, index0(d1,reg), 0x20, index0(d2,reg));
 }
@@ -2132,7 +2135,7 @@ void    oped(void)
                 }
             }
         } else if ((gByte_f ||
-                ((word)(val - (gDp << 8)) <= 254 && gValid_f && !gWord_f))) {
+                ((uint16_t)(val - (gDp << 8)) <= 254 && gValid_f && !gWord_f))) {
             putOped(0x40+0x10, val - (gDp << 8) + 1, 0x10, val - (gDp << 8));
         } else {
             put1Byte(gOprPtr->opcode + 0x30 + 0x40);
@@ -2148,7 +2151,7 @@ void    oped(void)
 #ifdef OPEQ
 void    none_wq(void)
 {
-    static byte tbl[] = {
+    static uint8_t tbl[] = {
         0x10,0xed,0x7c,0,                   /*  tstq  stq -4,s; */
         0x10,0x4f,0x10,0x5f,                /*  clrq  clrw;clrd */
         0x10,0x53,0x10,0x43,                /*  comq  comw;comd */
@@ -2167,8 +2170,8 @@ void    none_wq(void)
                                             /*  negq  comd;comw;incw;bne *+4;incd*/
         0
     };
-    byte *p;
-    byte l;
+    uint8_t *p;
+    uint8_t l;
 
     p = tbl + gOprPtr->prefix;
     l = gOprPtr->opcode;
@@ -2176,7 +2179,7 @@ void    none_wq(void)
         put1Byt2(*p++);
 }
 
-static void putOpeqR(word *op, byte d1, byte d2, int reg)
+static void putOpeqR(uint16_t *op, uint8_t d1, uint8_t d2, int reg)
 {
     put1Word(op[1] + 0x20);
     put1Byte(index0(d1,reg));
@@ -2186,9 +2189,9 @@ static void putOpeqR(word *op, byte d1, byte d2, int reg)
 
 void        opeq(void)  /* addq  subq */
 {
-    shrt val, val2;
-    shrt reg, i;
-    word op[2];
+    int16_t val, val2;
+    int16_t reg, i;
+    uint16_t op[2];
 
     op[0] = gOprPtr->prefix + 0x1000;   /* d */
     op[1] = gOprPtr->opcode + 0x1000;   /* w */
@@ -2286,7 +2289,7 @@ void        opeq(void)  /* addq  subq */
                     }
                 }
             }
-        } else if ((gByte_f || ((word)(val - (gDp << 8)) <= 253 && gValid_f && !gWord_f))) {
+        } else if ((gByte_f || ((uint16_t)(val - (gDp << 8)) <= 253 && gValid_f && !gWord_f))) {
             put1Word(op[1] + 0x10);
             put1Byte(val - (gDp << 8) + 2);
             put1Word(op[0] + 0x10);
@@ -2306,7 +2309,7 @@ void        opeq(void)  /* addq  subq */
 /*---------------------------------------------------------------------------*/
 static OPTBL_T *oOpHash[256];
 
-static int  hash(byte *s)
+static int  hash(uint8_t *s)
 {
     int h;
 
@@ -2316,7 +2319,7 @@ static int  hash(byte *s)
     return (h & 0xff);
 }
 
-OPTBL_T *srchOpTbl(byte *s)
+OPTBL_T *srchOpTbl(uint8_t *s)
 {
     OPTBL_T *q;
 
@@ -2350,7 +2353,7 @@ void    initOpTbl(void)
 
 
 /*---------------------------------------------------------------------------*/
-static void co_if(byte f)
+static void co_if(uint8_t f)
 {
     int val;
 
@@ -2416,9 +2419,9 @@ static void co_if(byte f)
 
 static int  getMnemonic(void)
 {
-    static byte temp[MNEMOSIZE + 1];
-    byte    *p;
-    byte    *pp;
+    static uint8_t temp[MNEMOSIZE + 1];
+    uint8_t    *p;
+    uint8_t    *pp;
     OPTBL_T *q;
 
     skipSpace();
@@ -2462,16 +2465,16 @@ static int  getMnemonic(void)
     return 0;
 }
 
-static byte *getLine(void)
+static uint8_t *getLine(void)
 {
     gLinPtr = gLineBuf + LINEHEAD;
     return fgets(gLinPtr, MAXCHAR - LINEHEAD, gSrcFp);
 }
 
-static byte oneLine(void)
+static uint8_t oneLine(void)
 {
-    byte temp[LBLSIZE + 1];
-    byte c,f,gf;
+    uint8_t temp[LBLSIZE + 1];
+    uint8_t c,f,gf;
 
     while (getLine() == NULL) {
         fclose(gSrcFp);
@@ -2515,7 +2518,7 @@ static void initPass(void)
  #endif
     gFile_sp = gLineNo = gErrors = gP1_sp = gCo_sp = gObjPos = gRmb_sp =
     gObjCnt = gLc = gDp = gObjLc =
-    gEOF_f = gGrp = gCSectSw = gPSect_f = gOrg_f = (byte)0;
+    gEOF_f = gGrp = gCSectSw = gPSect_f = gOrg_f = (uint8_t)0;
  #ifdef OPTIM
     if (gVerbos_f)
         fprintf(STDERR, gPass == -1 ? "<pass 1.5>\n" : "<pass %d>\n", gPass);
@@ -2528,7 +2531,7 @@ static void initPass(void)
 static void assemble(int argc, char **argv)
 {
     int  i;
-    byte f;
+    uint8_t f;
 
     initPass();
  #ifdef OPTS_FBAS
@@ -2575,7 +2578,7 @@ static void assemble(int argc, char **argv)
                         ,gOA_sp,gOAStk[gOA_sp].ll,gOAStk[gOA_sp].nn,gLineNo));
                     oa_putStr(gLineBuf+LINEHEAD,gOAStk[gOA_sp++].nn);
                 } else if (gPass == -2) {
-                    word  bb;
+                    uint16_t  bb;
 
                     bb = gObjCnt;
                     gOAchk_f = 0;
@@ -2617,9 +2620,9 @@ static void assemble(int argc, char **argv)
 
 /*---------------------------------------------------------------------------*/
 
-static word xstrtoui(byte *p,byte **q)
+static uint16_t xstrtoui(uint8_t *p,uint8_t **q)
 {
-    word w;
+    uint16_t w;
 
     for (w = 0; isxdigit(*p); p++)
         w = w * 16 +
@@ -2637,7 +2640,7 @@ static void getModNam(char *modnam, char *fnam)
     char *s;
 
     for (ep = NULL, s = fnam, i = MODNAMSZ; *s != '\0' && i--; ++s) {
-        if (isKanji(*(byte*)s)) {
+        if (isKanji(*(uint8_t*)s)) {
             if (*(++s) == '\0')
                 break;
         } else if (*s == '/'
@@ -2659,7 +2662,7 @@ static void getModNam(char *modnam, char *fnam)
 
 /*---------------------------------------------------------------------------*/
 static char *oLstFName, *oObjFName;
-static byte oList_f, oSymbol_f;
+static uint8_t oList_f, oSymbol_f;
 
 static void printLog(void)
 {
@@ -2683,13 +2686,13 @@ static void usage(void)
     fprintf(STDERR,"usage: %s [-opts] src_file...\n",gCmdName);
     e_puts(" -?  Show this help\n");
     e_puts(" -9  OS-9 standard ASM mode   -8  6809 mode\n");
-    e_puts(" -s  Show symbol table        -v  Show progress\n");
-    e_puts(" -u  Case-sensitive labels    -n  Case-insensitive labels\n");
-    e_puts(" -q  Allow address gaps caused by ORG or RMB\n");
     e_puts(" -p  Force < and > to select 8- and 16-bit indexed offsets\n");
   #ifdef OPTIM
     e_puts(" -y  Replace long branches with short branches when possible\n");
   #endif
+    e_puts(" -q  Allow address gaps caused by ORG or RMB\n");
+    e_puts(" -u  Case-sensitive labels    -n  Case-insensitive labels\n");
+    e_puts(" -s  Show symbol table        -v  Show progress\n");
     e_puts(" -m<mod_name>  Set the $modnam string variable\n");
     e_puts(" -d<LBL>[=Val] Define LBL as Val (default: 1)\n");
     e_puts(" -l[lst_file]  Write assembly listing to lst_file\n");
@@ -2758,10 +2761,10 @@ static void optsDefLbl(int argc,char **argv)
     }
 }
 
-static void options(byte *p)
+static void options(uint8_t *p)
 {
-    byte *pp;
-    byte c;
+    uint8_t *pp;
+    uint8_t c;
 
     while ((c = *p) != '\0') {
         if (*++p == '=')
@@ -2821,7 +2824,7 @@ static void options(byte *p)
             if (*p)
                 gErrFName = p;
             else
-                gErrFName = (byte *)(~0);
+                gErrFName = (uint8_t *)(~0);
             goto LOOPOUT;
       #endif
       #ifdef OA
@@ -2941,7 +2944,7 @@ int main(int argc, char *argv[])
             (gObjct == OB_SFMT) ? "s" : "o");
     }
   #ifdef OE
-    if (gErrFName == (byte *)(~0)) {
+    if (gErrFName == (uint8_t *)(~0)) {
         gErrFName = mallocE(FNAMESZ+1);
         FIL_ChgExt(strcpy(gErrFName, gSrcFName),"err");
     }

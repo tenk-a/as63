@@ -10,18 +10,21 @@
  #define EXTERN extern
 #endif
 
-typedef unsigned char  byte;/* 1ﾊﾞｲﾄ符号無整数型 */
-typedef unsigned short word;/* 2ﾊﾞｲﾄ符号無整数型 */
-typedef short   shrt;       /* 2ﾊﾞｲﾄ符号付整数型 */
-#define __(x)   x
+#if __STDC_VERSION__ >= 199901L || _MSC_VER >= 1600
+#include <stdint.h>
+#else
+typedef unsigned char   uint8_t;    /* 1ﾊﾞｲﾄ符号無整数型 */
+typedef unsigned short  uint16_t;   /* 2ﾊﾞｲﾄ符号無整数型 */
+typedef short           int16_t;    /* 2ﾊﾞｲﾄ符号付整数型 */
+#endif
 
-#define STDERR      stderr
-#define isKanji(c)  ((unsigned)((c)^0x20) - 0xa1 < 0x3cU)
-#define isKanji2(c) ((byte)(c) >= 0x40 && (byte)(c) <= 0xfc && (c) != 0x7f)
-#define toXDigit(c) (isdigit(c) ? (c - '0') : (toupper(c) - 'A' + 10))
-#define e_puts(s)   fprintf(STDERR,s)
+#define __(x)           x
+
+#define STDERR          stderr
+#define toXDigit(c)     (isdigit(c) ? (c - '0') : (toupper(c) - 'A' + 10))
+#define e_puts(s)       fprintf(STDERR,s)
 #ifndef OS9
-#define stpcpy(d,s) (strcpy((d),(s)),(d)+strlen(d))
+#define stpcpy(d,s)     (strcpy((d),(s)),(d)+strlen(d))
 #endif
 
 #ifdef  DEBUG
@@ -116,108 +119,108 @@ typedef int  val_t;             /* int<->long  定数演算のint/long化     */
 
 
 /* 条件アセンブラ */
-    #define CO_ELSE     1
-    #define CO_ENDC     2
-    #define CO_IFP1     3
-    #define CO_IF       4
-    #define CO_IFN      5
-    #define CO_ELIF     6
-    #define CO_IFGE     7
-    #define CO_IFGT     8
-    #define CO_IFLE     9
-    #define CO_IFLT     10
+#define CO_ELSE         1
+#define CO_ENDC         2
+#define CO_IFP1         3
+#define CO_IF           4
+#define CO_IFN          5
+#define CO_ELIF         6
+#define CO_IFGE         7
+#define CO_IFGT         8
+#define CO_IFLE         9
+#define CO_IFLT         10
 
 /* none_wq */
-#define WQ_TSTQ 0
-#define WQ_CLRQ (1*4)
-#define WQ_COMQ (2*4)
-#define WQ_LSRQ (3*4)
-#define WQ_ASRQ (4*4)
-#define WQ_RORQ (5*4)
-#define WQ_ROLQ (6*4)
-#define WQ_LSLW (7*4)
-#define WQ_NEGW (8*4)
-#define WQ_ASRW (9*4)
-#define WQ_LSLQ (10*4+2)
-#define WQ_INCQ (12*4)
-#define WQ_DECQ (13*4+2)
-#define WQ_NEGQ (15*4+2)
+#define WQ_TSTQ         0
+#define WQ_CLRQ         (1*4)
+#define WQ_COMQ         (2*4)
+#define WQ_LSRQ         (3*4)
+#define WQ_ASRQ         (4*4)
+#define WQ_RORQ         (5*4)
+#define WQ_ROLQ         (6*4)
+#define WQ_LSLW         (7*4)
+#define WQ_NEGW         (8*4)
+#define WQ_ASRW         (9*4)
+#define WQ_LSLQ         (10*4+2)
+#define WQ_INCQ         (12*4)
+#define WQ_DECQ         (13*4+2)
+#define WQ_NEGQ         (15*4+2)
 
 /* 出力するファイルの種類 */
-#define OB_BIN      1
-#define OB_SFMT     2
-/*#define OBJ_ROF   */
-#define OB_ASM      4
+#define OB_BIN          1
+#define OB_SFMT         2
+/*#define OBJ_ROF */
+#define OB_ASM          4
 
 /* opcode table */
 typedef struct optbl_t {
-        char *mnemonic;
-        byte prefix;
-        byte opcode;
-        byte option;
-        void (*process)(void);
+        char   *mnemonic;
+        uint8_t prefix;
+        uint8_t opcode;
+        uint8_t option;
+        void  (*process)(void);
         struct optbl_t *nl;
 } OPTBL_T;
 
 /* label table */
 typedef struct lbltbl_t {
-        int    line;
-        val_t  value;
-        struct lbltbl_t *left,*right;
-        char   flg;         /* 0:used  1:EQU  2:SET */
-        byte   grp;
-        char   name[LBLSIZE + 1];
+        int     line;
+        val_t   value;
+        struct lbltbl_t *left, *right;
+        char    flg;           /* 0:used  1:EQU  2:SET */
+        uint8_t grp;
+        char    name[LBLSIZE + 1];
 } LBLTBL_T;
 
 
 /*-------------------------------- var -------------------------------------*/
 #ifdef DEBUG
- EXTERN byte gDebug_f;
+ EXTERN uint8_t gDebug_f;
 #endif
 
 /* アセンブル */
-EXTERN FILE *gSrcFp;
+EXTERN FILE    *gSrcFp;
 EXTERN OPTBL_T *gOprPtr;
-EXTERN int  gErrors, gPass;
-EXTERN int  gImVal, gIndirect;
-EXTERN word gDp;
-EXTERN word gLc, gLinLc, gObjLc;
-EXTERN byte gValid_f, gEOF_f;
-EXTERN byte gOs9_f, gOrg_f, gOrgSFmt_f;
-EXTERN byte gByte_f, gWord_f, gIdxOfs_f;
-EXTERN char gModName[MODNAMSZ+1];
+EXTERN int      gErrors, gPass;
+EXTERN int      gImVal, gIndirect;
+EXTERN uint16_t gDp;
+EXTERN uint16_t gLc, gLinLc, gObjLc;
+EXTERN uint8_t  gValid_f, gEOF_f;
+EXTERN uint8_t  gOs9_f, gOrg_f, gOrgSFmt_f;
+EXTERN uint8_t  gByte_f, gWord_f, gIdxOfs_f;
+EXTERN char     gModName[MODNAMSZ+1];
 #ifndef M6809
- EXTERN byte gM68_f;
+ EXTERN uint8_t gM68_f;
 #endif
 
 /* object出力 */
-EXTERN FILE *gObjFp;
-EXTERN word gObjSiz, gObjCnt;
-EXTERN word gStartAddr, gEntryAddr;
-EXTERN byte gObjct;
-EXTERN int  gObjPos;
-EXTERN int  gObjBufSz;
-EXTERN byte gObjBuf[OBJSIZE];
-EXTERN byte gCrcBuf[3];
-EXTERN int  gRmb_sp,gRmb_f;
+EXTERN FILE    *gObjFp;
+EXTERN uint16_t gObjSiz,    gObjCnt;
+EXTERN uint16_t gStartAddr, gEntryAddr;
+EXTERN uint8_t  gObjct;
+EXTERN int      gObjPos;
+EXTERN int      gObjBufSz;
+EXTERN uint8_t  gObjBuf[OBJSIZE];
+EXTERN uint8_t  gCrcBuf[3];
+EXTERN int      gRmb_sp,    gRmb_f;
 #ifdef OPTS_FBAS
- EXTERN byte gFBasic_f;
+ EXTERN uint8_t gFBasic_f;
 #endif
 
 /* ラベル */
 EXTERN LBLTBL_T *gLblPtr;
-EXTERN int  gLabels, gLineNo;
-EXTERN word gCSectBase;
-EXTERN byte gGrp, gCSectSw;
-EXTERN byte gUpLo_f, gPSect_f;
+EXTERN int      gLabels,  gLineNo;
+EXTERN uint16_t gCSectBase;
+EXTERN uint8_t  gGrp,     gCSectSw;
+EXTERN uint8_t  gUpLo_f,  gPSect_f;
 
 /* リスト、メッセージ表示 */
-EXTERN char *gCmdName;
-EXTERN int  gList;
-EXTERN FILE *gLstFp;
-EXTERN char *gLinPtr;
-EXTERN byte gVerbos_f;
-EXTERN char gLineBuf[MAXCHAR+2];
+EXTERN char   *gCmdName;
+EXTERN int     gList;
+EXTERN FILE   *gLstFp;
+EXTERN char   *gLinPtr;
+EXTERN uint8_t gVerbos_f;
+EXTERN char    gLineBuf[MAXCHAR+2];
 #ifdef OE
  EXTERN FILE *gErrFp;
  EXTERN char *gErrFName;
@@ -227,8 +230,8 @@ EXTERN char gLineBuf[MAXCHAR+2];
 
 #ifdef OPTIM
  /* ｵﾌﾟﾃｨﾏｲｽﾞ(long->short branch)用 */
- EXTERN int *gOptStk, gOpt_sp, gOptChg, gOptCount;
- EXTERN byte gOpt_f;
+ EXTERN int    *gOptStk, gOpt_sp, gOptChg, gOptCount;
+ EXTERN uint8_t gOpt_f;
 #endif
 
 /* 'if'(条件ｱｾﾝﾌﾞﾙ)の管理 */
@@ -239,8 +242,8 @@ EXTERN int  gP1Stk[GP1_MAX+1];
 
 /* use for library inclusion */
 EXTERN FILE *gFileStk[MAXLIB];
-EXTERN int  gFile_sp;
-EXTERN char gSrcFName[FNAMESZ+1];
+EXTERN int   gFile_sp;
+EXTERN char  gSrcFName[FNAMESZ+1];
 #ifdef FILSTK2
  EXTERN int  gSrcLine;
  EXTERN struct FILSTK2_tag {
@@ -254,12 +257,12 @@ EXTERN char gSrcFName[FNAMESZ+1];
 
 #ifdef OA  /* -a ｵﾌﾟｼｮﾝ */
  typedef struct {
-     int  ll;
-     byte nn;
+     int     ll;
+     uint8_t nn;
  } OATBL_T;
  EXTERN OATBL_T *gOAStk;
- EXTERN byte gOAchk_f;
- EXTERN int  gOA_sp;
+ EXTERN uint8_t  gOAchk_f;
+ EXTERN int      gOA_sp;
  void oa_putStr(char *, int);
 #endif
 
