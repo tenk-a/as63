@@ -25,7 +25,7 @@ FILE    *fopenE(char *fname, char *atr)
     FILE   *fp;
 
     if ((fp = fopen(fname, atr)) == NULL) {
-        fprintf(STDERR, "%s: %s をオープンできない\n", gCmdName, fname);
+        fprintf(STDERR, "%s: File open error. %s.\n", gCmdName, fname);
         exit(1);
     }
     return fp;
@@ -36,7 +36,7 @@ void   *mallocE(size_t siz)
     void   *p;
 
     if ((p = malloc(siz)) == NULL) {
-        fprintf(STDERR, "%s:メモリが足りません\n", gCmdName);
+        fprintf(STDERR, "%s: Not enough memory.\n", gCmdName);
         exit(1);
     }
     return p;
@@ -44,7 +44,7 @@ void   *mallocE(size_t siz)
 
 void    errPrg(char * s)
 {
-    fprintf(STDERR, "%s:BUGが発生(%s)\n", gCmdName, s);
+    fprintf(STDERR, "%s:BUG(%s)\n", gCmdName, s);
     exit(1);
 }
 
@@ -57,7 +57,7 @@ void    error(char *s)
     if (gErrFName && gErrors - 1 == 0) {
         gErrFp = fopen(gErrFName, "w");
         if (gErrFp == NULL) {
-            fprintf(STDERR, "%s: %s をオープンできない\n", gCmdName, gErrFName);
+            fprintf(STDERR, "%s: File open error. %s\n", gCmdName, gErrFName);
             gErrFp = STDERR;
         }
     }
@@ -441,7 +441,7 @@ void    defLabel(char *temp, byte f, byte gf)
         if ((i = strcmp(temp, lp->name)) == 0) {
             if (lp->grp == 0 || lp->grp == gGrp) {
                 if (lp->line != gLineNo && (f == 1 || lp->flg == 1))
-                    errLbl("ラベルの多重定義", temp);
+                    errLbl("Duplicate label definition", temp);
                 (gLblPtr = lp)->value = gLinLc;
                 if (lp->flg == 0) {
                     lp->flg = f;
@@ -547,7 +547,7 @@ byte    getLabel(char *buf)
 
     gf = 0;
     if (!isSymbl2(*gLinPtr))
-        error("ラベル名がおかしい");
+        error("Invalid label name.");
     for (p = buf; p < buf + LBLSIZE; p++, gLinPtr++) {
         *p = *gLinPtr;
         if (!isSymbl3(*p))
@@ -582,13 +582,13 @@ int     checkChar(byte c)
 
 int     checkCh_e(byte c)
 {
-    static char buf[] = "必要な' 'がない";
+    static char buf[] = "Expected ' '.";
 
     if (toupper(*gLinPtr) == c) {
         gLinPtr++;
         return 1;
     }
-    buf[7] = c;
+    buf[10] = c;
     error(buf);
     return 0;
 }
@@ -675,7 +675,7 @@ static  val_t   term(void)
             gOAchk_f = 1;
         else
 #endif
-            errLbl("ラベルが未定義", temp);
+            errLbl("Undefined label", temp);
     /* DEBMSGF((STDERR,"LABEL:%s\n",temp)); */
         return (gValid_f = 0);
     } else if (isdigit(c)) {
@@ -695,7 +695,7 @@ static  val_t   term(void)
         /* DEBMSGF((STDERR,"*gLinPtr : %c(%02x) *%lx\t[digit]\n", gLinPtr,*gLinPtr,gLinPtr)); */
         return tv;
     } else {
-        error("式中に邪魔な文字がある");
+        error("Invalid character in expression.");
         DEBMSGF((STDERR, "*gLinPtr : %c(%02x)\t[term()]\n", *gLinPtr, *gLinPtr));
         return (gValid_f = 0);
     }
@@ -717,7 +717,7 @@ static  val_t   expMUL(void)
             gLinPtr++;
             v = term();
             if (v == 0) {
-                error("0で割算を行った");
+                error("Division by zero.");
                 v = 1;
             }
             if (c == '/')
@@ -916,7 +916,7 @@ val_t   expression(void)
     case '\n':
         break;
     default:
-        error("邪魔な文字がある");
+        error("Unexpected character.");
         DEBMSGF((STDERR, "*gLinPtr : %c(%02x)\t[expression()]\n",
                  *gLinPtr, *gLinPtr));
     }
@@ -929,7 +929,7 @@ byte    bytExpr(void)
 
     val = expression();
     if (val < -128 || 255 < val)
-        error("値が1バイトに納まらない");
+        error("Value does not fit in one byte.");
     return (byte)(val & 0xff);
 }
 
@@ -939,7 +939,7 @@ val_t   invExpr(void)
 
     r = expression();
     if (!gValid_f)
-        error("定数式の値が定まらない");
+        error("Constant expression is unresolved.");
     return r;
 }
 
@@ -1035,14 +1035,14 @@ int     getReg(int r)
     }
 #ifndef M6809
     if (gM68_f && (reg & X63REG))
-        error("6809モードでE,F,W,Vレジスタが使われた");
+        error("Register E, F, W, or V used in 6809 mode.");
 #endif
     if (r & reg)
         return reg;
     if (r == OFFSETRG)
         gLinPtr = l_p;
     else
-        error("レジスタの指定がおかしい");
+        error("Invalid register.");
     return 0;
 }
 
@@ -1069,7 +1069,7 @@ int     regNo(int r)
     case F: return 15;
 #endif
     default:
-        error("レジスタの指定がおかしい");
+        error("Unknown register.");
         return -1;
     }
 }
@@ -1115,7 +1115,7 @@ int     index0(int frame, int reg)
             frame = 0xaf;
             break;
         default:
-            error("インデックス・モードの指定がおかしい");
+            error("Invalid indexed addressing mode.");
         }
         return (frame ^ (gIndirect ? 0x1f : 0));
 #endif
@@ -1134,7 +1134,7 @@ static void indexM(int frame, int reg)
 static void operand(int grp, int mode)
 {
     val_t val;
-    int     reg;
+    int   reg;
 
     skipSpace();
     if ((mode & (IMMEDIATE | IMMEDIATE2)) && checkChar('#')) {
@@ -1152,7 +1152,7 @@ static void operand(int grp, int mode)
             if (checkChar('-'))
                 indexM(0x83, getReg(INDEXREG | W));
             else if (gIndirect)
-                error("[,-R] は指定できない");
+                error("[,-R] is not allowed.");
             else
                 indexM(0x82, getReg(INDEXREG));
         } else {
@@ -1161,9 +1161,9 @@ static void operand(int grp, int mode)
                 if (checkChar('+'))
                     indexM(0x81, reg);
                 else if (gIndirect)
-                    error("[,R+] は指定できない");
+                    error("[,R+] is not allowed.");
                 else if (reg == W)
-                    error(",w+ という指定はできない");
+                    error(",W+ is not allowed.");
                 else
                     indexM(0x80, reg);
             } else
@@ -1258,7 +1258,7 @@ static void operand(int grp, int mode)
             putCode(grp, EXTEND_MODE);
             putWord(val);
         } else {
-            error("アドレッシング・モードの指定がおかしい");
+            error("Invalid addressing mode.");
         }
     }
     if (gIndirect)
@@ -1353,7 +1353,7 @@ void    transfer(void)
     if ((r2 = regNo(ALLREG | X63REG)) < 0)
         goto ERR;
     if ((r1 ^ r2) & 0x08 && r1 != 0x0c && r2 != 0x0c)
-        error("違うサイズのレジスタを組合せている");
+        error("Registers have different sizes.");
     putByte((r1 << 4) | r2);
   ERR:
     return;
@@ -1400,7 +1400,7 @@ void    tfm(void)
   ER:
     put1Word(0);
     put1Byte(0);
-    error("tfm の指定がおかしい");
+    error("Invalid TFM operand.");
 }
 
 #endif
@@ -1441,12 +1441,12 @@ static void pshpul(byte u, byte h)
             break;
         case S:
             if (u == 0)
-                error("pshs,pulsでsレジスタが指定されてる");
+                error("Register S is not allowed in PSHS or PULS.");
             m2 = 0x40;
             break;
         case U:
             if (u)
-                error("pshu,puluでuレジスタが指定されてる");
+                error("Register U is not allowed in PSHU or PULU.");
             m2 = 0x40;
             break;
         case PC:
@@ -1461,7 +1461,7 @@ static void pshpul(byte u, byte h)
             break;
         }
         if (m1 & m2)
-            error("同じレジスタが指定されている");
+            error("The same register is specified more than once.");
         m1 |= m2;
     } while (checkChar(','));
 #ifdef OPEQ
@@ -1512,7 +1512,7 @@ void    branch(void)
 
     skipSpace();
     if ((val = expression() - gLinLc - 2) < -128 || 127 < val)
-        error("ショート・ブランチがとどかない");
+        error("Short branch target is out of range.");
     putCode(GROUP0, NO_MODE);
     putByte(val);
 }
@@ -1628,7 +1628,7 @@ void    mod(void)
 
 void    emod(void)
 {
- /* if (gOs9_f == 0) error("modがないのにemodがある"); */
+ /* if (gOs9_f == 0) error("EMOD without MOD."); */
     gOs9_f = 0;
     put1Byte(~gCrcBuf[0]);
     put1Byte(~gCrcBuf[1]);
@@ -1678,7 +1678,7 @@ void    fcb(void)
                     break;
                 c = *++gLinPtr;
                 if (!isxdigit(c)) {
-                    error("fcbでの#指定は偶数桁でないといけない");
+                    error("FCB hexadecimal data after # must have an even number of digits.");
                     break;
                 }
                 put1Byte(toXDigit(b) * 16 + toXDigit(c));
@@ -1713,7 +1713,7 @@ static void fccs(byte a)
                     put1Byte(b);
                 }
             } else {
-                error("fccの指定がおかしい");
+                error("Invalid FCC operand.");
             }
         } else if (isSymbl3(c) || c == '%' || c == '(') {
             --gLinPtr;
@@ -1721,7 +1721,7 @@ static void fccs(byte a)
         } else {
             while ((b = *gLinPtr++) != c) {
                 if (b == '\n') {
-                    error("終わりのデリミタがない");
+                    error("Missing closing delimiter.");
                     return;
                 } else {
                     if (a && *gLinPtr == c)
@@ -1830,7 +1830,7 @@ void    org(void)
             flushObj();
             gObjLc = gLc = origin;
         } else if (gLc > origin) {
-            error("orgの指定がおかしい");
+            error("Invalid ORG operand.");
             return;
         } else if (gLc < origin) {
             word    i;
@@ -1861,7 +1861,7 @@ void    endsct(void)
     else if (gPSect_f)
         gPSect_f = 0;
     else
-        error("endsectがあまってる");
+        error("ENDSECT without a matching section.");
 }
 
 void    psct(void)
@@ -1910,7 +1910,7 @@ void    library(void)
         if (strcmp(fname, "INC") == 0) {
             p = stpcpy(fname, gIncDirName);
         } else {
-            error("includeするファイル名がおかしい");
+            error("Invalid include file name.");
         }
     }
 #endif
@@ -1920,7 +1920,7 @@ void    library(void)
             break;
     }
     if (i == 0) {
-        error("ファイル名が長すぎる");
+        error("File name is too long.");
         return;
     }
     *p = '\0';
@@ -1929,7 +1929,7 @@ void    library(void)
     DEBMSGF((STDERR, "include %s  (#%d)\n", fname, gFile_sp + 1));
     fp = fopenE(fname, "r");
     if (gFile_sp >= MAXLIB) {
-        error("includeするファイルのネストが深する");
+        error("Include nesting is too deep.");
         exit(1);
     }
 #ifdef FILSTK2
@@ -2388,27 +2388,27 @@ static void co_if(byte f)
         }
     case CO_ELSE:
         switch (gCoStk[gCo_sp]) {
-        case  0: error("elseかelsifがあまっている");break;
+        case  0: error("ELSE or ELSIF without a matching IF.");break;
         case -1: gCoStk[gCo_sp] = 1; break;
         case  1: gCoStk[gCo_sp] = -2; break;
-        case  2: error("else,elsifがifp1の対になっている");
+        case  2: error("ELSE or ELSIF cannot be paired with IFP1.");
         }
         break;
     case CO_ENDC:
         if (gCoStk[gCo_sp] == 2) {
             if (gP1_sp > GP1_MAX)
-                error("ifp1の数が多すぎます");
+                error("Too many IFP1 directives.");
             gP1Stk[gP1_sp++] = gLineNo;
         } else if (gCoStk[gCo_sp] == -3) {
             gLineNo = gP1Stk[gP1_sp++];
         }
         gCoStk[gCo_sp] = 0;
         if (--gCo_sp < 0)
-            error("endifがあまってる");
+            error("ENDIF without a matching IF.");
  #ifdef DEBUG
         break;
     default:
-        error("co_if()の引数がおかしい");
+        error("Invalid argument to co_if().");
  #endif
     }
 }
@@ -2425,7 +2425,7 @@ static int  getMnemonic(void)
     if (*gLinPtr == '\n' || *gLinPtr == '\0')
         return 0;
     if (!isSymbl2(*gLinPtr)) {
-        error("ニーモニックの指定がおかしい");
+        error("Invalid mnemonic.");
         DEBMSGF((STDERR, "*gLinPtr : %c\n", *gLinPtr));
         return 0;
     }
@@ -2447,7 +2447,7 @@ static int  getMnemonic(void)
     if ((q = srchOpTbl(temp)) != NULL) {
  #ifndef M6809
         if (gM68_f && (q->option & 0x01))
-            error("6809モードで6309命令が使われた");
+            error("6309 instruction used in 6809 mode.");
  #endif
         if (q->process == NULL) {
             co_if(q->prefix);
@@ -2458,7 +2458,7 @@ static int  getMnemonic(void)
         return 1;
     }
  ERR:
-    error("ニーモニックでない名前");
+    error("Unknown mnemonic.");
     return 0;
 }
 
@@ -2563,9 +2563,9 @@ static void assemble(int argc, char **argv)
                             && strcmp(gOprPtr->mnemonic,"FCC")
                             && strcmp(gOprPtr->mnemonic,"FCS")
                             && strcmp(gOprPtr->mnemonic,"RZB"))
-                            error("vsect～endsectで使えない命令がある");
+                            error("Instruction is not allowed between VSECT and ENDSECT.");
                     } else {
-                        error("csect～endsectではrmb以外は使えない");
+                        error("Only RMB is allowed between CSECT and ENDSECT.");
                     }
                 }
  #ifdef OA
@@ -2586,7 +2586,7 @@ static void assemble(int argc, char **argv)
                         DEBMSGF((STDERR,"OA#-2:line=%d  size=%d\n",
                             gOAStk[gOA_sp].ll,gOAStk[gOA_sp].nn));
                         if (++gOA_sp >= OA_MAX)
-                            error("-aオプション時のアセンブルしない行が多すぎる");
+                            error("Too many unassembled lines for the -a option.");
                     }
                 } else
  #endif
@@ -2594,7 +2594,7 @@ static void assemble(int argc, char **argv)
                     gOprPtr->process();
                 }
                 if (*gLinPtr != '\n' && !isspace(*gLinPtr)) {
-                    error("邪魔な文字がある");
+                    error("Unexpected character.");
                     DEBMSGF((STDERR, "*gLinPtr : %c(%02x)\t[asemmble()]\n",
                         *gLinPtr,*gLinPtr));
                 }
@@ -2681,44 +2681,44 @@ static void printLog(void)
 static void usage(void)
 {
     fprintf(STDERR,"usage: %s [-opts] src_file...\n",gCmdName);
-    e_puts(" -?  ヘルプ\n");
-    e_puts(" -9  os9標準asmモード            -8  6809モード\n");
-    e_puts(" -s  シンボル・テーブルを表示    -v  途中経過の表示\n");
-    e_puts(" -u  ラベルの大小文字を区別する  -n  ラベルの大小文字を区別しない\n");
-    e_puts(" -q  org,rmbでアドレスが飛び飛びになるのを許す\n");
-    e_puts(" -p  <,>8,16bitオフセット強制(未指定: <>付でも5bit自動判定)\n");
+    e_puts(" -?  Show this help\n");
+    e_puts(" -9  OS-9 standard ASM mode   -8  6809 mode\n");
+    e_puts(" -s  Show symbol table        -v  Show progress\n");
+    e_puts(" -u  Case-sensitive labels    -n  Case-insensitive labels\n");
+    e_puts(" -q  Allow address gaps caused by ORG or RMB\n");
+    e_puts(" -p  Force < and > to select 8- and 16-bit indexed offsets\n");
   #ifdef OPTIM
-    e_puts(" -y  ロング・ブランチを可能ならショート・ブランチに置換\n");
+    e_puts(" -y  Replace long branches with short branches when possible\n");
   #endif
-    e_puts(" -m<mod_name>  $modnam文字列変数を設定\n");
-    e_puts(" -d<LBL>[=Val] ラベルLBLを値Valで定義.  LBL: set Val(省略:1)\n");
-    e_puts(" -l[lst_file]  アセンブリ・リストをlst_fileに出力\n");
-    e_puts(" -o[obj_file]  obj_fileにオブジェクトをバイナリで出力\n");
-    e_puts(" -f[obj_file]  obj_fileにオブジェクトをS-Formatで出力\n");
+    e_puts(" -m<mod_name>  Set the $modnam string variable\n");
+    e_puts(" -d<LBL>[=Val] Define LBL as Val (default: 1)\n");
+    e_puts(" -l[lst_file]  Write assembly listing to lst_file\n");
+    e_puts(" -o[obj_file]  Write binary object to obj_file\n");
+    e_puts(" -f[obj_file]  Write S-Record object to obj_file\n");
   #ifdef OA
-    e_puts(" -a[obj_file]  obj_fileにオブジェクトをFCBのデータの形で出力\n");
+    e_puts(" -a[obj_file]  Write object as FCB data to obj_file\n");
   #endif
   #ifdef OE
-    e_puts(" -e[err_file]  err_fileにソースのエラーを出力\n");
+    e_puts(" -e[err_file]  Write source errors to err_file\n");
   #endif
   #ifdef INCLUDIR
-    e_puts(" -i[lib_file]  $INCで参照するディレクトリ\n");
+    e_puts(" -i[lib_file]  Set the directory referenced by $INC\n");
   #endif
   #ifdef OPTS_FBAS
-    e_puts(" -k[Start[,Enter]]  F-BASICマシン語ファイル形式で出力\n");
-    e_puts(" -r  F-BASIC機械語ファイル形式時, rmbでその後にコードが無ければ0を出力しない\n");
+    e_puts(" -k[Start[,Enter]]  Write an F-BASIC machine-language file\n");
+    e_puts(" -r  In F-BASIC format, omit trailing zeros after RMB\n");
   #endif
   #ifdef DEBUG
     e_puts(" -c  Debug mode\n");
   #endif
   #ifdef M6809
-    DEBMSGF((STDERR,"6309に対応していない\n"));
+    DEBMSGF((STDERR,"6309 is not supported\n"));
   #endif
   #ifdef OPED
-    DEBMSGF((STDERR,"6809拡張命令あり(D)\n"));
+    DEBMSGF((STDERR,"6809 extended instructions enabled (D)\n"));
   #endif
   #ifdef OPEQ
-    DEBMSGF((STDERR,"6309拡張命令あり(Q)\n"));
+    DEBMSGF((STDERR,"6309 extended instructions enabled (Q)\n"));
   #endif
     exit(0);
 }
@@ -2736,7 +2736,7 @@ static void optsDefLbl(int argc,char **argv)
         if (*p++ != 'd' && *(p-1) != 'D')
             continue;
         if (*p == '\0') {
-            e_puts("-d でラベル名が指定されていない\n");
+            e_puts("No label name specified for -d.\n");
             continue;
         }
         gLinPtr = strncpy(gLineBuf+LINEHEAD,p,MAXCHAR-LINEHEAD-2);
@@ -2827,7 +2827,7 @@ static void options(byte *p)
       #ifdef OA
         case 'A':
             if ((gOAStk = (OATBL_T *) calloc(OA_MAX,sizeof(OATBL_T))) == NULL){
-                e_puts("-aオプションを行うためのメモリが足りない\n");
+                e_puts("Not enough memory for the -a option.\n");
                 break;
             }
             gObjBufSz = 16;
@@ -2847,7 +2847,7 @@ static void options(byte *p)
         case 'Y':
             if ((gOptStk = (int *)malloc(sizeof(int) * MAXOPTIM))
                 == NULL) {
-                e_puts("オプティマイズを行うためのメモリが足りない\n");
+                e_puts("Not enough memory for branch optimization.\n");
                 break;
             }
             gOpt_f = 1;
@@ -2880,13 +2880,13 @@ static void options(byte *p)
             if (*p)
                 gIncDirName = p;
             if (strlen(gIncDirName) >= FNAMESZ-10) {
-                e_puts("ファイル名が長すぎる\n");
+                e_puts("File name is too long.\n");
                 exit(1);
             }
             goto LOOPOUT;
       #endif
         default:
-            fprintf(STDERR,"%s: オプションが間違っている(-%c)\n", gCmdName,c);
+            fprintf(STDERR,"%s: Invalid option (-%c).\n", gCmdName,c);
             exit(1);
         }
     }
@@ -2895,7 +2895,7 @@ static void options(byte *p)
 
 int main(int argc, char *argv[])
 {
-    static char *title = "HD6309 cross assembler version 01.20T\n";
+    static char *title = "HD6309 cross assembler version 01.30T\n";
     char *p;
     int  i;
 
@@ -2928,7 +2928,7 @@ int main(int argc, char *argv[])
         }
     }
     if (*gSrcFName == '\0') {
-        fprintf(STDERR, "usage: %s [-opts] src_file...(-?でオプション説明)\n",
+        fprintf(STDERR, "usage: %s [-opts] src_file...(-? help)\n",
             gCmdName);
         exit(1);
     }
@@ -3012,4 +3012,3 @@ int main(int argc, char *argv[])
         fclose(gErrFp);
     return (gErrors ? 1 : 0);
 }
-
