@@ -18,9 +18,6 @@
 #define itoa       _itoa
 #endif
 
-#define isKanji(c)  ((unsigned)((c)^0x20) - 0xa1 < 0x3cU)
-//#define isKanji2(c) ((uint8_t)(c) >= 0x40 && (uint8_t)(c) <= 0xfc && (c) != 0x7f)
-
 /*--------------------------------------------------------------------------*/
 
 FILE    *fopenE(char *fname, char *atr)
@@ -524,6 +521,14 @@ static LBLTBL_T *refLabel(char *lbl)
 }
 
 /*---------------------------------------------------------------------------*/
+
+#define IS_KANJI(c)  ((unsigned)((c)^0x20) - 0xa1U < 0x3cU)
+//#define isKanji2(c) ((uint8_t)(c) >= 0x40 && (uint8_t)(c) <= 0xfc && (c) != 0x7f)
+
+int     isKanji(int c)
+{
+    return gSjis_f && IS_KANJI(c);
+}
 
 int     isSymbl(int c)
 {
@@ -1647,7 +1652,7 @@ void    fdb(void)
         if (checkChar('"')) {
             while (((*gLinPtr != '"') || (*++gLinPtr == '"'))
                    && (*gLinPtr != '\n')) {
-                if (isKanji(*(uint8_t*)gLinPtr)) {
+                if (isKanji(*(uint8_t*)gLinPtr) && gLinPtr[1]) {
                     put1Byte(*gLinPtr++);
                     put1Byte(*gLinPtr++);
                 } else {
@@ -2693,6 +2698,7 @@ static void usage(void)
     e_puts(" -q  Allow address gaps caused by ORG or RMB\n");
     e_puts(" -u  Case-sensitive labels    -n  Case-insensitive labels\n");
     e_puts(" -s  Show symbol table        -v  Show progress\n");
+    e_puts(" -j  use SJIS character.\n");
     e_puts(" -m<mod_name>  Set the $modnam string variable\n");
     e_puts(" -d<LBL>[=Val] Define LBL as Val (default: 1)\n");
     e_puts(" -l[lst_file]  Write assembly listing to lst_file\n");
@@ -2804,6 +2810,9 @@ static void options(uint8_t *p)
             break;
         case 'S':
             oSymbol_f = 1;
+            break;
+        case 'J':
+            gSjis_f = 1;
             break;
         case 'L':
             if (*p) {

@@ -213,6 +213,8 @@ EXTERN int      gLabels,  gLineNo;
 EXTERN uint16_t gCSectBase;
 EXTERN uint8_t  gGrp,     gCSectSw;
 EXTERN uint8_t  gUpLo_f,  gPSect_f;
+EXTERN uint8_t  gSjis_f;
+
 
 /* リスト、メッセージ表示 */
 EXTERN char   *gCmdName;
