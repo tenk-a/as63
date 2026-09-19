@@ -163,6 +163,14 @@ void    flushObj(void)
                 put2hex(gObjBuf[i]);
             put2hex(~oChkSum);
             putc('\n', gObjFp);
+      #ifdef OPTS_FLEX
+        } else if (gFlex_f) {
+            putc(0x02, gObjFp);
+            putc(gObjLc >> 8, gObjFp);
+            putc(gObjLc, gObjFp);
+            putc(gObjPos, gObjFp);
+            fwrite(gObjBuf, gObjPos, 1, gObjFp);
+      #endif
 #ifdef OA
         } else if (gObjct == OB_ASM && gObjPos) {
             fprintf(gObjFp, "\tfcb $%02x", gObjBuf[0]);
@@ -187,6 +195,12 @@ void    termObj(void)
         put4hex(gEntryAddr);
         put2hex(~oChkSum);
         putc('\n', gObjFp);
+  #ifdef OPTS_FLEX
+    } else if (gFlex_f) {
+        putc(0x16, gObjFp);
+        putc(gEntryAddr >> 8, gObjFp);
+        putc(gEntryAddr, gObjFp);
+  #endif
     }
 }
 
@@ -1772,7 +1786,11 @@ void    rmb(void)
 
     skipSpace();
     if (!gCSectSw) {
-        if (gOrgSFmt_f && gObjct == OB_SFMT) {
+        if (gOrgSFmt_f && (gObjct == OB_SFMT
+          #ifdef OPTS_FLEX
+            || gFlex_f
+          #endif
+        )) {
             base = invExpr();
             flushObj();
             gLc += base;
@@ -1834,7 +1852,11 @@ void    org(void)
         gCSectSw = 1;
         gCSectBase = origin;
     } else {
-        if ((gOrgSFmt_f && gObjct == OB_SFMT) || gOrg_f == 0) {
+        if ((gOrgSFmt_f && (gObjct == OB_SFMT
+          #ifdef OPTS_FLEX
+            || gFlex_f
+          #endif
+            )) || gOrg_f == 0) {
             flushObj();
             gObjLc = gLc = origin;
         } else if (gLc > origin) {
@@ -2704,6 +2726,9 @@ static void usage(void)
     e_puts(" -l[lst_file]  Write assembly listing to lst_file\n");
     e_puts(" -o[obj_file]  Write binary object to obj_file\n");
     e_puts(" -f[obj_file]  Write S-Record object to obj_file\n");
+  #ifdef OPTS_FLEX
+    e_puts(" -x[obj_file]  Write a FLEX binary executable to obj_file\n");
+  #endif
   #ifdef OA
     e_puts(" -a[obj_file]  Write object as FCB data to obj_file\n");
   #endif
@@ -2842,15 +2867,34 @@ static void options(uint8_t *p)
                 e_puts("Not enough memory for the -a option.\n");
                 break;
             }
+          #ifdef OPTS_FLEX
+            gFlex_f = 0;
+          #endif
             gObjBufSz = 16;
             gObjct = OB_ASM;
             goto OB;
       #endif
         case 'O':
+          #ifdef OPTS_FLEX
+            gFlex_f = 0;
+          #endif
             gObjct = OB_BIN;
             goto OB;
         case 'F':
+          #ifdef OPTS_FLEX
+            gFlex_f = 0;
+          #endif
             gObjct = OB_SFMT;
+            goto OB;
+      #ifdef OPTS_FLEX
+        case 'X':
+            gFlex_f = 1;
+          #ifdef OPTS_FBAS
+            gFBasic_f = 0;
+          #endif
+            gObjct = OB_BIN;
+            goto OB;
+      #endif
          OB:
             if (*p)
                 oObjFName = p;
@@ -2868,6 +2912,9 @@ static void options(uint8_t *p)
       #ifdef OPTS_FBAS
         case 'K':
             gFBasic_f = 1;
+          #ifdef OPTS_FLEX
+            gFlex_f = 0;
+          #endif
             gRmb_sp = 0;
             if (*p) {
                 gStartAddr = xstrtoui(p,&pp);
@@ -2950,7 +2997,11 @@ int main(int argc, char *argv[])
       #ifdef OA
             (gObjct == OB_ASM) ? "oa" :
       #endif
-            (gObjct == OB_SFMT) ? "s" : "o");
+            (gObjct == OB_SFMT) ? "s" :
+      #ifdef OPTS_FLEX
+            gFlex_f ? "cmd" :
+      #endif
+            "o");
     }
   #ifdef OE
     if (gErrFName == (uint8_t *)(~0)) {

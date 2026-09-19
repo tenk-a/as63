@@ -50,6 +50,7 @@ typedef int  val_t;             /* int<->long  定数演算のint/long化     */
 #define OA                      /* 定義すると-aｵﾌﾟｼｮﾝ関係を生成         */
 #define OPTIM                   /* 定義するとｵﾌﾟﾃｨﾏｲｽﾞ(-y)を行える      */
 #define OPTS_FBAS               /* 定義すると-k(FBASICﾏｼﾝ語ﾌｧｲﾙ出力)を生成 */
+#define OPTS_FLEX               /* 定義すると-x(FLEX実行ﾌｧｲﾙ出力)を生成 */
 #define FILSTK2                 /* 定義するとｴﾗｰ時にﾌｧｲﾙ名,行番号を表示 */
 #define OPED                    /* 6809用合成命令を使用可能にする       */
 #define OPEQ                    /* 6309用合成命令を使用可能にする       */
@@ -205,6 +206,9 @@ EXTERN uint8_t  gCrcBuf[3];
 EXTERN int      gRmb_sp,    gRmb_f;
 #ifdef OPTS_FBAS
  EXTERN uint8_t gFBasic_f;
+#endif
+#ifdef OPTS_FLEX
+ EXTERN uint8_t gFlex_f;
 #endif
 
 /* ラベル */
