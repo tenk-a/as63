@@ -1747,6 +1747,18 @@ void    fdb(void)
     } while (checkChar(','));
 }
 
+void    flb(void)
+{
+    val_t val;
+
+    skipSpace();
+    do {
+        val = expression();
+        put1Word((uint16_t)(val >> 16));
+        put1Word((uint16_t)val);
+    } while (checkChar(','));
+}
+
 void    fcb(void)
 {
     skipSpace();
@@ -2666,9 +2678,10 @@ static void assemble(int argc, char **argv)
                     && strcmp(gOprPtr->mnemonic,"ENDSECT")) {
                     if (gCSectSw == 3) {
                         if (strcmp(gOprPtr->mnemonic,"FDB")
-                            && strcmp(gOprPtr->mnemonic,"DC.W")
                             && strcmp(gOprPtr->mnemonic,"FCB")
                             && strcmp(gOprPtr->mnemonic,"DC.B")
+                            && strcmp(gOprPtr->mnemonic,"DC.W")
+                            && strcmp(gOprPtr->mnemonic,"DC.L")
                             && strcmp(gOprPtr->mnemonic,"FCC")
                             && strcmp(gOprPtr->mnemonic,"FCS")
                             && strcmp(gOprPtr->mnemonic,"RZB"))

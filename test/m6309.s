@@ -222,5 +222,5 @@ start
 main
         nop
         rts
-        dc.b 1,2,3,4
+
         end

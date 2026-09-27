@@ -11,6 +11,11 @@
 	fdb	1		1
 	fdb	!0		1
 	fdb	!10		0
+
+	dc.b	$12,$34
+	dc.w	$5678
+	dc.l	$9abcdef0,-1
+
 AA	equ	*
 AA2	equ	.
 	fdb	1+2		3
