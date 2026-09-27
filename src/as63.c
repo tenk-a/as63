@@ -2807,6 +2807,7 @@ static void options(uint8_t *p)
             gIdxOfs_f = 1;
             break;
         case '?':
+        case 'H':
             usage();
         case 'D':
             goto LOOPOUT;
