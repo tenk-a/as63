@@ -1,4 +1,4 @@
-::@echo off
+@echo off
 setlocal
 
 pushd %~dp0
@@ -20,6 +20,7 @@ call :ase -otst63x.o tst63x.s
 echo:
 
 :: FLEX binary.
+call :ase -q -xfx9hello.cmd fx9hello.s
 call :ase -q -xtst_flex.cmd tst_flex.s
 
 :: OS-9 modules.
@@ -28,7 +29,7 @@ call :ase -9 -i. -mplace -oplace.o place.s
 echo:
 
 :: 疑似命令テスト...
-call :ase -otst_exp2.o tst_exp2.s
+call :asm -otst_exp2.o tst_exp2.s
 call :asm -otst_expr.o tst_expr.s
 call :asm -9 -otst_expr-os9.o tst_expr.s
 call :ase -otst_if.o tst_if.s
@@ -36,8 +37,9 @@ call :ase -j -q -ftst_org.s19 tst_org.s
 echo:
 
 :: multi file test. 
-call :asm -a -ltst_mf_1.lst tst_mf.s
-call :ase -a -ltst_mf.lst   tst_mf.s tst_mf2.s
+call :asm -ltst_mf_1.lst tst_mf.s
+call :ase -a -ltst_mf_2.lst tst_mf2.s
+call :ase -ltst_mf.lst tst_mf.s tst_mf2.oa
 
 goto END
 
