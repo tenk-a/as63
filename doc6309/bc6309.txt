@@ -26,7 +26,7 @@
 2  20   cwai
 2  22   swi2 swi3
 3  4    addr adcr subr sbcr cmpr andr orr eorr
-        lbra tstmd
+        lbra bitmd
 3  5    ldmd
 3  7    lbsr
 3  6+3n tfm

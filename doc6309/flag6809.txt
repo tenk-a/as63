@@ -11,12 +11,12 @@ n z v c   命令( * は 0文字以上の任意の文字列)
 ･ * ･ ･   leax leay
 ･ * ･ *   mul (c 演算後AccBのbit7が1ならｾｯﾄ)
 * * ･ ･   sex
-* * * ･   inc*
-* * 0 ･   dec* ld* st* tst* and* or* bit*
+* * * ･   inc* dec*
+* * 0 ･   ld* st* tst* and* or* bit*
 * * ･ *   asr* ror*
 0 * ･ *   lsr*
 * * * *   add* adc* sub* sbc* cmp* lsl*/asl* rol* neg*
-          daa(v 不定)(c bit7からｷｬﾘｰが生じたか演算前にｾｯﾄされていた時ｾｯﾄ)
+          daa (v=新c xor 新AccA.bit7)
 0 1 0 0   clr*
 * * 0 1   com*
 
