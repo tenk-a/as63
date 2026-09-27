@@ -1,3 +1,4 @@
+*[SJIS] This file is encoded in SJIS to store SJIS strings in the fcb.
 *	org,rmb の s-format(-f,-q指定)出力時とそうでないときのチェック.
 	org	$200
 	fcb	1

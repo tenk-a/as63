@@ -1,10 +1,10 @@
-* as63 -a -l tst_mf.a
-* as63 -a -l tst_mf.a tst_mf2.a
+* as63 -a -l tst_mf.s
+* as63 -a -l tst_mf.s tst_mf2.s
 test0
 	lbra >test3
 	rts
-test:
 	pshs d,x,y,u
+test:
 	lda  >_TST1,y
 	ldb  >_TST2,y
 	mul
@@ -16,5 +16,4 @@ test:
 	equ used(test2)
 
 * Expected error when assembled with tst_mf2.s:
-*   Undefined label(TEST3)
-
+*   Undefined label(test3)

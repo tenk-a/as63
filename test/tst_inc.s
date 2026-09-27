@@ -1,3 +1,4 @@
+*[SJIS] This file is encoded in SJIS to store SJIS strings in the fcb.
 	use	$INC\TST_INC.INC
 	
 START:
@@ -26,4 +27,3 @@ MSG:
 *   Duplicate label definition(LBL1) (from tst_inc.inc)
 *   Invalid character in expression (2 occurrences)
 *   Unexpected character (4 occurrences)
-

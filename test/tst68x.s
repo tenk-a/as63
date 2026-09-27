@@ -1,4 +1,4 @@
-* 6809 �g�����߂̃`�F�b�N  as63 -8l �ŕ\�����Ċm�F.
+* 6809 拡張命令のチェック  as63 -8l で表示して確認.
 * 1
 	tstd
 	std  -2,s
@@ -50,7 +50,7 @@
 	anda	#$0f
 
 * direct,extend
-* �޲ڸĥ���گ�ݸނɂȂ�̂� $0�`$fe�܂�.
+* ﾀﾞｲﾚｸﾄ･ｱﾃﾞﾚｯｼﾝｸﾞになるのは $0～$feまで.
 	sbcd	$fe
 	sbcb	$ff
 	sbca	$fe
@@ -63,7 +63,7 @@
 	adcb	$101
 	adca	$100
 
-* ��ĥ�ݸ����,��ĥ�޸����.
+* ｵｰﾄ･ｲﾝｸﾘﾒﾝﾄ,ｵｰﾄ･ﾃﾞｸﾘﾒﾝﾄ.
 	andd	,-x
 	andb	,x
 	anda	,-x
@@ -114,7 +114,7 @@
 	sbca	-18,y
 
 
-* 8bit|16bit �̾��
+* 8bit|16bit ｵﾌｾｯﾄ
 	andd	$7e,x
 	andb	$7f,x
 	anda	$7e,x
@@ -156,7 +156,7 @@
 	eorb	-$80,pc
 	eora	-$81,pc
 
-* pc��è��.
+* pcﾘﾗﾃｨﾌﾞ.
 J2	set	*
 	rzb	120
 	andd	J2,pcr
@@ -181,7 +181,7 @@ J1	set	*
 	andb	J1+1,pcr
 	anda	J1,pcr
 
-*�@ڼ޽���̾�āA���޲ڸĥӰ�ނ͕s�\.
+*　ﾚｼﾞｽﾀ･ｵﾌｾｯﾄ、ｲﾝﾀﾞｲﾚｸﾄ･ﾓｰﾄﾞは不可能.
 	adcd	a,x	error
 	sbcd	d,y	error
 	andd	[,x]	error

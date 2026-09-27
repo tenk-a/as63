@@ -48,28 +48,39 @@ void    errPrg(char * s)
     exit(1);
 }
 
-void    error(char *s)
+static void errorWarning(char *s, int errorMode)
 {
-    gErrors++;
+    if (errorMode)
+        gErrors++;
     if (gPass != 2)
         return;
-#ifdef OE
-    if (gErrFName && gErrors - 1 == 0) {
+ #ifdef OE
+    if (errorMode && gErrFName && gErrors - 1 == 0) {
         gErrFp = fopen(gErrFName, "w");
         if (gErrFp == NULL) {
             fprintf(STDERR, "%s: File open error. %s\n", gCmdName, gErrFName);
             gErrFp = STDERR;
         }
     }
-#endif
+ #endif
     if (gList > 0) {
         fprintf(gLstFp, "*** %s\n", s);
     }
-#ifdef FILSTK2
+ #ifdef FILSTK2
     fprintf(gErrFp, "%s %5d : %s\n", gSrcFName, gSrcLine, s);
-#else
+ #else
     fprintf(gErrFp, "%5d : %s\n", gLineNo, s);
-#endif
+ #endif
+}
+
+void    error(char *s)
+{
+    errorWarning(s, 1);
+}
+
+void    warning(char *s)
+{
+    errorWarning(s, 0);
 }
 
 static void errLbl(char *msg, char *lbl)
@@ -1053,8 +1064,17 @@ int     getReg(int r)
         }
     }
  #ifndef M6809
-    if (gM68_f && (reg & X63REG))
-        error("Register E, F, W, or V used in 6809 mode.");
+    if (gM68_f && (reg & X63REG)) {
+      #ifdef OPTS_UNDOC
+        if (reg == V) {
+            if (!gUndoc_f)
+                warning("[WARNING] Register V used in 6809 mode.");
+        } else
+      #endif
+        {
+            error("Register E, F, W, or V used in 6809 mode.");
+        }
+    }
  #endif
     if (r & reg)
         return reg;
@@ -1316,6 +1336,48 @@ void    ccr(void)
     operand(GROUP0, IMMEDIATE);
 }
 
+#ifdef OPTS_UNDOC
+void undoc_imm8(void)
+{
+    skipSpace();
+    if (!checkCh_e('#'))
+        return;
+    putCode(GROUP0, NO_MODE);
+    putByte(bytExpr());
+}
+
+void undoc_imm16(void)
+{
+    skipSpace();
+    if (!checkCh_e('#'))
+        return;
+    putCode(GROUP0, NO_MODE);
+    putWord(expression());
+}
+
+void undoc_flag(void)
+{
+    uint8_t opcode;
+    val_t val;
+
+    skipSpace();
+    if (!checkCh_e('#'))
+        return;
+    val = expression();
+    opcode = gOprPtr->opcode;
+    if (gWord_f || (!gByte_f && (val < -128 || 255 < val))) {
+        gOprPtr->opcode = 0x8f;
+        putCode(GROUP0, NO_MODE);
+        putWord(val);
+    } else {
+        gOprPtr->opcode = 0x87;
+        putCode(GROUP0, NO_MODE);
+        putByte(val);
+    }
+    gOprPtr->opcode = opcode;
+}
+#endif
+
 #ifndef M6809
 void    load4(void)
 {
@@ -1371,8 +1433,14 @@ void    transfer(void)
     checkCh_e(',');
     if ((r2 = regNo(ALLREG | X63REG)) < 0)
         goto ERR;
-    if ((r1 ^ r2) & 0x08 && r1 != 0x0c && r2 != 0x0c)
-        error("Registers have different sizes.");
+    if (
+     #ifdef OPTS_UNDOC
+        !gUndoc_f &&
+     #endif
+        ((r1 ^ r2) & 0x08) && r1 != 0x0c && r2 != 0x0c
+    ) {
+        warning("[WARNING] Registers have different sizes.");
+    }
     putByte((r1 << 4) | r2);
   ERR:
     return;
@@ -2473,8 +2541,20 @@ static int  getMnemonic(void)
     }
     if ((q = srchOpTbl(temp)) != NULL) {
      #ifndef M6809
-        if (gM68_f && (q->option & 0x01))
+      #ifdef OPTS_UNDOC
+        if (q->option & OPR_UNDOC6809) {
+            if (!gM68_f)
+                error("6809 undocumented instruction requires -8.");
+            else if (!gUndoc_f)
+                warning("[WARNING] 6809 undocumented instruction used without -z.");
+        } else
+      #endif
+        if (gM68_f && (q->option & 0x01)) {
             error("6309 instruction used in 6809 mode.");
+        }
+     #else
+        if ((q->option & OPR_UNDOC6809) && !gUndoc_f)
+            warning("[WARNING] 6809 undocumented instruction used without -z.");
      #endif
         if (q->process == NULL) {
             co_if(q->prefix);
@@ -2586,7 +2666,9 @@ static void assemble(int argc, char **argv)
                     && strcmp(gOprPtr->mnemonic,"ENDSECT")) {
                     if (gCSectSw == 3) {
                         if (strcmp(gOprPtr->mnemonic,"FDB")
+                            && strcmp(gOprPtr->mnemonic,"DC.W")
                             && strcmp(gOprPtr->mnemonic,"FCB")
+                            && strcmp(gOprPtr->mnemonic,"DC.B")
                             && strcmp(gOprPtr->mnemonic,"FCC")
                             && strcmp(gOprPtr->mnemonic,"FCS")
                             && strcmp(gOprPtr->mnemonic,"RZB"))
@@ -2710,6 +2792,9 @@ static void usage(void)
     fprintf(STDERR,"usage: %s [-opts] src_file...\n",gCmdName);
     e_puts(" -?  Show this help\n");
     e_puts(" -9  OS-9 standard ASM mode   -8  6809 mode\n");
+  #ifdef OPTS_UNDOC
+    e_puts(" -z  Enable undocumented 6809 opcodes (requires -8)\n");
+  #endif
     e_puts(" -p  Force < and > to select 8- and 16-bit indexed offsets\n");
   #ifdef OPTIM
     e_puts(" -y  Replace long branches with short branches when possible\n");
@@ -2823,6 +2908,11 @@ static void options(uint8_t *p)
         case 'V':
             gVerbos_f = 1;
             break;
+      #ifdef OPTS_UNDOC
+        case 'Z':
+            gUndoc_f  = 1;
+            break;
+      #endif
       #ifndef M6809
         case '8':
             gM68_f = 1;

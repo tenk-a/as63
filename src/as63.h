@@ -57,6 +57,8 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define FILSTK2               /* show file name and line number on errors    */
 #define OPED                  /* enable synthetic instructions for 6809      */
 #define OPEQ                  /* enable synthetic instructions for 6309      */
+#define OPTS_UNDOC              /* enable 6809 undocument instructions         */
+
 #ifdef OA
 # define OA_MAX 500
 #endif
@@ -172,6 +174,10 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define OB_ASM          4
 
 /* opcode table */
+#ifdef OPTS_UNDOC
+#define OPR_UNDOC6809  0x02
+#endif
+
 typedef struct optbl_t {
         char   *mnemonic;
         uint8_t prefix;
@@ -210,6 +216,9 @@ EXTERN uint8_t  gByte_f , gWord_f, gIdxOfs_f;
 EXTERN char     gModName[MODNAMSZ+1];
 #ifndef M6809
  EXTERN uint8_t gM68_f;
+#endif
+#ifdef OPTS_UNDOC
+ EXTERN uint8_t gUndoc_f;
 #endif
 
 /* object output */
@@ -294,7 +303,6 @@ extern OPTBL_T gOpTab[];
 
 
 /*-- Function --*/
-#if 10
 void
     none(void), load(void), load2(void),    store(void),
     ccr(void),  lea(void),  memory(void),   transfer(void),
@@ -305,16 +313,18 @@ void
     fcc(void),  fcs(void),  org(void),      setdp(void),
     vsct(void), psct(void), csct(void),     endsct(void),
     opt(void),  nam(void),  page(void),     spc(void),
-    endop(void);
-#ifndef M6809
-  void  tfm(void),  load4(void),immemory(void);
- #ifdef OPEQ
-  void  opeq(void), none_wq(void);
+ #ifdef OPTS_UNDOC
+    undoc_imm8(void), undoc_imm16(void), undoc_flag(void),
  #endif
-#endif
-#ifdef OPED
-  void  oped(void), none_d(void);
-#endif
-#endif
+ #ifndef M6809
+    tfm(void),  load4(void),immemory(void),
+  #ifdef OPEQ
+    opeq(void), none_wq(void),
+  #endif
+ #endif
+ #ifdef OPED
+  oped(void), none_d(void),
+ #endif
+    endop(void);
 
 #endif
