@@ -15,4 +15,10 @@ A2	set	T2
 	if defined(T3)
 A3	equ	T3
 	endif
+
+* Expected errors:
+*   Undefined label(ERROR)
+*   Undefined label(T1)
+*   Undefined label(T2)
+*   Undefined label(T3)
 

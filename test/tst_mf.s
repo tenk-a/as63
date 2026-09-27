@@ -14,4 +14,7 @@ test:
 	puls d,x,y,u,pc
 	
 	equ used(test2)
+
+* Expected error when assembled with tst_mf2.s:
+*   Undefined label(TEST3)
 

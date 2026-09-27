@@ -188,3 +188,12 @@ J1	set	*
 
 	eord	,w	error
 	eord	e,x	error
+
+* Expected errors (6809 mode):
+*   Undefined label(A)
+*   Undefined label(D)
+*   Invalid character in expression
+*   Unexpected character (2 occurrences)
+*   Register E, F, W, or V used in 6809 mode
+*   Invalid register
+*   Undefined label(E)

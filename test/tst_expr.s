@@ -111,3 +111,8 @@ JJJ3	rts
 	equ used(JJJ2)		1
 	equ used(JJJ3)		
 	equ used(JJJ4)		
+
+* Expected errors:
+*   Duplicate label definition(A2)
+*   Duplicate label definition(A0)
+*   Undefined label(JJJ2)

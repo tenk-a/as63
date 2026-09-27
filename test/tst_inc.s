@@ -21,4 +21,9 @@ MSG:
 	fcc	'é¿çsÇ≈Ç´Ç‹ÇπÇÒÇÊ','!','?',$00
 	rmb	16
 	fcb	100
+
+* Expected errors:
+*   Duplicate label definition(LBL1) (from tst_inc.inc)
+*   Invalid character in expression (2 occurrences)
+*   Unexpected character (4 occurrences)
 
