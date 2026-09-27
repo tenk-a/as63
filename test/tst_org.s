@@ -1,4 +1,4 @@
-*	org,rmb の s-format(-f,-q指定)出力時とそうでないときのチェック
+*	org,rmb の s-format(-f,-q指定)出力時とそうでないときのチェック.
 	org	$200
 	fcb	1
 	org	$220
@@ -10,4 +10,3 @@ T2	fcc	"test だってば",$00
 T3	fcc	/test object/,$00
 T4	fcs	'test object',$00
 	end	
-

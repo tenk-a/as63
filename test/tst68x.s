@@ -1,4 +1,4 @@
-* 6809 拡張命令のチェック　　as63 -8l で表示して確認
+* 6809 拡張命令のチェック  as63 -8l で表示して確認.
 * 1
 	tstd
 	std  -2,s
@@ -50,7 +50,7 @@
 	anda	#$0f
 
 * direct,extend
-* ﾀﾞｲﾚｸﾄ･ｱﾃﾞﾚｯｼﾝｸﾞになるのは $0～$feまで
+* ﾀﾞｲﾚｸﾄ･ｱﾃﾞﾚｯｼﾝｸﾞになるのは $0～$feまで.
 	sbcd	$fe
 	sbcb	$ff
 	sbca	$fe
@@ -63,7 +63,7 @@
 	adcb	$101
 	adca	$100
 
-* ｵｰﾄ･ｲﾝｸﾘﾒﾝﾄ,ｵｰﾄ･ﾃﾞｸﾘﾒﾝﾄ
+* ｵｰﾄ･ｲﾝｸﾘﾒﾝﾄ,ｵｰﾄ･ﾃﾞｸﾘﾒﾝﾄ.
 	andd	,-x
 	andb	,x
 	anda	,-x
@@ -156,7 +156,7 @@
 	eorb	-$80,pc
 	eora	-$81,pc
 
-* pcﾘﾗﾃｨﾌﾞ
+* pcﾘﾗﾃｨﾌﾞ.
 J2	set	*
 	rzb	120
 	andd	J2,pcr
@@ -181,11 +181,10 @@ J1	set	*
 	andb	J1+1,pcr
 	anda	J1,pcr
 
-*　ﾚｼﾞｽﾀ･ｵﾌｾｯﾄ、ｲﾝﾀﾞｲﾚｸﾄ･ﾓｰﾄﾞは不可能
+*　ﾚｼﾞｽﾀ･ｵﾌｾｯﾄ、ｲﾝﾀﾞｲﾚｸﾄ･ﾓｰﾄﾞは不可能.
 	adcd	a,x	error
 	sbcd	d,y	error
 	andd	[,x]	error
 
 	eord	,w	error
 	eord	e,x	error
-

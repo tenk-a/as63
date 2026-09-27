@@ -1,4 +1,4 @@
-* ’è”‰‰Z
+* ’è”‰‰Z.
 .	equ	1
 ..	equ	2
 .$	equ	3
@@ -103,7 +103,7 @@ CCC	equ CHK
     	bra JJJ3
     endif
     if  used(JJJ3)
-	bra JJJ4		CHK‚ª’è‹`‚³‚ê‚é‚Æerror
+	bra JJJ4		CHK‚ª’è‹`‚³‚ê‚é‚Æerror.
 JJJ3	rts
     endif
 
@@ -111,4 +111,3 @@ JJJ3	rts
 	equ used(JJJ2)		1
 	equ used(JJJ3)		
 	equ used(JJJ4)		
-
