@@ -3,6 +3,11 @@
  *      HD6309 cross assembler  *
  *                              *
  ********************************/
+#ifndef AS63_H_INCLUDED
+#define AS63_H_INCLUDED
+
+#include <stdio.h>
+#include <string.h>
 
 #ifdef EXT
  #define EXTERN
@@ -13,9 +18,9 @@
 #if __STDC_VERSION__ >= 199901L || _MSC_VER >= 1600
 #include <stdint.h>
 #else
-typedef unsigned char   uint8_t;    /* 1ﾊﾞｲﾄ符号無整数型 */
-typedef unsigned short  uint16_t;   /* 2ﾊﾞｲﾄ符号無整数型 */
-typedef short           int16_t;    /* 2ﾊﾞｲﾄ符号付整数型 */
+typedef unsigned char   uint8_t;    /* 1-byte unsigned integer type */
+typedef unsigned short  uint16_t;   /* 2-byte unsigned integer type */
+typedef short           int16_t;    /* 2-byte signed integer type */
 #endif
 
 #define __(x)           x
@@ -35,35 +40,48 @@ typedef short           int16_t;    /* 2ﾊﾞｲﾄ符号付整数型 */
 
 /*---------------------------------------------------------------------------*/
 
-/* buffer size */
-#define LINEHEAD        24      /* ﾘｽﾄ表示でのｿｰｽ行の表示位置           */
-#define OBJSIZE         32      /* objの出力ﾊﾞｯﾌｧのｻｲｽﾞ(byte):S式での１行分 */
-#define MNEMOSIZE       8       /* ﾆｰﾓﾆｯｸの最大文字数                   */
-#define MAXCHAR         1024    /* 入力する行の最大文字数               */
-#define MAXLABEL        256     /* 名前表用のﾒﾓﾘ拾得のﾌﾞﾛｯｸ･ｻｲｽﾞ(node数)*/
-#define MODNAMSZ        29      /* module name の最大文字数             */
+#define LINEHEAD        24    /* source line display position in listing     */
+#define OBJSIZE         32    /* obj output buffer size (bytes): one S-record line */
+#define MNEMOSIZE       8     /* maximum number of mnemonic characters       */
+#define MODNAMSZ        29    /* maximum number of characters in module name */
 
-typedef int  val_t;             /* int<->long  定数演算のint/long化     */
-/*#define M6809 */              /* 定義すると6309の命令を生成しない     */
-#define HE                      /* 定義すると余計なものを生成する       */
-#define OE                      /* 定義すると-eｵﾌﾟｼｮﾝ関係を生成         */
-#define OA                      /* 定義すると-aｵﾌﾟｼｮﾝ関係を生成         */
-#define OPTIM                   /* 定義するとｵﾌﾟﾃｨﾏｲｽﾞ(-y)を行える      */
-#define OPTS_FBAS               /* 定義すると-k(FBASICﾏｼﾝ語ﾌｧｲﾙ出力)を生成 */
-#define OPTS_FLEX               /* 定義すると-x(FLEX実行ﾌｧｲﾙ出力)を生成 */
-#define FILSTK2                 /* 定義するとｴﾗｰ時にﾌｧｲﾙ名,行番号を表示 */
-#define OPED                    /* 6809用合成命令を使用可能にする       */
-#define OPEQ                    /* 6309用合成命令を使用可能にする       */
-#define FNAMESZ         127     /* ﾌｧｲﾙ名(ﾊﾟｽﾘｽﾄ)の最大文字数           */
-#define MAXLIB          16      /* includeでネストできる深さ            */
-#define LBLSIZE         21      /* ラベル名の文字数                     */
-#define MAXOPTIM        3000    /* longﾌﾞﾗﾝﾁをｼｮｰﾄに変更できる最大数    */
-#define GCO_MAX         40      /* ifﾈｽﾄの最大の深さ */
-#define GP1_MAX         100     /* ifp1の使える回数 */
+typedef int  val_t;           /* int<->long: use int/long for constant arithmetic */
+/*#define M6809 */            /* do not generate 6309 instructions           */
+
+#define HE                    /* generate additional features                */
+#define OE                    /* enable -e option support                    */
+#define OA                    /* enable -a option support                    */
+#define OPTIM                 /* enable optimization (-y)                    */
+#define OPTS_FBAS             /* enable -k (FBASIC machine-code file output) */
+#define OPTS_FLEX             /* enable -x (FLEX executable file output)     */
+#define FILSTK2               /* show file name and line number on errors    */
+#define OPED                  /* enable synthetic instructions for 6809      */
+#define OPEQ                  /* enable synthetic instructions for 6309      */
 #ifdef OA
 # define OA_MAX 500
 #endif
 #define INCLUDIR        "."
+
+#ifdef SMALL_HOST
+#define MAXCHAR         1024  /* maximum number of characters per input line */
+#define MAXLABEL        256   /* memory allocation block size for name table (nodes) */
+#define FNAMESZ         127   /* maximum file name (path list) length        */
+#define MAXLIB          16    /* maximum include nesting depth               */
+#define LBLSIZE         21    /* maximum label name length                   */
+#define MAXOPTIM        3000  /* maximum number of long branches convertible to short */
+#define GCO_MAX         40    /* maximum if nesting depth                    */
+#define GP1_MAX         100   /* maximum number of ifp1 uses                 */
+#else
+#define MAXCHAR         16384 /* maximum number of characters per input line */
+#define MAXLABEL        1024  /* memory allocation block size for name table (nodes) */
+#define FNAMESZ         16384 /* maximum file name (path list) length        */
+#define MAXLIB          256   /* maximum include nesting depth               */
+#define LBLSIZE         128   /* maximum label name length                   */
+#define MAXOPTIM        8192  /* maximum number of long branches convertible to short */
+#define GCO_MAX         256   /* maximum if nesting depth                    */
+#define GP1_MAX         1024  /* maximum number of ifp1 uses                 */
+#endif
+
 
 #ifdef M6809
  #ifdef OPEQ
@@ -119,7 +137,7 @@ typedef int  val_t;             /* int<->long  定数演算のint/long化     */
 #define EXTEND_MODE     3
 
 
-/* 条件アセンブラ */
+/* conditional assembler */
 #define CO_ELSE         1
 #define CO_ENDC         2
 #define CO_IFP1         3
@@ -147,7 +165,7 @@ typedef int  val_t;             /* int<->long  定数演算のint/long化     */
 #define WQ_DECQ         (13*4+2)
 #define WQ_NEGQ         (15*4+2)
 
-/* 出力するファイルの種類 */
+/* output file type */
 #define OB_BIN          1
 #define OB_SFMT         2
 /*#define OBJ_ROF */
@@ -179,22 +197,22 @@ typedef struct lbltbl_t {
  EXTERN uint8_t gDebug_f;
 #endif
 
-/* アセンブル */
+/* assembly */
 EXTERN FILE    *gSrcFp;
 EXTERN OPTBL_T *gOprPtr;
-EXTERN int      gErrors, gPass;
-EXTERN int      gImVal, gIndirect;
+EXTERN int      gErrors , gPass;
+EXTERN int      gImVal  , gIndirect;
 EXTERN uint16_t gDp;
-EXTERN uint16_t gLc, gLinLc, gObjLc;
+EXTERN uint16_t gLc     , gLinLc , gObjLc;
 EXTERN uint8_t  gValid_f, gEOF_f;
-EXTERN uint8_t  gOs9_f, gOrg_f, gOrgSFmt_f;
-EXTERN uint8_t  gByte_f, gWord_f, gIdxOfs_f;
+EXTERN uint8_t  gOs9_f  , gOrg_f , gOrgSFmt_f;
+EXTERN uint8_t  gByte_f , gWord_f, gIdxOfs_f;
 EXTERN char     gModName[MODNAMSZ+1];
 #ifndef M6809
  EXTERN uint8_t gM68_f;
 #endif
 
-/* object出力 */
+/* object output */
 EXTERN FILE    *gObjFp;
 EXTERN uint16_t gObjSiz,    gObjCnt;
 EXTERN uint16_t gStartAddr, gEntryAddr;
@@ -211,7 +229,7 @@ EXTERN int      gRmb_sp,    gRmb_f;
  EXTERN uint8_t gFlex_f;
 #endif
 
-/* ラベル */
+/* labels */
 EXTERN LBLTBL_T *gLblPtr;
 EXTERN int      gLabels,  gLineNo;
 EXTERN uint16_t gCSectBase;
@@ -220,7 +238,7 @@ EXTERN uint8_t  gUpLo_f,  gPSect_f;
 EXTERN uint8_t  gSjis_f;
 
 
-/* リスト、メッセージ表示 */
+/* listing and message display */
 EXTERN char   *gCmdName;
 EXTERN int     gList;
 EXTERN FILE   *gLstFp;
@@ -228,23 +246,23 @@ EXTERN char   *gLinPtr;
 EXTERN uint8_t gVerbos_f;
 EXTERN char    gLineBuf[MAXCHAR+2];
 #ifdef OE
- EXTERN FILE *gErrFp;
- EXTERN char *gErrFName;
+ EXTERN FILE  *gErrFp;
+ EXTERN char  *gErrFName;
 #else
  #define gErrFp STDERR
 #endif
 
 #ifdef OPTIM
- /* ｵﾌﾟﾃｨﾏｲｽﾞ(long->short branch)用 */
+ /* for optimization (long->short branch) */
  EXTERN int    *gOptStk, gOpt_sp, gOptChg, gOptCount;
  EXTERN uint8_t gOpt_f;
 #endif
 
-/* 'if'(条件ｱｾﾝﾌﾞﾙ)の管理 */
-EXTERN int  gCo_sp;
-EXTERN int  gCoStk[GCO_MAX+1];
-EXTERN int  gP1_sp;
-EXTERN int  gP1Stk[GP1_MAX+1];
+/* manage 'if' (conditional assembly) */
+EXTERN int   gCo_sp;
+EXTERN int   gCoStk[GCO_MAX+1];
+EXTERN int   gP1_sp;
+EXTERN int   gP1Stk[GP1_MAX+1];
 
 /* use for library inclusion */
 EXTERN FILE *gFileStk[MAXLIB];
@@ -261,7 +279,7 @@ EXTERN char  gSrcFName[FNAMESZ+1];
  EXTERN char *gIncDirName;
 #endif
 
-#ifdef OA  /* -a ｵﾌﾟｼｮﾝ */
+#ifdef OA  /* -a option */
  typedef struct {
      int     ll;
      uint8_t nn;
@@ -297,4 +315,6 @@ void
 #ifdef OPED
   void  oped(void), none_d(void);
 #endif
+#endif
+
 #endif

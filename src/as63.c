@@ -83,8 +83,6 @@ static void errLbl(char *msg, char *lbl)
 }
 
 char    *FIL_BaseName(char *adr)
-    /* ファイルパス名よりファイル名の位置を得る */
-    /* パスの区切りは MS-DOS 依存. MS全角チェックなし */
 {
     char *p;
 
@@ -97,7 +95,7 @@ char    *FIL_BaseName(char *adr)
         ) {
             adr = p + 1;
         }
-      #if 0 /* MS全角チェック */
+      #if 0
         if (isKanji((*(uint8_t*)p)) && *(p+1) )
             p++;
       #endif
@@ -107,7 +105,6 @@ char    *FIL_BaseName(char *adr)
 }
 
 char    *FIL_ChgExt(char filename[], char *ext)
-    /* ファイル名の最後尾にある拡張子を付け替える */
 {
     char *p;
 
@@ -125,7 +122,7 @@ char    *FIL_ChgExt(char filename[], char *ext)
 
 /*---------------------------------------------------------------------------*/
 
-static uint16_t oChkSum;            /* S-formatの各行ごとのチェック・サム */
+static uint16_t oChkSum;            /* Checksum for each line of S-format */
 
 static uint8_t hexDigit(uint8_t x)
 {
@@ -171,13 +168,13 @@ void    flushObj(void)
             putc(gObjPos, gObjFp);
             fwrite(gObjBuf, gObjPos, 1, gObjFp);
       #endif
-#ifdef OA
+      #ifdef OA
         } else if (gObjct == OB_ASM && gObjPos) {
             fprintf(gObjFp, "\tfcb $%02x", gObjBuf[0]);
             for (i = 1; i < gObjPos; i++)
                 fprintf(gObjFp, ",$%02x", gObjBuf[i]);
             putc('\n', gObjFp);
-#endif
+      #endif
         } else {
             fwrite(gObjBuf, gObjPos, 1, gObjFp);
         }
@@ -345,9 +342,9 @@ void    initLine(void)
     oPostf = 15;
     oPos = 10;
     itoa(++gLineNo, gLineBuf, 10);
-#ifdef FILSTK2
+ #ifdef FILSTK2
     ++gSrcLine;
-#endif
+ #endif
     p = gLineBuf;
     while (*p++) {}
     for (--p; p < gLinPtr; p++)
@@ -401,7 +398,7 @@ void    put1Word(int w)
 /*---------------------------------------------------------------------------*/
 
 static LBLTBL_T *oLabel;
-static int oLrf;
+static int       oLrf;
 
 static void printNode(LBLTBL_T *lp)
 {
@@ -636,10 +633,10 @@ static  val_t   term(void)
     case '~':
         return ~term();
     case '!':
-#ifdef DRC
+     #ifdef DRC
         if (gDrc_f)
             return ~term();
-#endif
+     #endif
         return (term() == 0);
     case '*':
         return gLinLc;
@@ -692,16 +689,16 @@ static  val_t   term(void)
                 gValid_f = 0;
             return (lp->value);
         }
-#ifdef OA
+     #ifdef OA
         if (gObjct == OB_ASM && refLbl0(temp))
             gOAchk_f = 1;
         else
-#endif
+     #endif
             errLbl("Undefined label", temp);
     /* DEBMSGF((STDERR,"LABEL:%s\n",temp)); */
         return (gValid_f = 0);
     } else if (isdigit(c)) {
-#ifdef HE
+     #ifdef HE
         if (c == '0') {
             if (toupper(*(gLinPtr + 1)) == 'X') {
                 gLinPtr += 2;
@@ -711,7 +708,7 @@ static  val_t   term(void)
                 goto BDIG;
             }
         }
-#endif
+     #endif
         for (tv = 0; isdigit(*gLinPtr); ++gLinPtr)
             tv = (tv * 10) + *gLinPtr - '0';
         /* DEBMSGF((STDERR,"*gLinPtr : %c(%02x) *%lx\t[digit]\n", gLinPtr,*gLinPtr,gLinPtr)); */
@@ -986,7 +983,7 @@ void    imm4Expr(int16_t *v1, int16_t *v2)
 
 void    putCode(int grp, int mode)
 {
- /* addressing mode offset table 'gOffset[group][mode]' */
+    /* addressing mode offset table 'gOffset[group][mode]' */
     static int gOffset[4][4] =  {
         {0x00, 0x00, 0x00, 0},
         {0x00, 0x00, 0x60, 0x70},
@@ -1026,13 +1023,13 @@ int     getReg(int r)
         case 'Y':   reg = Y;    break;
         case 'U':   reg = U;    break;
         case 'S':   reg = S;    break;
-#ifndef M6809
+     #ifndef M6809
         case 'W':   reg = W;    break;
         case 'E':   reg = E;    break;
         case 'F':   reg = F;    break;
         case 'V':   reg = V;    break;
         case 'N':   reg = N;    break;
-#endif
+     #endif
         }
     } else {
         ++gLinPtr;
@@ -1055,10 +1052,10 @@ int     getReg(int r)
                 ++gLinPtr;
         }
     }
-#ifndef M6809
+ #ifndef M6809
     if (gM68_f && (reg & X63REG))
         error("Register E, F, W, or V used in 6809 mode.");
-#endif
+ #endif
     if (r & reg)
         return reg;
     if (r == OFFSETRG)
@@ -1077,19 +1074,19 @@ int     regNo(int r)
     case U: return 3;
     case S: return 4;
     case PC:return 5;
-#ifndef M6809
+ #ifndef M6809
     case W: return 6;
     case V: return 7;
-#endif
+ #endif
     case A: return 8;
     case B: return 9;
     case CC:return 10;
     case DP:return 11;
-#ifndef M6809
+ #ifndef M6809
     case N: return 12;
     case E: return 14;
     case F: return 15;
-#endif
+ #endif
     default:
         error("Unknown register.");
         return -1;
@@ -1121,7 +1118,7 @@ int     index0(int frame, int reg)
     case S:
         xr = 0x60;
         break;
-#ifndef M6809
+ #ifndef M6809
     case W:
         switch (frame) {
         case 0x83:              /* ,--W */
@@ -1140,7 +1137,7 @@ int     index0(int frame, int reg)
             error("Invalid indexed addressing mode.");
         }
         return (frame ^ (gIndirect ? 0x1f : 0));
-#endif
+ #endif
     default:
         xr = 0;
     }
@@ -1204,7 +1201,7 @@ static void operand(int grp, int mode)
             case D:
                 val = 0x8b;
                 break;
-#ifndef M6809
+         #ifndef M6809
             case E:
                 val = 0x87;
                 break;
@@ -1214,7 +1211,7 @@ static void operand(int grp, int mode)
             case W:
                 val = 0x8e;
                 break;
-#endif
+         #endif
             default:
                 //error("Invalid register.");
                 val = 0x86;
@@ -1231,9 +1228,9 @@ static void operand(int grp, int mode)
             case Y:
             case U:
             case S:
-#ifndef M6809
+         #ifndef M6809
             case W:
-#endif
+         #endif
                 if (gValid_f && val == 0
                          && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
                     indexM(0x84, reg);
@@ -1434,11 +1431,11 @@ static void pshpul(uint8_t u, uint8_t h)
     m1 = m2 = 0;
     skipSpace();
     do {
-#ifdef OPEQ
+     #ifdef OPEQ
         switch (getReg(ALLREG | W))
-#else
+     #else
         switch (getReg(ALLREG))
-#endif
+     #endif
         {
         case CC:
             m2 = 0x01;
@@ -1474,11 +1471,11 @@ static void pshpul(uint8_t u, uint8_t h)
         case PC:
             m2 = 0x80;
             break;
-#ifdef OPEQ
+     #ifdef OPEQ
         case W:
             m2 = 0x100;
             break;
-#endif
+     #endif
         default:
             break;
         }
@@ -1486,7 +1483,7 @@ static void pshpul(uint8_t u, uint8_t h)
             error("The same register is specified more than once.");
         m1 |= m2;
     } while (checkChar(','));
-#ifdef OPEQ
+ #ifdef OPEQ
     if (m1 & 0x100) {           /* w */
         if (h)
             put1Word(u ? 0x103b : 0x1039);      /* puluw pulsw */
@@ -1500,10 +1497,10 @@ static void pshpul(uint8_t u, uint8_t h)
         putCode(GROUP0, NO_MODE);
         putByte(m1);
     }
-#else
+ #else
     putCode(GROUP0, NO_MODE);
     putByte(m1);
-#endif
+ #endif
 }
 
 void    pshs(void)
@@ -1541,29 +1538,29 @@ void    branch(void)
 
 void    lbranch(void)
 {
-#ifdef OPTIM
+ #ifdef OPTIM
     OPTBL_T shortop;
     val_t   val;
-#endif
+ #endif
     uint8_t    f;
 
     skipSpace();
     f = checkChar('>');
     switch (gPass) {
     case 1:
-#ifdef OPTIM
+     #ifdef OPTIM
         if (gOpt_f && gOpt_sp < MAXOPTIM) {
             gOptStk[gOpt_sp++] = gLinLc;
         }
-#endif
-#ifdef OA
+     #endif
+     #ifdef OA
         if (gObjct == OB_ASM)
             expression();
-#endif
+     #endif
         putCode(GROUP0, NO_MODE);
         putWord(0);
         return;
-#ifdef OPTIM
+ #ifdef OPTIM
     case -1:
         if (gOpt_f && gOpt_sp < MAXOPTIM) {
             if (gOptStk[gOpt_sp] == -1) {
@@ -1583,12 +1580,12 @@ void    lbranch(void)
         putCode(GROUP0, NO_MODE);
         putWord(0);
         return;
-#endif
-#ifdef OA
+ #endif
+ #ifdef OA
     case -2:
-#endif
+ #endif
     case 2:
-#ifdef OPTIM
+     #ifdef OPTIM
         if (gOpt_f && gOpt_sp < MAXOPTIM && gOptStk[gOpt_sp++] == -1) {
             printChar('<', 4);
             gOptCount++;
@@ -1600,7 +1597,7 @@ void    lbranch(void)
             putByte(expression() - gLinLc - 2);
             return;
         }
-#endif
+     #endif
         putCode(GROUP0, NO_MODE);
         putWord(expression() - gLinLc - (gOprPtr->prefix ? 4 : 3));
         return;
@@ -1662,7 +1659,7 @@ void    fdb(void)
 {
     skipSpace();
     do {
-#ifdef HE
+     #ifdef HE
         if (checkChar('"')) {
             while (((*gLinPtr != '"') || (*++gLinPtr == '"'))
                    && (*gLinPtr != '\n')) {
@@ -1676,9 +1673,9 @@ void    fdb(void)
         } else {
             put1Word(expression());
         }
-#else
+     #else
         put1Word(expression());
-#endif
+     #endif
     } while (checkChar(','));
 }
 
@@ -1691,7 +1688,7 @@ void    fcb(void)
                    && (*gLinPtr != '\n')) {
                 put1Byte(*gLinPtr++);
             }
-#ifdef HE
+     #ifdef HE
         } else if (checkChar('#')) {
             for (;;) {
                 uint8_t    b, c;
@@ -1706,7 +1703,7 @@ void    fcb(void)
                 put1Byte(toXDigit(b) * 16 + toXDigit(c));
                 gLinPtr++;
             }
-#endif
+     #endif
         } else if (checkChar('>')) {
             put1Word(expression());
         } else {
@@ -1927,13 +1924,13 @@ void    library(void)
     default:
         c = '\0';
     }
-#ifdef INCLUDIR
+ #ifdef INCLUDIR
     if (c == '>')
         p = stpcpy(fname, gIncDirName);
     else
-#endif
+ #endif
         p = fname;
-#ifdef INCLUDIR
+ #ifdef INCLUDIR
     if (*gLinPtr == '$' && c != '>') {
         ++gLinPtr;
         getLabel(fname);
@@ -1943,7 +1940,7 @@ void    library(void)
             error("Invalid include file name.");
         }
     }
-#endif
+ #endif
     for (i = FNAMESZ - 2; i--; p++, gLinPtr++) {
         *p = *gLinPtr;
         if (*p == '\n' || isspace(*p) || *p == '\0' || *p == c)
@@ -1962,12 +1959,12 @@ void    library(void)
         error("Include nesting is too deep.");
         exit(1);
     }
-#ifdef FILSTK2
+ #ifdef FILSTK2
     strcpy(gFilStk2[gFile_sp].srcname, gSrcFName);
     gFilStk2[gFile_sp].srcline = gSrcLine;
     strcpy(gSrcFName, fname);
     gSrcLine = 0;
-#endif
+ #endif
     gFileStk[gFile_sp++] = gSrcFp;
     gSrcFp = fp;
 }
@@ -1977,10 +1974,10 @@ int     popFile(void)
     if (gFile_sp <= 0)
         return 0;
     gSrcFp = gFileStk[--gFile_sp];
-#ifdef FILSTK2
+ #ifdef FILSTK2
     strcpy(gSrcFName, gFilStk2[gFile_sp].srcname);
     gSrcLine = gFilStk2[gFile_sp].srcline;
-#endif
+ #endif
     return 1;
 }
 
@@ -2475,10 +2472,10 @@ static int  getMnemonic(void)
         *--gLinPtr = '#';
     }
     if ((q = srchOpTbl(temp)) != NULL) {
- #ifndef M6809
+     #ifndef M6809
         if (gM68_f && (q->option & 0x01))
             error("6309 instruction used in 6809 mode.");
- #endif
+     #endif
         if (q->process == NULL) {
             co_if(q->prefix);
             return 0;
@@ -2516,11 +2513,11 @@ static uint8_t oneLine(void)
         gf = temp[0] = '\0';
         if (!isspace(c) && c != '\n')
             gf = getLabel(temp);
- #ifdef OA
+     #ifdef OA
         if (gObjct == OB_ASM && gf && gPass == 2) {
             oa_putStr(gLineBuf+LINEHEAD,0);
         }
- #endif
+     #endif
         f = getMnemonic();
         if (temp[0] && gCoStk[gCo_sp] >= 0)
             defLabel(temp, f && !strcmp(gOprPtr->mnemonic,"SET") ? 2 : 1, gf);
@@ -2598,7 +2595,7 @@ static void assemble(int argc, char **argv)
                         error("Only RMB is allowed between CSECT and ENDSECT.");
                     }
                 }
- #ifdef OA
+             #ifdef OA
                 if (gObjct == OB_ASM && gPass == 2
                     && gOAStk[gOA_sp].ll == gLineNo) {
                     DEBMSGF((STDERR,"OA#2:%d line=%d size=%d / gLineNo=%d\n"
@@ -2619,7 +2616,7 @@ static void assemble(int argc, char **argv)
                             error("Too many unassembled lines for the -a option.");
                     }
                 } else
- #endif
+             #endif
                 {
                     gOprPtr->process();
                 }
@@ -2671,9 +2668,9 @@ static void getModNam(char *modnam, char *fnam)
             if (*(++s) == '\0')
                 break;
         } else if (*s == '/'
- #ifdef MSDOS
+         #ifdef MSDOS
             || *s == ':' || *s == '\\'
- #endif
+         #endif
         ){
             fnam = s + 1;
         } else if (*s == '.') {
@@ -2954,7 +2951,7 @@ static void options(uint8_t *p)
 
 int main(int argc, char *argv[])
 {
-    static char *title = "HD6309 cross assembler version 01.30T\n";
+    static char *title = "HD6309 cross assembler version 01.40T\n";
     char *p;
     int  i;
 
