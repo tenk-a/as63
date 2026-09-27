@@ -46,22 +46,17 @@ typedef short           int16_t;    /* 2-byte signed integer type */
 #define MODNAMSZ        29    /* maximum number of characters in module name */
 
 typedef int  val_t;           /* int<->long: use int/long for constant arithmetic */
-/*#define M6809 */            /* do not generate 6309 instructions           */
 
-#define HE                    /* generate additional features                */
-#define OE                    /* enable -e option support                    */
-#define OA                    /* enable -a option support                    */
-#define OPTIM                 /* enable optimization (-y)                    */
-#define OPTS_FBAS              /* enable -k (FBASIC machine-code file output) */
-#define OPTS_FLEX              /* enable -x (FLEX executable file output)     */
-#define FILSTK2               /* show file name and line number on errors    */
-#define OPED                  /* enable synthetic instructions for 6809      */
-#define OPEQ                  /* enable synthetic instructions for 6309      */
-#define OPTS_UNDOC             /* enable 6809 undocument instructions         */
-#define OPTS_M6800             /* enable 6800 family mnemonic                 */
+#define OPT_OA_FILE           /* enable -a option support                    */
+#define OPT_OPTIMIZE          /* enable optimization (-y)                    */
+#define OPT_FBAS              /* enable -k (FBASIC machine-code file output) */
+#define OPT_FLEX              /* enable -x (FLEX executable file output)     */
+#define OPT_EXT_INST          /* enable extended instructions                */
+#define OPT_UNDOC             /* enable 6809 undocument instructions         */
+#define OPT_M6800             /* enable 6800 family mnemonic                 */
 
-#ifdef OA
-# define OA_MAX 500
+#ifdef OPT_OA_FILE
+# define OA_MAX         500
 #endif
 #define INCLUDIR        "."
 
@@ -83,12 +78,6 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define MAXOPTIM        8192  /* maximum number of long branches convertible to short */
 #define GCO_MAX         256   /* maximum if nesting depth                    */
 #define GP1_MAX         1024  /* maximum number of ifp1 uses                 */
-#endif
-
-#ifdef M6809
- #ifdef OPEQ
-  #undef OPEQ
- #endif
 #endif
 
 /* register notation */
@@ -174,10 +163,10 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define OB_ASM          4
 
 /* opcode table */
-#ifdef OPTS_UNDOC
+#ifdef OPT_UNDOC
 #define OPR_UNDOC6809  0x02
 #endif
-#ifdef OPTS_M6800
+#ifdef OPT_M6800
 #define OPR_M6800      0x04
 #endif
 
@@ -217,13 +206,11 @@ EXTERN uint8_t  gValid_f, gEOF_f;
 EXTERN uint8_t  gOs9_f  , gOrg_f , gOrgSFmt_f;
 EXTERN uint8_t  gByte_f , gWord_f, gIdxOfs_f;
 EXTERN char     gModName[MODNAMSZ+1];
-#ifndef M6809
- EXTERN uint8_t gM6809_f;
-#endif
-#ifdef OPTS_M6800
+EXTERN uint8_t  gM6809_f;
+#ifdef OPT_M6800
  EXTERN uint8_t gM6800_f;
 #endif
-#ifdef OPTS_UNDOC
+#ifdef OPT_UNDOC
  EXTERN uint8_t gUndoc_f;
 #endif
 
@@ -237,10 +224,10 @@ EXTERN int      gObjBufSz;
 EXTERN uint8_t  gObjBuf[OBJSIZE];
 EXTERN uint8_t  gCrcBuf[3];
 EXTERN int      gRmb_sp,    gRmb_f;
-#ifdef OPTS_FBAS
+#ifdef OPT_FBAS
  EXTERN uint8_t gFBasic_f;
 #endif
-#ifdef OPTS_FLEX
+#ifdef OPT_FLEX
  EXTERN uint8_t gFlex_f;
 #endif
 
@@ -260,14 +247,10 @@ EXTERN FILE   *gLstFp;
 EXTERN char   *gLinPtr;
 EXTERN uint8_t gVerbos_f;
 EXTERN char    gLineBuf[MAXCHAR+2];
-#ifdef OE
- EXTERN FILE  *gErrFp;
- EXTERN char  *gErrFName;
-#else
- #define gErrFp STDERR
-#endif
+EXTERN FILE   *gErrFp;
+EXTERN char   *gErrFName;
 
-#ifdef OPTIM
+#ifdef OPT_OPTIMIZE
  /* for optimization (long->short branch) */
  EXTERN int    *gOptStk, gOpt_sp, gOptChg, gOptCount;
  EXTERN uint8_t gOpt_f;
@@ -283,18 +266,16 @@ EXTERN int   gP1Stk[GP1_MAX+1];
 EXTERN FILE *gFileStk[MAXLIB];
 EXTERN int   gFile_sp;
 EXTERN char  gSrcFName[FNAMESZ+1];
-#ifdef FILSTK2
- EXTERN int  gSrcLine;
- EXTERN struct FILSTK2_tag {
+EXTERN int   gSrcLine;
+EXTERN struct FILSTK2_tag {
             int  srcline;
             char srcname[FNAMESZ+1];
         } gFilStk2[MAXLIB];
-#endif
 #ifdef INCLUDIR
  EXTERN char *gIncDirName;
 #endif
 
-#ifdef OA  /* -a option */
+#ifdef OPT_OA_FILE  /* -a option */
  typedef struct {
      int     ll;
      uint8_t nn;
@@ -320,19 +301,15 @@ void
     fcc(void),  fcs(void),  org(void),      setdp(void),
     vsct(void), psct(void), csct(void),     endsct(void),
     opt(void),  nam(void),  page(void),     spc(void),
- #ifdef OPTS_UNDOC
+    tfm(void),  load4(void),immemory(void),
+ #ifdef OPT_UNDOC
     undoc_imm8(void), undoc_imm16(void), undoc_flag(void),
  #endif
- #ifndef M6809
-    tfm(void),  load4(void),immemory(void),
-  #ifdef OPEQ
+ #ifdef OPT_EXT_INST
     opeq(void), none_wq(void),
-  #endif
+    oped(void), none_d(void),
  #endif
- #ifdef OPED
-  oped(void), none_d(void),
- #endif
- #ifdef OPTS_M6800
+ #ifdef OPT_M6800
   mnm6800(void), mnm68hc11(void), hc11BitOp(void), hc11BitBranch(void), hc11MinMax(void), hc11Emuls(void),
  #endif
     endop(void);

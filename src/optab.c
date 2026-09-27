@@ -15,9 +15,7 @@ OPTBL_T gOpTab[] = {
     /* and */
         { "ANDA",   0x00,   0x84,   0x00,   load    },
         { "ANDB",   0x00,   0xc4,   0x00,   load    },
-    #ifdef HE
         { "ANDC",   0x00,   0x1c,   0x00,   ccr     },
-    #endif
         { "ANDCC",  0x00,   0x1c,   0x00,   ccr     },
     /* asl */
         { "ASL",    0x00,   0x08,   0x00,   memory  },
@@ -184,7 +182,7 @@ OPTBL_T gOpTab[] = {
         { "TSTA",   0x00,   0x4d,   0x00,   none    },
         { "TSTB",   0x00,   0x5d,   0x00,   none    },
 
-    #ifdef OPTS_UNDOC
+    #ifdef OPT_UNDOC
     /* undocumented 6809 opcodes (-8 -z) */
         { "XNEG",   0x00,  0x01,  OPR_UNDOC6809, memory },
         { "XNEGA",  0x00,  0x41,  OPR_UNDOC6809, none },
@@ -241,7 +239,7 @@ OPTBL_T gOpTab[] = {
         { "XSTX11", 0x11,  0x8f,  OPR_UNDOC6809, undoc_imm16 },
         { "XSTU11", 0x11,  0xcf,  OPR_UNDOC6809, undoc_imm16 },
     #endif
-    #ifdef OPED
+    #ifdef OPT_EXT_INST
         { "ADCD",   0x10,   0x89,   0x00,   oped    },
         { "ANDD",   0x10,   0x84,   0x00,   oped    },
         { "EORD",   0x10,   0x88,   0x00,   oped    },
@@ -261,8 +259,7 @@ OPTBL_T gOpTab[] = {
         { "TSTD",   0x10,   0x4d,   0x00,   none_d  },
     #endif
   /* HD6309         */
-  #ifndef M6809
-      #ifndef OPED
+      #ifndef OPT_EXT_INST
         { "ADCD",   0x10,   0x89,   0x01,   load2   },
         { "ANDD",   0x10,   0x84,   0x01,   load2   },
         { "EORD",   0x10,   0x88,   0x01,   load2   },
@@ -303,7 +300,7 @@ OPTBL_T gOpTab[] = {
         { "RORW",   0x10,   0x56,   0x01,   none    },
         { "SEXW",   0x00,   0x14,   0x01,   none    },
         { "TSTW",   0x10,   0x5d,   0x01,   none    },
-      #ifdef OPEQ
+      #ifdef OPT_EXT_INST
         { "ASLW",   WQ_LSLW,    4,  0x01,   none_wq },
         { "ASRW",   WQ_ASRW,    6,  0x01,   none_wq },
         { "LSLW",   WQ_LSLW,    4,  0x01,   none_wq },
@@ -351,7 +348,7 @@ OPTBL_T gOpTab[] = {
         { "DIVQ",   0x11,   0x8e,   0x01,   load2   },
         { "LDQ",    0x10,   0xcc,   0x01,   load4   },
         { "STQ",    0x10,   0xcd,   0x01,   store   },
-      #ifdef OPEQ
+      #ifdef OPT_EXT_INST
         { "ASLQ",   WQ_LSLQ,    6,  0x01,   none_wq },
         { "ASRQ",   WQ_ASRQ,    4,  0x01,   none_wq },
         { "CLRQ",   WQ_CLRQ,    4,  0x01,   none_wq },
@@ -369,14 +366,7 @@ OPTBL_T gOpTab[] = {
       #endif
     /* md */
         { "BITMD",  0x11,   0x3c,   0x01,   ccr     },
-   #ifdef OPTS_M6800
-    /* HD6301/HD6303 compatibility */
-        { "XGDX",   0x1e,   0x01,   0x01,   none    }, /* exg d,x */
-        { "SLP",    0x00,   0x13,   0x01,   none    }, /* sync */
-   #endif
-  #endif /* not M6809 */
-
-  #ifdef OPTS_M6800
+  #ifdef OPT_M6800
     /* M6800 aliases with an identical 6809 encoding. */
         { "CPX",    0x00,   0x8c,   OPR_M6800,  load2   },
         { "LDAA",   0x00,   0x86,   OPR_M6800,  load    },
@@ -385,7 +375,7 @@ OPTBL_T gOpTab[] = {
         { "ORAB",   0x00,   0xca,   OPR_M6800,  load    },
         { "STAA",   0x00,   0x87,   OPR_M6800,  store   },
         { "STAB",   0x00,   0xc7,   OPR_M6800,  store   },
-	/* M6800 mnemonics translated to 6809 sequences. */
+    /* M6800 mnemonics translated to 6809 sequences. */
         { "CLC",    0,      0,      0,      mnm6800     },
         { "SEC",    0,      1,      0,      mnm6800     },
         { "CLI",    0,      2,      0,      mnm6800     },
@@ -416,7 +406,10 @@ OPTBL_T gOpTab[] = {
         { "ABA",    0,      27,     0,      mnm6800     },
         { "CBA",    0,      28,     0,      mnm6800     },
         { "SBA",    0,      29,     0,      mnm6800     },
-      /* 68HC11/HCS12 compatibility */
+     /* HD6301/HD6303 compatibility */
+        { "XGDX",   0x1e,   0x01,   0x01,   none        }, /* exg d,x */
+        { "SLP",    0x00,   0x13,   0x01,   none        }, /* sync */
+     /* 68HC11/HCS12 compatibility */
         { "PSHD",   0x34,   0x06,   OPR_M6800,  none        }, /* pshs d */
         { "PULD",   0x35,   0x06,   OPR_M6800,  none        }, /* puls d */
         { "BSET",   0,      0,      OPR_M6800,  hc11BitOp   }, /* 6309: oim #m,ea; 6809: pshs a; lda ea; ora #m; sta ea; puls a */
@@ -467,9 +460,7 @@ OPTBL_T gOpTab[] = {
         { "LIB",    0x00,   0x00,   0x00,   library },
         { "USE",    0x00,   0x00,   0x00,   library },
         { "INCLUDE",0x00,   0x00,   0x00,   library },
-      #ifdef HE
         { ".INCLUDE",0x00,  0x00,   0x00,   library },
-      #endif
     /* if */
         { "IF",     CO_IF,  0x00,   0x00,   NULL    },
         { "IFNE",   CO_IF,  0x00,   0x00,   NULL    },
@@ -484,12 +475,10 @@ OPTBL_T gOpTab[] = {
         { "ELSIF",  CO_ELIF,0x00,   0x00,   NULL    },
         { "ENDIF",  CO_ENDC,0x00,   0x00,   NULL    },
         { "ENDC",   CO_ENDC,0x00,   0x00,   NULL    },
-      #ifdef HE
         { ".IF",    CO_IF,  0x00,   0x00,   NULL    },
         { ".ELSE",  CO_ELSE,0x00,   0x00,   NULL    },
         { ".ELSIF", CO_ELIF,0x00,   0x00,   NULL    },
         { ".ENDIF", CO_ENDC,0x00,   0x00,   NULL    },
-      #endif
     /* etc */
         { "OPT",    0x00,   0x00,   0x00,   opt     },
         { "VSECT",  0x00,   0x00,   0x00,   vsct    },
