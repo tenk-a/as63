@@ -2138,6 +2138,18 @@ void    none_d(void)
         return;
     }
  #endif
+ #ifdef OPTS_UNDOC
+  #ifndef M6809
+    if (gM68_f && gUndoc_f && gOprPtr->opcode == 0x40)
+  #else
+    if (gUndoc_f && gOprPtr->opcode == 0x40)
+  #endif
+    {
+        printByte(putB(0x50), 10);  /* negb */
+        printByte(putB(0x42), 12);  /* ngca */
+        return;
+    }
+ #endif
     p = (uint8_t *)(tbl[gOprPtr->opcode - 0x40]);
     for (i = 10,l = *p++; l--; i += 2)
         printByte(putB(*p++),i);

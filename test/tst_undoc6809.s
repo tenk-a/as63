@@ -28,6 +28,8 @@ entry:
 	neg	<work+4
 	nega
 	negb
+	ldd	#$1234
+	negd
 	lsr	,y
 	lsra
 	lsrb

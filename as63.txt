@@ -1,6 +1,6 @@
 ＡＳ６３
 
-	ＨＤ６３０９・クロス・アセンブラ	Version 1.20T
+        ＨＤ６３０９・クロス・アセンブラ        Version 1.20T
 
 
 
@@ -119,7 +119,7 @@
   -d<LBL>[=Val]
       ラベルLBLを値Valで定義します。値は10進数か16進数で指定します。
         -dLBL=$100 ->  LBL: set $100
-        -dLBL      ->  LBL: set 1	値が省略されると1が設定されます。
+        -dLBL      ->  LBL: set 1       値が省略されると1が設定されます。
  
   -i[lib_file]
       use(lib) で利用する変数$INCにディレクトリ名を設定します。
@@ -202,13 +202,13 @@
       F-BASIC機械語ファイル形式で出力します。
 
       生成するオブジェクトの頭に、
-	  $00				(1バイト),
-	  オブジェクト・サイズ		(2バイト)
-	  Start(ロード・アドレス)	(2バイト)
+          $00                           (1バイト),
+          オブジェクト・サイズ          (2バイト)
+          Start(ロード・アドレス)       (2バイト)
     の5バイトを付加し、オブジェクトの後に、
-	  $FF,$00,$00			(3バイト)
-	  Enter(実行開始アドレス)	(2バイト)
-	  $1a				(1バイト)
+          $FF,$00,$00                   (3バイト)
+          Enter(実行開始アドレス)       (2バイト)
+          $1a                           (1バイト)
     の6バイトを付加します。
 
       Start が省略された場合は、 最初に org で指定されたアドレスになりま
@@ -322,9 +322,9 @@
      |          :  (1)
      |       if  used(LBL)
      |LBL       :  (2)
-     | 	        :
+     |          :
      |       endif
-     |       	:  (3)
+     |          :  (3)
 
      (1) の範囲で LBL が使われる（たとえば lbsr LBL）と条件が成立し, LBLを
     定義したルーチンが現れ生成されます。LBL が (1), (3) で使われていなけれ
@@ -347,37 +347,37 @@
 
     ・式 が 0でなければ (命令群) を アセンブルし、0 ならばしない。
       if  式
-	(命令群)
+        (命令群)
       endif
 
     ・式 が 0でなければ (命令群1) を アセンブルし、0 ならば (命令群2)をア
       センブルする。
       if  式
-	(命令群1)
+        (命令群1)
       else
-	(命令群2)
+        (命令群2)
       endif
 
     ・式 が 0 でなければ (命令群1) をアセンブルし、0 ならば次のelsifの式を
       評価し、0 でなけらば(命令群2) を、 そうでなければ (命令群3) をアセン
       ブルする。（elsif 節は else か endif が現れるまでいくつもおける）
       if  式
-	(命令群1)
+        (命令群1)
       elsif 式
-	(命令群2)
+        (命令群2)
       else
-	(命令群3)
+        (命令群3)
       endif
 
   また、os9 Asm  との互換性のため 以下のものもあります。
-    ・ifne 式	式の値が 0 以外のときアセンブル
-    ・ifeq 式	式の値が 0 のときアセンブル
-    ・iflt 式	式の値が 0 未満のときアセンブル
-    ・ifle 式	式の値が 0 以下のときアセンブル
-    ・ifgt 式	式の値が 0 より大きいときアセンブル
-    ・ifge 式	式の値が 0 以上のときアセンブル
+    ・ifne 式   式の値が 0 以外のときアセンブル
+    ・ifeq 式   式の値が 0 のときアセンブル
+    ・iflt 式   式の値が 0 未満のときアセンブル
+    ・ifle 式   式の値が 0 以下のときアセンブル
+    ・ifgt 式   式の値が 0 より大きいときアセンブル
+    ・ifge 式   式の値が 0 以上のときアセンブル
     ・ifp1      パス1のときのみアセンブル （おもに定数ラベル登録用）
-    ・endc	endif と同じ
+    ・endc      endif と同じ
 
 
 
@@ -402,16 +402,16 @@
     csect ～ endsect の間には rmb 以外の命令は置けず、<式>の値から始まり、
   rmbのサイズごとに値を更新します。なお、<式> は省略不可です。
   たとえば、
-		csect	0
-      LBL1	rmb	1
-      LBL2	rmb	10
-		rmb	2
-      LBL3	rmb	0
-		endsect
+                csect   0
+      LBL1      rmb     1
+      LBL2      rmb     10
+                rmb     2
+      LBL3      rmb     0
+                endsect
   は、
-      LBL1	equ	0
-      LBL2	equ	1
-      LBL3	equ	13
+      LBL1      equ     0
+      LBL2      equ     1
+      LBL3      equ     13
   と同じことになります。
 
 □  org  <式>
@@ -467,7 +467,7 @@
     デリミタは２つとも同じ文字であり、文字列中に含まれてはいけません。
     デリミタとして主に以下のものが使えます（他にも使える文字がある^^;）。
 
-	"  /   '  #  !  -  +  *  &
+        "  /   '  #  !  -  +  *  &
 
   実際には最初の3つ以外はなるべく使わないほうが無難だと思います。
 
@@ -492,11 +492,11 @@
 □  opt  {-l|l}
     ソース中でオプションを変更します。いまのとこ、以下のものしか対応してま
   せん。これ以外のものは無視します。（エラーにはなりません）
-    opt  l	ソースを表示します。    
-    opt  -l	ソースの表示を抑制します。
-		正確には内部のカウンタを l が指定されれば +1, -l なら -1し
-		て、カウンタの値がが 0 より大きければ表示、0以下なら抑制し
-		ます（os9 Asm と同じはずです）。
+    opt  l      ソースを表示します。    
+    opt  -l     ソースの表示を抑制します。
+                正確には内部のカウンタを l が指定されれば +1, -l なら -1し
+                て、カウンタの値がが 0 より大きければ表示、0以下なら抑制し
+                ます（os9 Asm と同じはずです）。
 
 □  無視する疑似命令
     以下の命令はサポートされていませんが、ソースにあらわれてもエラーにはな
@@ -521,9 +521,9 @@
 
 □  ???_iでのイミディエイト指定
     ??? を #イミディエイト指定可能な命令とするとき、
-      ???    #定数式	( ldw  #10 )
+      ???    #定数式    ( ldw  #10 )
     を
-      ???_i  定数式	( ldw_i 10 )
+      ???_i  定数式     ( ldw_i 10 )
     のように c.asm 用 6309 マクロでの表記もできます。
 
 □  ldq のイミディエイト・アドレッシング
@@ -547,22 +547,22 @@
 
   ・ニーモニックのみの命令
     （フラグ変化  * 変化  X 破壊  ･ 不変  1 set   0 clr）
-		(生成される命令)	    NZVC	サイズ
-	negw	comw;incw		    **X1	 4
-	lslw	andcc #$fe;rolw		    ****	 4
-	asrw	pshw;asl ,s++;rorw	    **X*	 6
+                (生成される命令)            NZVC        サイズ
+        negw    comw;incw                   **X1         4
+        lslw    andcc #$fe;rolw             ****         4
+        asrw    pshw;asl ,s++;rorw          **X*         6
 
-	tstq	stq -4,s		    **･･	 3
-	clrq	clrw;clrd		    0100	 4
-	comq	comw;comd		    *X01	 4
-	negq	comd;comw;incw;bne*+4;incd  *XX1	10
-	lsrq	lsrd;rorw		    XX･*	 4
-	asrq	asrd;rorw		    XX･*	 4
-	rorq	rord;rorw		    XX･*	 4
-	rolq	rolw;rold		    *XX*	 4
-	lslq	andcc #$fe;rolw;rold	    *XX*	 6
-	incq	incw;bne *+4;incd	    *XX･	 6
-	decq	tstw;bne *+4;decd;decw	    *X0･	 8
+        tstq    stq -4,s                    **･･         3
+        clrq    clrw;clrd                   0100         4
+        comq    comw;comd                   *X01         4
+        negq    comd;comw;incw;bne*+4;incd  *XX1        10
+        lsrq    lsrd;rorw                   XX･*         4
+        asrq    asrd;rorw                   XX･*         4
+        rorq    rord;rorw                   XX･*         4
+        rolq    rolw;rold                   *XX*         4
+        lslq    andcc #$fe;rolw;rold        *XX*         6
+        incq    incw;bne *+4;incd           *XX･         6
+        decq    tstw;bne *+4;decd;decw      *X0･         8
 
       スピードよりもサイズが小さいことを優先しました。
 
@@ -571,17 +571,17 @@
 
   ・addq,subq
       可能なアドレッシング・モード
-	イミディエイト
-	エクステンド
-	ダイレクト($00～$fd まで)
-	ゼロ,5ビット(x,y,u,s),
-	8ビット,16ビット(x,y,u,s,pc,pcr)
-	オート・インクリメント、オート・デクリメント
+        イミディエイト
+        エクステンド
+        ダイレクト($00～$fd まで)
+        ゼロ,5ビット(x,y,u,s),
+        8ビット,16ビット(x,y,u,s,pc,pcr)
+        オート・インクリメント、オート・デクリメント
 
       不可能なアドレッシング・モード
-	インダイレクト・モード
-	レジスタ・オフセット
-	Wレジスタによるインデックス
+        インダイレクト・モード
+        レジスタ・オフセット
+        Wレジスタによるインデックス
 
   ・psh,pul
       psh,pul で w レジスタを指定できます。
@@ -597,32 +597,35 @@
     6809モードにおいて以下の命令は6809で生成することができます。
 
   ・ニーモニックのみの命令
-	(生成される命令)		NZVC	6309との互換性	(サイズ)
-	clrd	clrb;clra		0100	n,z,v,c有効	2    同じ
-	tstd	std  -2,s		**0･	n,z,v,c有効	2    同じ
-	comd	comb;coma		*X01	n,c有効		2    同じ
-	negd	nega;negb;sbca #0       *XXX	n有効		4    違う
-	incd	addd #1			****	n,z,v有効	3    違う
-	decd	subd #1			****	n,z,v有効	3    違う
-	asld	lslb;rola		*XX*	n,c有効		2    同じ
-	lsld	lslb;rola		*XX*	n,c有効		2    同じ
-	rold	rolb;rola		*XX*	n,c有効		2    同じ
-	asrd	asra;rorb		XX･*	v,c有効		2    同じ
-	lsrd	lsra;rorb		XX･*	v,c有効		2    同じ
-	rord	rora;rorb		XX･*	v,c有効		2    同じ
+        (生成される命令)                NZVC    6309との互換性  (サイズ)
+        clrd    clrb;clra               0100    n,z,v,c有効     2    同じ
+        tstd    std  -2,s               **0･    n,z,v,c有効     2    同じ
+        comd    comb;coma               *X01    n,c有効         2    同じ
+        negd    nega;negb;sbca #0       *XXX    n有効           4    違う
+        (-z時)  negb;xnca               *X**    n,v,c有効       2    同じ
+        incd    addd #1                 ****    n,z,v有効       3    違う
+        decd    subd #1                 ****    n,z,v有効       3    違う
+        asld    lslb;rola               *XX*    n,c有効         2    同じ
+        lsld    lslb;rola               *XX*    n,c有効         2    同じ
+        rold    rolb;rola               *XX*    n,c有効         2    同じ
+        asrd    asra;rorb               XX･*    v,c有効         2    同じ
+        lsrd    lsra;rorb               XX･*    v,c有効         2    同じ
+        rord    rora;rorb               XX･*    v,c有効         2    同じ
+
+        -z 指定時は 6809 未定義命令を使用.
 
   ・adcd,sbcd,andd,ord,eord
       可能なアドレッシング・モード
-	イミディエイト
-	エクステンド
-	ダイレクト($00～$feまで)
-	ゼロ,5ビット(x,y,u,s)
-	8ビット, 16ビット(x,y,u,s,pc,pcr)
-	オート・インクリメント、オート・デクリメント。
+        イミディエイト
+        エクステンド
+        ダイレクト($00～$feまで)
+        ゼロ,5ビット(x,y,u,s)
+        8ビット, 16ビット(x,y,u,s,pc,pcr)
+        オート・インクリメント、オート・デクリメント。
 
       不可能なアドレッシング・モード
-	インダイレクト・モード
-	レジスタ・オフセット
+        インダイレクト・モード
+        レジスタ・オフセット
 
     レジスタに対する動作が同じなだけでフラグ変化や生成されるサイズは異なり
     ますので気をつけて使ってください。
