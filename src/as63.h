@@ -52,12 +52,12 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define OE                    /* enable -e option support                    */
 #define OA                    /* enable -a option support                    */
 #define OPTIM                 /* enable optimization (-y)                    */
-#define OPTS_FBAS             /* enable -k (FBASIC machine-code file output) */
-#define OPTS_FLEX             /* enable -x (FLEX executable file output)     */
+#define OPTS_FBAS              /* enable -k (FBASIC machine-code file output) */
+#define OPTS_FLEX              /* enable -x (FLEX executable file output)     */
 #define FILSTK2               /* show file name and line number on errors    */
 #define OPED                  /* enable synthetic instructions for 6809      */
 #define OPEQ                  /* enable synthetic instructions for 6309      */
-#define OPTS_UNDOC              /* enable 6809 undocument instructions         */
+#define OPTS_UNDOC             /* enable 6809 undocument instructions         */
 #define OPTS_M6800             /* enable 6800 family mnemonic                 */
 
 #ifdef OA
@@ -333,7 +333,7 @@ void
   oped(void), none_d(void),
  #endif
  #ifdef OPTS_M6800
-  mnm6800(void),
+  mnm6800(void), mnm68hc11(void), hc11BitOp(void), hc11BitBranch(void), hc11MinMax(void), hc11Emuls(void),
  #endif
     endop(void);
 

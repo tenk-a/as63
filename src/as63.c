@@ -1415,6 +1415,253 @@ void    none(void)
 }
 
 #ifdef OPTS_M6800
+void    mnm68hc11(void)
+{
+    static const struct {
+        uint8_t len;
+        uint8_t code[7];
+    } tbl[] = {
+        { 7, { 0x34, 0x03, 0x4f, 0x31, 0xab, 0x35, 0x03 } }, /* aby -> pshs a,cc; clra; leay d,y; puls cc,a */
+        { 6, { 0x34, 0x01, 0x31, 0x62, 0x35, 0x01 }       }, /* tsy -> pshs cc; leay 2,s; puls cc */
+    };
+    int j;
+
+ #ifndef M6809
+    if (gOprPtr->opcode == 0 && !gM6809_f) {
+        static const uint8_t aby6309[] = { 0x34, 0x03, 0x4f, 0x10, 0x30, 0x02, 0x35, 0x03 }; /* pshs a,cc; clra; addr d,y; puls cc,a */
+        for (j = 0; j < sizeof(aby6309); ++j)
+            put1Byte(aby6309[j]);
+        return;
+    }
+ #endif
+    for (j = 0; j < tbl[gOprPtr->opcode].len; ++j)
+        put1Byte(tbl[gOprPtr->opcode].code[j]);
+}
+
+typedef struct {
+    uint8_t indexed;
+    uint8_t extended;
+    uint8_t len;
+    uint8_t code[3];
+} HC11MEM_T;
+
+static int  hc11IndexHere(void)
+{
+    uint8_t *p;
+    int found;
+
+    p = gLinPtr;
+    skipSpace();
+    found = (toupper(*gLinPtr) == 'X' || toupper(*gLinPtr) == 'Y')
+        && !isSymbl3(*(gLinPtr + 1));
+    gLinPtr = p;
+    return found;
+}
+
+static int  hc11IndexReg(void)
+{
+    skipSpace();
+    if (toupper(*gLinPtr) == 'X' && !isSymbl3(*(gLinPtr + 1))) {
+        ++gLinPtr;
+        return 0;
+    }
+    if (toupper(*gLinPtr) == 'Y' && !isSymbl3(*(gLinPtr + 1))) {
+        ++gLinPtr;
+        return 0x20;
+    }
+    error("Only X or Y is allowed for this mnemonic.");
+    return -1;
+}
+
+/* Parse the direct or X/Y-indexed operand accepted by the HC11 bit forms. */
+static int  hc11Mem(HC11MEM_T *m)
+{
+    val_t val;
+    uint8_t *p;
+    int base;
+    int i;
+
+    m->indexed = m->extended = m->len = 0;
+    for (i = 0; i < sizeof(m->code); ++i)
+        m->code[i] = 0;
+    skipSpace();
+    if (checkChar(',')) {
+        val = 0;
+        base = hc11IndexReg();
+        if (base < 0)
+            return 0;
+        m->indexed = 1;
+    } else {
+        val = expression();
+        p = gLinPtr;
+        if (checkChar(',') && hc11IndexHere()) {
+            base = hc11IndexReg();
+            if (base < 0)
+                return 0;
+            m->indexed = 1;
+        } else {
+            gLinPtr = p;
+            if (gByte_f || (gValid_f && 0 <= val && val <= 255 && !gWord_f)) {
+                if (gValid_f && (val < 0 || 255 < val))
+                    error("Direct address is out of range.");
+                m->len = 1;
+                m->code[0] = (uint8_t)val;
+            } else {
+                if (gValid_f && (val < 0 || 65535 < val))
+                    error("Extended address is out of range.");
+                m->extended = 1;
+                m->len = 2;
+                m->code[0] = (uint8_t)(val >> 8);
+                m->code[1] = (uint8_t)val;
+            }
+            return 1;
+        }
+    }
+    if (gValid_f && -16 <= val && val <= 15 && !gByte_f && !gWord_f) {
+        m->len = 1;
+        m->code[0] = (uint8_t)((val & 0x1f) | base);
+    } else if (gValid_f && -128 <= val && val <= 127 && !gWord_f) {
+        m->len = 2;
+        m->code[0] = (uint8_t)(0x88 | base);
+        m->code[1] = (uint8_t)val;
+    } else {
+        m->len = 3;
+        m->code[0] = (uint8_t)(0x89 | base);
+        m->code[1] = (uint8_t)(val >> 8);
+        m->code[2] = (uint8_t)val;
+    }
+    return 1;
+}
+
+static void hc11MemTail(const HC11MEM_T *m)
+{
+    int i;
+
+    for (i = 0; i < m->len; ++i)
+        put1Byte(m->code[i]);
+}
+
+static void hc11MemOp(uint8_t direct, uint8_t indexed, uint8_t extended, HC11MEM_T const* m)
+{
+    put1Byte(m->indexed ? indexed : (m->extended ? extended : direct));
+    hc11MemTail(m);
+}
+
+static int  hc11Mask(uint8_t *mask)
+{
+    if (!checkCh_e(','))
+        return 0;
+    skipSpace();
+    checkChar('#');
+    *mask = bytExpr();
+    return 1;
+}
+
+void    hc11BitOp(void)
+{
+    HC11MEM_T m;
+    uint8_t mask;
+    int clear;
+
+    clear = gOprPtr->opcode;
+    if (!hc11Mem(&m) || !hc11Mask(&mask))
+        return;
+ #ifndef M6809
+    if (!gM6809_f) {
+        put1Byte(m.indexed ? (clear ? 0x62 : 0x61)
+                 : (m.extended ? (clear ? 0x72 : 0x71) : (clear ? 0x02 : 0x01)));
+        put1Byte(clear ? (uint8_t)~mask : mask);
+        hc11MemTail(&m);
+        return;
+    }
+ #endif
+    put1Byte(0x34); put1Byte(0x02);                    /* pshs a */
+    hc11MemOp(0x96, 0xa6, 0xb6, &m);                   /* lda */
+    put1Byte(clear ? 0x84 : 0x8a);                     /* anda/ora */
+    put1Byte(clear ? (uint8_t)~mask : mask);           /* #mask */
+    hc11MemOp(0x97, 0xa7, 0xb7, &m);                   /* sta */
+    put1Byte(0x35); put1Byte(0x02);                    /* puls a */
+}
+
+void    hc11BitBranch(void)
+{
+    HC11MEM_T m;
+    uint8_t mask;
+    val_t target;
+    val_t disp;
+    int set;
+
+    set = gOprPtr->opcode == 0;
+    if (!hc11Mem(&m) || !hc11Mask(&mask) || !checkCh_e(','))
+        return;
+    target = expression();
+    put1Byte(0x34); put1Byte(0x03);                    /* pshs a,cc */
+    hc11MemOp(0x96, 0xa6, 0xb6, &m);                   /* lda */
+    put1Byte(0x84); put1Byte(mask);                    /* anda #mask */
+    if (set) {
+        put1Byte(0x81); put1Byte(mask);                /* cmpa #mask */
+    }
+    put1Byte(0x26); put1Byte(4);                       /* bne false */
+    put1Byte(0x35); put1Byte(0x03);                    /* puls a,cc */
+    disp = target - gLc - 2;
+    if (gValid_f && (disp < -128 || 127 < disp))
+        error("Short branch target is out of range.");
+    put1Byte(0x20); put1Byte((uint8_t)disp);           /* bra target */
+    put1Byte(0x35); put1Byte(0x03);                    /* false: puls a,cc */
+}
+
+void    hc11MinMax(void)
+{
+    HC11MEM_T m;
+    int isMin;
+    int isMem;
+    int skip;
+
+    isMin = gOprPtr->opcode & 1;
+    isMem = gOprPtr->opcode & 2;
+    if (!hc11Mem(&m))
+        return;
+    if (!m.indexed) {
+        error("Indexed addressing is required for this mnemonic.");
+        return;
+    }
+    put1Byte(0x34); put1Byte(0x04);                    /* pshs b */
+    hc11MemOp(0xd6, 0xe6, 0xf6, &m);                   /* ldb */
+    put1Byte(0x11);                                    /* cba */
+    put1Byte(isMin ? 0x25 : 0x24);                     /* bcs/bcc no change */
+    skip = isMem ? 5 + m.len : 2;
+    put1Byte((uint8_t)skip);
+    if (isMem) {
+        put1Byte(0x34); put1Byte(0x01);                /* pshs cc */
+        hc11MemOp(0x97, 0xa7, 0xb7, &m);               /* sta */
+        put1Byte(0x35); put1Byte(0x01);                /* puls cc */
+    } else {
+        put1Byte(0x1f); put1Byte(0x98);                /* tfr b,a */
+    }
+    put1Byte(0x35); put1Byte(0x04);                    /* puls b */
+}
+
+void    hc11Emuls(void)
+{
+ #ifndef M6809
+    if (gM6809_f) {
+        error("EMULS requires 6309 mode.");
+        return;
+    }
+ #else
+    error("EMULS requires 6309 mode.");
+    return;
+ #endif
+    put1Byte(0x10); put1Byte(0x38);                    /* pshs w */
+    put1Byte(0x34); put1Byte(0x20);                    /* pshs y */
+    put1Byte(0x11); put1Byte(0xaf); put1Byte(0xe1);    /* muld ,s++ */
+    put1Byte(0x1f); put1Byte(0x02);                    /* tfr d,y */
+    put1Byte(0x1f); put1Byte(0x60);                    /* tfr w,d */
+    put1Byte(0x10); put1Byte(0x39);                    /* puls w */
+}
+#endif
+
+#ifdef OPTS_M6800
 void    mnm6800(void)
 {
     static const struct {
