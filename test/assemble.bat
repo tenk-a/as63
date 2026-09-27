@@ -17,6 +17,7 @@ call :ase -9    -mtst_undoc6309 -o tst_undoc6309.s
 call :ase -9 -z -mtst_undoc6309 -o tst_undoc6309.s
 call :asm -j -i. -otst_inc.o tst_inc.s
 call :ase -otst63x.o tst63x.s
+call :ase -6 -ltst_m6800.lst -otst_m6800.o tst_m6800.s
 echo:
 
 :: FLEX binary.

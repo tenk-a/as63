@@ -58,6 +58,7 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define OPED                  /* enable synthetic instructions for 6809      */
 #define OPEQ                  /* enable synthetic instructions for 6309      */
 #define OPTS_UNDOC              /* enable 6809 undocument instructions         */
+#define OPTS_M6800             /* enable 6800 family mnemonic                 */
 
 #ifdef OA
 # define OA_MAX 500
@@ -83,7 +84,6 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define GCO_MAX         256   /* maximum if nesting depth                    */
 #define GP1_MAX         1024  /* maximum number of ifp1 uses                 */
 #endif
-
 
 #ifdef M6809
  #ifdef OPEQ
@@ -177,6 +177,9 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #ifdef OPTS_UNDOC
 #define OPR_UNDOC6809  0x02
 #endif
+#ifdef OPTS_M6800
+#define OPR_M6800      0x04
+#endif
 
 typedef struct optbl_t {
         char   *mnemonic;
@@ -215,7 +218,10 @@ EXTERN uint8_t  gOs9_f  , gOrg_f , gOrgSFmt_f;
 EXTERN uint8_t  gByte_f , gWord_f, gIdxOfs_f;
 EXTERN char     gModName[MODNAMSZ+1];
 #ifndef M6809
- EXTERN uint8_t gM68_f;
+ EXTERN uint8_t gM6809_f;
+#endif
+#ifdef OPTS_M6800
+ EXTERN uint8_t gM6800_f;
 #endif
 #ifdef OPTS_UNDOC
  EXTERN uint8_t gUndoc_f;
@@ -325,6 +331,9 @@ void
  #endif
  #ifdef OPED
   oped(void), none_d(void),
+ #endif
+ #ifdef OPTS_M6800
+  mnm6800(void),
  #endif
     endop(void);
 

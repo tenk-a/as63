@@ -369,40 +369,56 @@ OPTBL_T gOpTab[] = {
 	  #endif
 	/* md */
 		{ "BITMD",	0x11,	0x3c,	0x01,	ccr 	},
+   #ifdef OPTS_M6800
+	/* HD6301/HD6303 compatibility */
+		{ "XGDX",	0x1e,	0x01,	0x01,	none	}, /* exg d,x */
+		{ "SLP",	0x00,	0x13,	0x01,	none	}, /* sync */
+   #endif
   #endif /* not M6809 */
-  #ifdef M6800
-		{ "CLC",	0,		0,		0,		mmmm	},
-		{ "SEC",	0,		0,		0,		mmmm	},
-		{ "CLI",	0,		0,		0,		mmmm	},
-		{ "SEI",	0,		0,		0,		mmmm	},
-		{ "CLV",	0,		0,		0,		mmmm	},
-		{ "SEV",	0,		0,		0,		mmmm	},
-		{ "CLF",	0,		0,		0,		mmmm	},
-		{ "SEF",	0,		0,		0,		mmmm	},
-		{ "CLZ",	0,		0,		0,		mmmm	},
-		{ "SEZ",	0,		0,		0,		mmmm	},
-		{ "PSHA",	0,		0,		0,		mmmm	},
-		{ "PSHB",	0,		0,		0,		mmmm	},
-		{ "PULA",	0,		0,		0,		mmmm	},
-		{ "PULB",	0,		0,		0,		mmmm	},
-		{ "PSHX",	0,		0,		0,		mmmm	},
-		{ "PULX",	0,		0,		0,		mmmm	},
-		{ "DES",	0,		0,		0,		mmmm	},
-		{ "DEX",	0,		0,		0,		mmmm	},
-		{ "INS",	0,		0,		0,		mmmm	},
-		{ "INX",	0,		0,		0,		mmmm	},
-		{ "WAI",	0,		0,		0,		mmmm	},
-		{ "TAB",	0,		0,		0,		mmmm	},
-		{ "TBA",	0,		0,		0,		mmmm	},
-		{ "TAP",	0,		0,		0,		mmmm	},
-		{ "TPA",	0,		0,		0,		mmmm	},
-		{ "TSX",	0,		0,		0,		mmmm	},
-		{ "TXS",	0,		0,		0,		mmmm	},
-		{ "ABA",	0,		0,		0,		mmmm	},
-		{ "CBA",	0,		0,		0,		mmmm	},
-		{ "SBA",	0,		0,		0,		mmmm	},
+
+  #ifdef OPTS_M6800
+	/* M6800 aliases with an identical 6809 encoding. */
+		{ "CPX",	0x00,	0x8c,	OPR_M6800,	load2	},
+		{ "LDAA",	0x00,	0x86,	OPR_M6800,	load	},
+		{ "LDAB",	0x00,	0xc6,	OPR_M6800,	load	},
+		{ "ORAA",	0x00,	0x8a,	OPR_M6800,	load	},
+		{ "ORAB",	0x00,	0xca,	OPR_M6800,	load	},
+		{ "STAA",	0x00,	0x87,	OPR_M6800,	store	},
+		{ "STAB",	0x00,	0xc7,	OPR_M6800,	store	},
+	/* M6800 mnemonics translated to 6809 sequences. */
+		{ "CLC",	0,		0,		0,		mnm6800 },
+		{ "SEC",	0,		1,		0,		mnm6800 },
+		{ "CLI",	0,		2,		0,		mnm6800 },
+		{ "SEI",	0,		3,		0,		mnm6800 },
+		{ "CLV",	0,		4,		0,		mnm6800 },
+		{ "SEV",	0,		5,		0,		mnm6800 },
+		{ "CLF",	0,		6,		0,		mnm6800 },
+		{ "SEF",	0,		7,		0,		mnm6800 },
+		{ "CLZ",	0,		8,		0,		mnm6800 },
+		{ "SEZ",	0,		9,		0,		mnm6800 },
+		{ "PSHA",	0,		10,		0,		mnm6800 },
+		{ "PSHB",	0,		11,		0,		mnm6800 },
+		{ "PULA",	0,		12,		0,		mnm6800 },
+		{ "PULB",	0,		13,		0,		mnm6800 },
+		{ "PSHX",	0,		14,		0,		mnm6800 },
+		{ "PULX",	0,		15,		0,		mnm6800 },
+		{ "DES",	0,		16,		0,		mnm6800 },
+		{ "DEX",	0,		17,		0,		mnm6800 },
+		{ "INS",	0,		18,		0,		mnm6800 },
+		{ "INX",	0,		19,		0,		mnm6800 },
+		{ "WAI",	0,		20,		0,		mnm6800 },
+		{ "TAB",	0,		21,		0,		mnm6800 },
+		{ "TBA",	0,		22,		0,		mnm6800 },
+		{ "TAP",	0,		23,		0,		mnm6800 },
+		{ "TPA",	0,		24,		0,		mnm6800 },
+		{ "TSX",	0,		25,		0,		mnm6800 },
+		{ "TXS",	0,		26,		0,		mnm6800 },
+		{ "ABA",	0,		27,		0,		mnm6800 },
+		{ "CBA",	0,		28,		0,		mnm6800 },
+		{ "SBA",	0,		29,		0,		mnm6800 },
   #endif
-	/* ‹^Ž—–½—ß */
+
+    /* ç–‘ä¼¼å‘½ä»¤ */
 		{ "OS9",	0x10,	0x3f,	0x00,	os9svc	},
 		{ "MOD",	0x00,	0x00,	0x00,	mod 	},
 		{ "EMOD",	0x00,	0x00,	0x00,	emod	},
@@ -463,4 +479,3 @@ OPTBL_T gOpTab[] = {
 		{ "PAG",	0x00,	0x00,	0x00,	page	},
 		{ "",		0x00,	0x00,	0x00,	none	}
 };
-

@@ -1064,7 +1064,7 @@ int     getReg(int r)
         }
     }
  #ifndef M6809
-    if (gM68_f && (reg & X63REG)) {
+    if (gM6809_f && (reg & X63REG)) {
       #ifdef OPTS_UNDOC
         if (reg == V) {
             if (!gUndoc_f)
@@ -1413,6 +1413,64 @@ void    none(void)
 {
     putCode(GROUP0, NO_MODE);
 }
+
+#ifdef OPTS_M6800
+void    mnm6800(void)
+{
+    static const struct {
+        uint8_t len;
+        uint8_t code[4];
+    } tbl[] = {
+        { 2, { 0x1c, 0xfe } },          /* clc  -> andcc #$fe   */
+        { 2, { 0x1a, 0x01 } },          /* sec  -> orcc #$01    */
+        { 2, { 0x1c, 0xef } },          /* cli  -> andcc #$ef   */
+        { 2, { 0x1a, 0x10 } },          /* sei  -> orcc #$10    */
+        { 2, { 0x1c, 0xfd } },          /* clv  -> andcc #$fd   */
+        { 2, { 0x1a, 0x02 } },          /* sev  -> orcc #$02    */
+        { 2, { 0x1c, 0xbf } },          /* clf  -> andcc #$bf   */
+        { 2, { 0x1a, 0x40 } },          /* sef  -> orcc #$40    */
+        { 2, { 0x1c, 0xfb } },          /* clz  -> andcc #$fb   */
+        { 2, { 0x1a, 0x04 } },          /* sez  -> orcc #$04    */
+        { 2, { 0x34, 0x02 } },          /* psha -> pshs a       */
+        { 2, { 0x34, 0x04 } },          /* pshb -> pshs b       */
+        { 2, { 0x35, 0x02 } },          /* pula -> puls a       */
+        { 2, { 0x35, 0x04 } },          /* pulb -> puls b       */
+        { 2, { 0x34, 0x10 } },          /* pshx -> pshs x       */
+        { 2, { 0x35, 0x10 } },          /* pulx -> puls x       */
+        { 2, { 0x32, 0x7f } },          /* des  -> leas -1,s    */
+        { 2, { 0x30, 0x1f } },          /* dex  -> leax -1,x    */
+        { 2, { 0x32, 0x61 } },          /* ins  -> leas 1,s     */
+        { 2, { 0x30, 0x01 } },          /* inx  -> leax 1,x     */
+        { 2, { 0x3c, 0xff } },          /* wai  -> cwai #$ff    */
+        { 3, { 0x1f, 0x89, 0x4d } },    /* tab  -> tfr a,b;tsta */
+        { 3, { 0x1f, 0x98, 0x4d } },    /* tba  -> tfr b,a;tsta */
+        { 2, { 0x1f, 0x8a } },          /* tap  -> tfr a,cc     */
+        { 2, { 0x1f, 0xa8 } },          /* tpa  -> tfr cc,a     */
+        { 2, { 0x1f, 0x41 } },          /* tsx  -> tfr s,x      */
+        { 2, { 0x1f, 0x14 } },          /* txs  -> tfr x,s      */
+        { 4, { 0x34,0x04,0xab,0xe0 } }, /* aba  -> 6309: addr b,a; 6809: pshs b; adda ,s+ */
+        { 4, { 0x34,0x04,0xa1,0xe0 } }, /* cba  -> 6309: cmpr b,a; 6809: pshs b; cmpa ,s+ */
+        { 4, { 0x34,0x04,0xa0,0xe0 } }, /* sba  -> 6309: subr b,a; 6809: pshs b; suba ,s+ */
+    };
+    const uint8_t *p;
+    int j;
+
+    if (!gM6800_f)
+        warning("[WARNING] M6800 mnemonic used without -6.");
+ #ifndef M6809
+    if (!gM6809_f && gOprPtr->opcode >= 27) {
+        static const uint8_t opr[] = { 0x30, 0x37, 0x32 };
+        put1Byte(0x10);
+        put1Byte(opr[gOprPtr->opcode - 27]);
+        put1Byte(0x98);             /* B,A */
+        return;
+    }
+ #endif
+    p = tbl[gOprPtr->opcode].code;
+    for (j = 0; j < tbl[gOprPtr->opcode].len; ++j)
+        put1Byte(p[j]);
+}
+#endif
 
 void    setdp(void)
 {
@@ -2133,14 +2191,14 @@ void    none_d(void)
     };
 
  #ifndef M6809
-    if (gM68_f == 0) {
+    if (gM6809_f == 0) {
         putCode(GROUP0, NO_MODE);   /*  none(); */
         return;
     }
  #endif
  #ifdef OPTS_UNDOC
   #ifndef M6809
-    if (gM68_f && gUndoc_f && gOprPtr->opcode == 0x40)
+    if (gM6809_f && gUndoc_f && gOprPtr->opcode == 0x40)
   #else
     if (gUndoc_f && gOprPtr->opcode == 0x40)
   #endif
@@ -2175,7 +2233,7 @@ void    oped(void)
     int  reg, i, val2;
 
  #ifndef M6809
-    if (gM68_f == 0) {
+    if (gM6809_f == 0) {
         load2();
         return;
     }
@@ -2564,16 +2622,20 @@ static int  getMnemonic(void)
         *--gLinPtr = '#';
     }
     if ((q = srchOpTbl(temp)) != NULL) {
+     #ifdef OPTS_M6800
+        if ((q->option & OPR_M6800) && !gM6800_f)
+            warning("[WARNING] M6800 mnemonic used without -6.");
+     #endif
      #ifndef M6809
       #ifdef OPTS_UNDOC
         if (q->option & OPR_UNDOC6809) {
-            if (!gM68_f)
+            if (!gM6809_f)
                 error("6809 undocumented instruction requires -8.");
             else if (!gUndoc_f)
                 warning("[WARNING] 6809 undocumented instruction used without -z.");
         } else
       #endif
-        if (gM68_f && (q->option & 0x01)) {
+        if (gM6809_f && (q->option & 0x01)) {
             error("6309 instruction used in 6809 mode.");
         }
      #else
@@ -2817,6 +2879,9 @@ static void usage(void)
     fprintf(STDERR,"usage: %s [-opts] src_file...\n",gCmdName);
     e_puts(" -?  Show this help\n");
     e_puts(" -9  OS-9 standard ASM mode   -8  6809 mode\n");
+  #ifdef OPTS_M6800
+    e_puts(" -6  Enable M6800-family mnemonic compatibility\n");
+  #endif
   #ifdef OPTS_UNDOC
     e_puts(" -z  Enable undocumented 6809 opcodes (requires -8)\n");
   #endif
@@ -2940,7 +3005,12 @@ static void options(uint8_t *p)
       #endif
       #ifndef M6809
         case '8':
-            gM68_f = 1;
+            gM6809_f = 1;
+            break;
+      #endif
+      #ifdef OPTS_M6800
+        case '6':
+            gM6800_f = 1;
             break;
       #endif
         case '9':
