@@ -14,8 +14,13 @@
 #include    "as63.h"
 
 #ifdef _MSC_VER
-#define stricmp    _stricmp
-#define itoa       _itoa
+#define strcasecmp  _stricmp
+#define ITOA10(i,a) _itoa((i),(a),10)
+#elif defined _WIN32
+#define strcasecmp  stricmp
+#define ITOA10(i,a) snprintf((a), sizeof(a), "%d", (i))
+#else
+#define ITOA10(i,a) snprintf((a), sizeof(a), "%d", (i))
 #endif
 
 /*--------------------------------------------------------------------------*/
@@ -346,7 +351,8 @@ void    initLine(void)
     gLblPtr = NULL;
     oPostf = 15;
     oPos = 10;
-    itoa(++gLineNo, gLineBuf, 10);
+    ++gLineNo;
+    ITOA10(gLineNo, gLineBuf);
     ++gSrcLine;
     p = gLineBuf;
     while (*p++) {}
@@ -570,7 +576,7 @@ uint8_t    getLabel(char *buf)
     gf = 0;
     if (!isSymbl2(*gLinPtr))
         error("Invalid label name.");
-    for (p = buf; p < buf + LBLSIZE; p++, gLinPtr++) {
+    for (p = buf; p < (uint8_t*)buf + LBLSIZE; p++, gLinPtr++) {
         *p = *gLinPtr;
         if (!isSymbl3(*p))
             break;
@@ -676,7 +682,7 @@ static  val_t   term(void)
     --gLinPtr;
     if (isSymbl2(c)) {
         getLabel(temp);
-        if (stricmp(temp, "defined") == 0 || stricmp(temp, "used") == 0) {
+        if (strcasecmp(temp, "defined") == 0 || strcasecmp(temp, "used") == 0) {
             checkCh_e('(');
             getLabel(temp);
             if (temp[4])
@@ -2057,7 +2063,7 @@ static void fccs(uint8_t a)
         c = *gLinPtr++;
         if (c == '$' && toupper(*gLinPtr) == 'M') {
             getLabel(temp);
-            if (stricmp(temp, "modnam") == 0 && gModName) {
+            if (strcasecmp(temp, "modnam") == 0 && gModName) {
                 p = gModName;
                 while ((b = *p++) != '\0') {
                     if (a && *p == '\0')
@@ -3344,7 +3350,7 @@ int main(int argc, char *argv[])
       #endif
             "o");
     }
-    if (gErrFName == (uint8_t *)(~0)) {
+    if (gErrFName == (char *)(~0)) {
         gErrFName = mallocE(FNAMESZ+1);
         FIL_ChgExt(strcpy(gErrFName, gSrcFName),"err");
     }

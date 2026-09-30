@@ -27,7 +27,7 @@ typedef short           int16_t;    /* 2-byte signed integer type */
 
 #define STDERR          stderr
 #define toXDigit(c)     (isdigit(c) ? (c - '0') : (toupper(c) - 'A' + 10))
-#define e_puts(s)       fprintf(STDERR,s)
+#define e_puts(s)       fprintf(STDERR,"%s", s)
 #ifndef OS9
 #define stpcpy(d,s)     (strcpy((d),(s)),(d)+strlen(d))
 #endif
