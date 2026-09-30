@@ -3061,7 +3061,7 @@ static void usage(void)
     e_puts(" -6  Enable M6800-family mnemonic compatibility\n");
   #endif
   #ifdef OPT_UNDOC
-    e_puts(" -z  Enable undocumented 6809 opcodes (requires -8)\n");
+    e_puts(" -z  Enable undocumented 6809/6309 opcodes/operands\n");
   #endif
     e_puts(" -p  Force < and > to select 8- and 16-bit indexed offsets\n");
   #ifdef OPT_OPTIMIZE
