@@ -105,7 +105,7 @@ char const *FIL_BaseName(char const *adr)
        ) {
             adr = p + 1;
         }
-     #if 0
+     #if 1
         if (isKanji( (*(uint8_t *) p) ) && *(p + 1) )
             p++;
      #endif
@@ -3771,34 +3771,16 @@ static uint16_t xstrtoui(uint8_t const *p, uint8_t const **q)
     return w;
 }
 
-static void getModNam(char * modnam, char const *fnam)
+static void getModNam(char *modnam, char const *fnam)
 {
-    char const *ep = NULL;
-    int         i  = MODNAMSZ;
-    char const *s  = fnam;
-    char *dst;
+    char const *base = FIL_BaseName(fnam);
+    char const *end  = strrchr(base, '.');
+    size_t length = end ? (size_t)(end - base) : strlen(base);
 
-    for (; *s != '\0' && i--; ++s) {
-        if (isKanji(*(uint8_t const *) s)) {
-            if (*(++s) == '\0')
-                break;
-        } else if (*s == '/'
-         #if defined(MSDOS) || defined(_WIN32)
-                  || *s == ':' || *s == '\\'
-         #endif
-       ) {
-            fnam = s + 1;
-        } else if (*s == '.') {
-            ep = s;
-        }
-    }
-
-    if (ep == NULL || ep < fnam)
-        ep = s;
-
-    for (dst = modnam; (*dst = *fnam) != '\0' && fnam < ep; ++dst, ++fnam) { ; }
-
-    *dst = '\0';
+    if (length > MODNAMSZ)
+        length = MODNAMSZ;
+    memcpy(modnam, base, length);
+    modnam[length] = '\0';
 }
 
 
