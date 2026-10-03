@@ -2,7 +2,7 @@
 #include <string.h>
 #include "as63.h"
 
-OPTBL_T gOpTab[] = {
+OPTBL_T const gOpTab[] = {
     /* abx */
     { "ABX",      0x00,       0x3a,    0x00,           none        },
     /* adc */

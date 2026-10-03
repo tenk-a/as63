@@ -26,11 +26,11 @@
 
 /*--------------------------------------------------------------------------*/
 
-FILE    *fopenE(char *fname, char *atr)
+FILE    *fopenE(char const * fname, char const * atr)
 {
-    FILE *fp;
+    FILE * fp = fopen(fname, atr);
 
-    if (( fp = fopen(fname, atr) ) == NULL) {
+    if (fp == NULL) {
         fprintf(STDERR, "%s: File open error. %s.\n", gCmdName, fname);
         exit(1);
     }
@@ -39,22 +39,22 @@ FILE    *fopenE(char *fname, char *atr)
 
 void   *mallocE(size_t siz)
 {
-    void *p;
+    void *p = malloc(siz);
 
-    if (( p = malloc(siz) ) == NULL) {
+    if (p == NULL) {
         fprintf(STDERR, "%s: Not enough memory.\n", gCmdName);
         exit(1);
     }
     return p;
 }
 
-void    errPrg(char *s)
+void    errPrg(char const * s)
 {
     fprintf(STDERR, "%s:BUG(%s)\n", gCmdName, s);
     exit(1);
 }
 
-static void errorWarning(char *s, int errorMode)
+static void errorWarning(char const * s, int errorMode)
 {
     if (errorMode)
         gErrors++;
@@ -73,17 +73,17 @@ static void errorWarning(char *s, int errorMode)
     fprintf(gErrFp, "%s %5d : %s\n", gSrcFName, gSrcLine, s);
 }
 
-void    error(char *s)
+void    error(char const * s)
 {
     errorWarning(s, 1);
 }
 
-void    warning(char *s)
+void    warning(char const * s)
 {
     errorWarning(s, 0);
 }
 
-static void errLbl(char *msg, char *lbl)
+static void errLbl(char const * msg, char const * lbl)
 {
     char buf[260];
 
@@ -93,11 +93,10 @@ static void errLbl(char *msg, char *lbl)
     error(buf);
 }
 
-char    *FIL_BaseName(char *adr)
+char const *FIL_BaseName(char const *adr)
 {
-    char *p;
+    char const *p = adr;
 
-    p = adr;
     while (*p != '\0') {
         if (*p == '/'
          #if defined(MSDOS) || defined(_WIN32)
@@ -115,12 +114,10 @@ char    *FIL_BaseName(char *adr)
     return adr;
 }
 
-char    *FIL_ChgExt(char filename[], char *ext)
+char    *FIL_ChgExt(char * filename, char const * ext)
 {
-    char *p;
+    char *p = strrchr(FIL_BaseName(filename), '.');
 
-    p  = FIL_BaseName(filename);
-    p  = strrchr( p, '.');
     if (p == NULL) {
         strcat(filename, ".");
         strcat( filename, ext);
@@ -276,7 +273,7 @@ int     put2B(uint16_t w)
 }
 
 #ifdef OPT_OA_FILE
-void    oa_putStr(char *s, int n)
+void    oa_putStr(char const * s, int n)
 {
     if (gPass != 2)
         return;
@@ -361,7 +358,7 @@ void    initLine(void)
     ++gSrcLine;
     p          = gLineBuf;
     while (*p++) { ; }
-    for (--p; p < gLinPtr; p++)
+    for (--p; p < (char const*)gLinPtr; p++)
         *p = ' ';
     printAddress(gLinLc = gLc);
 }
@@ -415,7 +412,7 @@ void    put1Word(int w)
 static LBLTBL_T *   oLabel;
 static int          oLrf;
 
-static void printNode(LBLTBL_T *lp)
+static void printNode(LBLTBL_T const * lp)
 {
     if (lp == NULL)
         return;
@@ -457,12 +454,11 @@ void    initNode(void)
     oLabel->right      = oLabel->left = NULL;
 }
 
-void    defLabel(char *temp, uint8_t f, uint8_t gf)
+void    defLabel(char const * temp, uint8_t f, uint8_t gf)
 {
-    LBLTBL_T *  lp;
+    LBLTBL_T *  lp = oLabel;
     int         i;
 
-    lp = oLabel;
     for (;;) {
         if (( i = strcmp(temp, lp->name) ) == 0) {
             if (lp->grp == 0 || lp->grp == gGrp) {
@@ -519,12 +515,11 @@ void    defLabel(char *temp, uint8_t f, uint8_t gf)
     return;
 }
 
-static LBLTBL_T *refLbl0(char *lbl)
+static LBLTBL_T *refLbl0(char const * lbl)
 {
-    LBLTBL_T *  lp;
+    LBLTBL_T *  lp = oLabel;
     int         i;
 
-    lp = oLabel;
     while (lp != NULL) {
         if (( i = strcmp(lbl, lp->name) ) == 0) {
             if (lp->grp == 0 || lp->grp == gGrp)
@@ -536,11 +531,10 @@ static LBLTBL_T *refLbl0(char *lbl)
     return lp;
 }
 
-static LBLTBL_T *refLabel(char *lbl)
+static LBLTBL_T *refLabel(char const * lbl)
 {
-    LBLTBL_T *lp;
+    LBLTBL_T *lp = refLbl0(lbl);
 
-    lp = refLbl0(lbl);
     if (lp && lp->flg == 0)
         return NULL;
     return lp;
@@ -550,7 +544,7 @@ static LBLTBL_T *refLabel(char *lbl)
 /*---------------------------------------------------------------------------*/
 
 #define IS_KANJI(c)  ( (unsigned) ( (c) ^ 0x20 ) - 0xa1U < 0x3cU )
-//#define isKanji2(c) ((uint8_t)(c) >= 0x40 && (uint8_t)(c) <= 0xfc && (c) != 0x7f)
+//#define isKanji2(c) (c >= 0x40 && c <= 0xfc && (c) != 0x7f)
 
 int     isKanji(int c)
 {
@@ -575,20 +569,19 @@ int     isSymbl3(int c)
     return (isalnum(c) || c == '_' || c == '.' || c == '@' || c == '$');
 }
 
-uint8_t    getLabel(char *buf)
+uint8_t    getLabel(char * buf)
 {
     uint8_t *   p;
-    uint8_t     gf;
+    uint8_t     gf = 0;
 
-    gf = 0;
     if (!isSymbl2(*gLinPtr) )
         error("Invalid label name.");
-    for (p = buf; p < (uint8_t *) buf + LBLSIZE; p++, gLinPtr++) {
+    for (p = (uint8_t*)buf; p < (uint8_t *) buf + LBLSIZE; p++, gLinPtr++) {
         *p = *gLinPtr;
         if (!isSymbl3(*p) )
             break;
         if (gUpLo_f)
-            *p = toupper(*p);
+            *p = toupper(*(uint8_t const*)p);
     }
     while (isSymbl3(*gLinPtr))
         gLinPtr++;
@@ -640,7 +633,7 @@ static val_t   term(void)
     val_t       tv;
     uint16_t    c;
 
-    switch (c = *gLinPtr++) {
+    switch ( (c = *gLinPtr++) ) {
     case '+':
         return term();
     case '-':
@@ -662,7 +655,7 @@ static val_t   term(void)
             return gCSectBase;
         break;
     case '\'':
-        if (isKanji(*(uint8_t *) gLinPtr) )
+        if (isKanji(*gLinPtr) )
             goto DC;
         return *gLinPtr++;
     case '"':
@@ -727,10 +720,10 @@ static val_t   term(void)
         return (gValid_f = 0);
     } else if (isdigit(c)) {
         if (c == '0') {
-            if (toupper( *(gLinPtr + 1) ) == 'X') {
+            if (toupper(*(gLinPtr + 1)) == 'X') {
                 gLinPtr += 2;
                 goto XDIG;
-            } else if (toupper( *(gLinPtr + 1) ) == 'B') {
+            } else if (toupper(*(gLinPtr + 1)) == 'B') {
                 gLinPtr += 2;
                 goto BDIG;
             }
@@ -988,7 +981,7 @@ val_t   invExpr(void)
     return r;
 }
 
-void    imm4Expr(int16_t *v1, int16_t *v2)
+void    imm4Expr(int16_t * v1, int16_t * v2)
 {
     val_t val;
 
@@ -1008,7 +1001,7 @@ void    imm4Expr(int16_t *v1, int16_t *v2)
 void    putCode(int grp, int mode)
 {
     /* addressing mode offset table 'gOffset[group][mode]' */
-    static int gOffset[4][4] =  {
+    static int8_t const gOffset[4][4] =  {
         { 0x00, 0x00, 0x00, 0             },
         { 0x00, 0x00, 0x60, 0x70          },
         { 0x00, 0x10, 0x20, 0x30          },
@@ -1027,12 +1020,10 @@ void    putCode(int grp, int mode)
 
 int     getReg(int r)
 {
-    int         reg;
+    int         reg = 0;
     uint8_t     c, b, d;
-    uint8_t *   l_p;
+    uint8_t *l_p = gLinPtr;
 
-    reg    = 0;
-    l_p    = gLinPtr;
     b      = toupper(*gLinPtr);
     gLinPtr++;
     c      = toupper(*gLinPtr);
@@ -1239,7 +1230,7 @@ static void operand(int grp, int mode)
         val = expression();
         if ((mode & INDEX) && checkChar(',')) {
             putCode(grp, INDEX_MODE);
-            switch ( reg = getReg(INDEXREG | W | PC | PCR)) {
+            switch ( (reg = getReg(INDEXREG | W | PC | PCR)) ) {
             case X:
             case Y:
             case U:
@@ -1393,24 +1384,26 @@ void undoc_imm16(void)
 
 void undoc_flag(void)
 {
-    uint8_t opcode;
+    OPTBL_T const * saved = gOprPtr;
+    OPTBL_T selected = *saved;
     val_t   val;
 
     skipSpace();
     if (!checkCh_e('#') )
         return;
     val                = expression();
-    opcode             = gOprPtr->opcode;
+
+    gOprPtr = &selected;
     if (gWord_f || ( !gByte_f && (val < -128 || 255 < val) )) {
-        gOprPtr->opcode = 0x8f;
+        selected.opcode = 0x8f;
         putCode(GROUP0, NO_MODE);
         putWord(val);
     } else {
-        gOprPtr->opcode = 0x87;
+        selected.opcode = 0x87;
         putCode(GROUP0, NO_MODE);
         putByte(val);
     }
-    gOprPtr->opcode    = opcode;
+    gOprPtr = saved;
 }
 
 void    load4(void)
@@ -1459,7 +1452,7 @@ void    mnm68hc11(void)
     int j;
 
     if (gOprPtr->opcode == 0 && !gM6809_f) {
-        static const uint8_t aby6309[] = { 0x34, 0x03, 0x4f, 0x10, 0x30, 0x02, 0x35, 0x03 };    /* pshs a,cc; clra; addr d,y; puls cc,a */
+        static uint8_t const aby6309[] = { 0x34, 0x03, 0x4f, 0x10, 0x30, 0x02, 0x35, 0x03 };    /* pshs a,cc; clra; addr d,y; puls cc,a */
         for (j = 0; j < sizeof (aby6309); ++j)
             put1Byte(aby6309[j]);
         return;
@@ -1477,10 +1470,9 @@ typedef struct {
 
 static int  hc11IndexHere(void)
 {
-    uint8_t *   p;
+    uint8_t *p = gLinPtr;
     int         found;
 
-    p          = gLinPtr;
     skipSpace();
     found      = (toupper(*gLinPtr) == 'X' || toupper(*gLinPtr) == 'Y')
                  && !isSymbl3( *(gLinPtr + 1) );
@@ -1504,7 +1496,7 @@ static int  hc11IndexReg(void)
 }
 
 /* Parse the direct or X/Y-indexed operand accepted by the HC11 bit forms. */
-static int  hc11Mem(HC11MEM_T *m)
+static int  hc11Mem(HC11MEM_T * m)
 {
     val_t       val;
     uint8_t *   p;
@@ -1563,7 +1555,7 @@ static int  hc11Mem(HC11MEM_T *m)
     return 1;
 }
 
-static void hc11MemTail(const HC11MEM_T *m)
+static void hc11MemTail(HC11MEM_T const* m)
 {
     int i;
 
@@ -1571,13 +1563,13 @@ static void hc11MemTail(const HC11MEM_T *m)
         put1Byte(m->code[i]);
 }
 
-static void hc11MemOp(uint8_t direct, uint8_t indexed, uint8_t extended, HC11MEM_T const *m)
+static void hc11MemOp(uint8_t direct, uint8_t indexed, uint8_t extended, HC11MEM_T const * m)
 {
     put1Byte( m->indexed ? indexed : (m->extended ? extended : direct) );
     hc11MemTail(m);
 }
 
-static int  hc11Mask(uint8_t *mask)
+static int  hc11Mask(uint8_t * mask)
 {
     if (!checkCh_e(',') )
         return 0;
@@ -1591,9 +1583,8 @@ void    hc11BitOp(void)
 {
     HC11MEM_T   m;
     uint8_t     mask;
-    int         clear;
+    int         clear = gOprPtr->opcode;
 
-    clear = gOprPtr->opcode;
     if (!hc11Mem(&m) || !hc11Mask(&mask) )
         return;
     if (!gM6809_f) {
@@ -1618,9 +1609,8 @@ void    hc11BitBranch(void)
     uint8_t     mask;
     val_t       target;
     val_t       disp;
-    int         set;
+    int         set = gOprPtr->opcode == 0;
 
-    set    = gOprPtr->opcode == 0;
     if (!hc11Mem(&m) || !hc11Mask(&mask) || !checkCh_e(',') )
         return;
     target = expression();
@@ -1642,12 +1632,10 @@ void    hc11BitBranch(void)
 void    hc11MinMax(void)
 {
     HC11MEM_T   m;
-    int         isMin;
-    int         isMem;
+    int         isMin = gOprPtr->opcode & 1;
+    int         isMem = gOprPtr->opcode & 2;
     int         skip;
 
-    isMin  = gOprPtr->opcode & 1;
-    isMem  = gOprPtr->opcode & 2;
     if (!hc11Mem(&m) )
         return;
     if (!m.indexed) {
@@ -1721,13 +1709,13 @@ void    mnm6800(void)
         { 4, { 0x34, 0x04, 0xa1, 0xe0} },   /* cba  -> 6309: cmpr b,a; 6809: pshs b; cmpa ,s+ */
         { 4, { 0x34, 0x04, 0xa0, 0xe0} },   /* sba  -> 6309: subr b,a; 6809: pshs b; suba ,s+ */
     };
-    const uint8_t * p;
+    uint8_t const*  p;
     int             j;
 
     if (!gM6800_f)
         warning("[WARNING] M6800 mnemonic used without -6.");
     if (!gM6809_f && gOprPtr->opcode >= 27) {
-        static const uint8_t opr[] = { 0x30, 0x37, 0x32 };
+        static uint8_t const opr[] = { 0x30, 0x37, 0x32 };
         put1Byte(0x10);
         put1Byte(opr[gOprPtr->opcode - 27]);
         put1Byte(0x98);                     /* B,A */
@@ -1989,7 +1977,7 @@ void    mod(void)
 {
     uint16_t    os9hdr[4];
     uint8_t     sum, l;
-    uint8_t *   p;
+    uint8_t const *p;
 
     gOs9_f     = 1;
     gObjLc     = gLc = 0;
@@ -2005,7 +1993,7 @@ void    mod(void)
     checkCh_e(',');
     put1Byte(os9hdr[3] = (expression() & 0xFF));
     os9hdr[3] |= l * 0x100;
-    for (p = (uint8_t *) os9hdr, sum = (uint8_t)~0, l = 8; l-- > 0;) {
+    for (p = (uint8_t const *) os9hdr, sum = (uint8_t)~0, l = 8; l-- > 0;) {
         sum ^= *p++;
     }
     put1Byte(sum & 0xff);
@@ -2055,7 +2043,7 @@ void    fdb(void)
     do {
         if (checkChar('"')) {
             while (((*gLinPtr != '"') || (*++gLinPtr == '"')) && (*gLinPtr != '\n')) {
-                if (isKanji(*(uint8_t *) gLinPtr) && gLinPtr[1]) {
+                if (isKanji(*gLinPtr) && gLinPtr[1]) {
                     put1Byte(*gLinPtr++);
                     put1Byte(*gLinPtr++);
                 } else {
@@ -2111,8 +2099,8 @@ void    fcb(void)
 
 static void fccs(uint8_t a)
 {
-    uint8_t     temp[MNEMOSIZE + 1];
-    uint8_t *   p;
+    char        temp[MNEMOSIZE + 1];
+    uint8_t const *p;
     uint8_t     b;
     uint8_t     c;
 
@@ -2122,7 +2110,7 @@ static void fccs(uint8_t a)
         if (c == '$' && toupper(*gLinPtr) == 'M') {
             getLabel(temp);
             if (strcasecmp(temp, "modnam") == 0 && gModName) {
-                p = gModName;
+                p = (uint8_t const*)gModName;
                 while ( (b = *p++) != '\0') {
                     if (a && *p == '\0')
                         b |= 0x80;
@@ -2349,12 +2337,12 @@ void    vsct(void)
 
 /*----------------------------------*/
 
-static int textOperand(char *dst, int size)
+static int textOperand(char * dst, int size)
 {
-    uint8_t  c;
-    int      quote = 0;
-    int      n     = 0;
-    char const *prefix = "";
+    uint8_t     c;
+    int         quote = 0;
+    int         n     = 0;
+    char const* prefix= "";
     skipSpace();
     if (*gLinPtr == '"' || *gLinPtr == '\'') {
         quote = *gLinPtr++;
@@ -2382,7 +2370,7 @@ static int textOperand(char *dst, int size)
     }
     strcpy(dst, prefix);
     n = (int)strlen(prefix);
-    while ((c = *(uint8_t const*)gLinPtr) != 0 && c != '\n') {
+    while ((c = *gLinPtr) != 0 && c != '\n') {
         if (quote ? (c == quote) : (isspace(c) || c == ',' || c == ';')) {
             break;
         }
@@ -2404,7 +2392,7 @@ static int textOperand(char *dst, int size)
 
 static int nextComma(void)
 {
-    char *saved = gLinPtr;
+    uint8_t *saved = gLinPtr;
     skipSpace();
     if (checkChar(',') )
         return 1;
@@ -2412,7 +2400,7 @@ static int nextComma(void)
     return 0;
 }
 
-static FILE *openSearch(char const *name, char const *mode)
+static FILE *openSearch(char const * name, char const * mode)
 {
     FILE *  fp = fopen(name, mode);
     char    path[FNAMESZ + 1];
@@ -2423,7 +2411,7 @@ static FILE *openSearch(char const *name, char const *mode)
     if (name[0] == '/' || name[0] == '\\' || (name[0] && name[1] == ':') )
         return NULL;
     for (i = -1; i < extraIncCount; ++i) {
-        char const *dir = i < 0 ? gIncDirName : extraIncDirs[i];
+        char const * dir = i < 0 ? gIncDirName : extraIncDirs[i];
         if (strlen(dir) + strlen(name) + 2 > sizeof (path) )
             continue;
         strcpy(path, dir);
@@ -2457,9 +2445,9 @@ void incdir(void)
 
 void incbin(void)
 {
+    FILE *fp;
     char    name[FNAMESZ + 1];
     val_t   offset = 0, length = -1;
-    FILE *  fp;
     long    fileSize, available;
     int     c;
 
@@ -2481,7 +2469,7 @@ void incbin(void)
         error("Invalid INCBIN offset or length.");
         return;
     }
-    fp         = openSearch(name, "rb");
+    fp = openSearch(name, "rb");
     if (!fp) {
         error("Cannot open INCBIN file.");
         return;
@@ -2556,7 +2544,7 @@ void rsOffset(void)
 {
     int   mode = gOprPtr->opcode & 15;
     int   kind = gOprPtr->opcode >> 4;
-    val_t *counter = (kind == 1) ? &soCounter : kind == 2 ? &foCounter : &rsCounter;
+    val_t * counter = (kind == 1) ? &soCounter : kind == 2 ? &foCounter : &rsCounter;
     val_t count;
     val_t next;
     clearAddress();
@@ -2674,7 +2662,7 @@ void argumentOffsets(void)
         getLabel(name);
         size = 2;
         if (strlen(name) > 2 && name[strlen(name)-2] == '.') {
-            int suffix = toupper(name[strlen(name)-1]);
+            int suffix = toupper(*(uint8_t const*)(name + strlen(name) - 1));
             if (suffix != 'B' && suffix != 'W' && suffix != 'L') {
                 error("Invalid CARGS size.");
                 return;
@@ -2706,7 +2694,7 @@ void printText(void)
             int n = 0;
             while (*gLinPtr && *gLinPtr != '\n' && *gLinPtr != ';' && *gLinPtr != ',')
                 text[n++] = *gLinPtr++;
-            while ( n && isspace( (uint8_t) text[n - 1] ) )
+            while ( n && isspace( *(uint8_t const*)(text + n - 1) ) )
                 --n;
             text[n] = 0;
             if (*gLinPtr == ';') {
@@ -2749,15 +2737,15 @@ void printValue(void)
 
 void    library(void)
 {
-    char fname[FNAMESZ + 1];
     FILE *fp;
+    char fname[FNAMESZ + 1];
     clearAddress();
     if (!textOperand(fname, sizeof(fname)))
         return;
     if (gVerbos_f)
         fprintf(STDERR, "[%s]\n", fname);
     DEBMSGF( (STDERR, "include %s  (#%d)\n", fname, gFile_sp + 1) );
-    fp  = openSearch(fname, "r");
+    fp = openSearch(fname, "r");
     if (!fp) {
         error("Cannot open include file.");
         return;
@@ -2840,9 +2828,9 @@ void    page(void)
 
 void    none_d(void)
 {
-    uint8_t *       p;
-    uint8_t         i, l;
-    static uint8_t  tbl[16][5] = {
+    uint8_t const* p;
+    uint8_t        i, l;
+    static uint8_t const tbl[16][5] = {
         { 4, 0x40, 0x50, 0x82, 0x00          }, /* negd 0x1040 */
         { 0, 0,    0,    0,    0             },
         { 0, 0,    0,    0,    0             },
@@ -2870,7 +2858,7 @@ void    none_d(void)
         printByte(putB(0x42), 12);              /* ngca */
         return;
     }
-    p = (uint8_t *) (tbl[gOprPtr->opcode - 0x40]);
+    p = tbl[gOprPtr->opcode - 0x40];
     for (i = 10, l = *p++; l--; i += 2)
         printByte(putB(*p++), i);
 }
@@ -2923,7 +2911,7 @@ void    oped(void)  /* andd  ord  eord  adcd  sbcd */
     } else {
         val = expression();
         if (checkChar(',')) {
-            switch ( reg = getReg(INDEXREG | PC | PCR)) {
+            switch ( (reg = getReg(INDEXREG | PC | PCR)) ) {
             case X:
             case Y:
             case U:
@@ -2983,7 +2971,7 @@ void    oped(void)  /* andd  ord  eord  adcd  sbcd */
 
 void    none_wq(void)
 {
-    static uint8_t  tbl[] = {
+    static uint8_t const tbl[] = {
         0x10, 0xed, 0x7c, 0,                /*  tstq  stq -4,s; */
         0x10, 0x5f, 0x10, 0x4f,             /*  clrq  clrw;clrd */
         0x10, 0x53, 0x10, 0x43,             /*  comq  comw;comd */
@@ -3002,16 +2990,14 @@ void    none_wq(void)
         /*  negq  comd;comw;incw;bne *+4;incd*/
         0
     };
-    uint8_t *       p;
-    uint8_t         l;
+    uint8_t const*  p = tbl + gOprPtr->prefix;
+    uint8_t         l = gOprPtr->opcode;
 
-    p  = tbl + gOprPtr->prefix;
-    l  = gOprPtr->opcode;
     while (l--)
         put1Byt2(*p++);
 }
 
-static void putOpeqR(uint16_t *op, uint8_t d1, uint8_t d2, int reg)
+static void putOpeqR(uint16_t const * op, uint8_t d1, uint8_t d2, int reg)
 {
     put1Word(op[1] + 0x20);
     put1Byte( index0(d1, reg) );
@@ -3080,7 +3066,7 @@ void        opeq(void)  /* addq  subq */
     } else {
         val = expression();
         if (checkChar(',')) {
-            switch ( reg = getReg(INDEXREG | PC | PCR)) {
+            switch ( (reg = getReg(INDEXREG | PC | PCR)) ) {
             case X:
             case Y:
             case U:
@@ -3144,45 +3130,44 @@ void        opeq(void)  /* addq  subq */
 
 /*---------------------------------------------------------------------------*/
 
-static OPTBL_T *oOpHash[256];
+/* Search links are mutable; opcode definitions remain read-only. */
+static OPTBL_T const*  oOpHash[256];
+static OPTBL_T const** oOpNext;
 
-static int  hash(uint8_t *s)
+static int hash(char const* s)
 {
-    int h;
-
-    h = 0;
+    unsigned int h = 0;
     while (*s)
-        h = (h << 2) + h + *s++;
-    return (h & 0xff);
+        h = (h << 2) + h + (uint8_t)*s++;
+    return h & 0xff;
 }
 
-OPTBL_T *srchOpTbl(uint8_t *s)
+OPTBL_T const* srchOpTbl(char const * s)
 {
-    OPTBL_T *q;
-
-    for (q = oOpHash[hash(s)]; q != NULL; q = q->nl) {
+    OPTBL_T const* q;
+    for (q = oOpHash[hash(s)]; q != NULL; q = oOpNext[q - gOpTab]) {
         if (strcmp(s, q->mnemonic) == 0)
             return q;
     }
     return NULL;
 }
 
-void    initOpTbl(void)
+void initOpTbl(void)
 {
-    OPTBL_T *   p;
-    OPTBL_T *   q;
-    int         h;
-
-    for (p = gOpTab; *p->mnemonic; p++) {
-        q      = oOpHash[h = hash(p->mnemonic)];
-        if (q) {
-            while (q->nl != NULL)
-                q = q->nl;
-            q->nl = p;
-        } else {
-            oOpHash[h] = p;
-        }
-        p->nl  = NULL;
+    size_t  count = 0;
+    int     h;
+    OPTBL_T const* p;
+    while (*gOpTab[count].mnemonic)
+        ++count;
+    free(oOpNext);
+    oOpNext = mallocE(count * sizeof(*oOpNext));
+    memset((void*)oOpHash, 0, sizeof(oOpHash));
+    /* Reverse insertion preserves the original table's lookup order. */
+    while (count) {
+        p = gOpTab + --count;
+        h = hash(p->mnemonic);
+        oOpNext[count] = oOpHash[h];
+        oOpHash[h]     = p;
     }
 }
 
@@ -3191,9 +3176,8 @@ void    initOpTbl(void)
 
 static void co_if(uint8_t f)
 {
-    int val;
+    int val = 0;
 
-    val = 0;
     if ((f >= CO_IF || f == CO_IFP1) && f != CO_ELIF && gCoStk[gCo_sp] < 0) {
         /* Do not evaluate operands inside an inactive parent branch. */
         if (gCo_sp >= GCO_MAX) {
@@ -3313,9 +3297,9 @@ static void co_if(uint8_t f)
 static int  getMnemonic(void)
 {
     static uint8_t  temp[MNEMOSIZE + 1];
-    uint8_t *       p;
-    uint8_t *       pp;
-    OPTBL_T *       q;
+    uint8_t*        p = temp;
+    uint8_t* pp = temp + MNEMOSIZE;
+    OPTBL_T const*  q;
 
     skipSpace();
     if (*gLinPtr == '\n' || *gLinPtr == '\0')
@@ -3324,7 +3308,7 @@ static int  getMnemonic(void)
         ++gLinPtr;
         if (gCoStk[gCo_sp] < 0)
             return 0;
-        gOprPtr = srchOpTbl( (uint8_t *) "=" );
+        gOprPtr = srchOpTbl("=");
         return 1;
     }
     if (!isSymbl2(*gLinPtr)) {
@@ -3333,7 +3317,6 @@ static int  getMnemonic(void)
         return 0;
     }
 
-    pp = (p = temp) + MNEMOSIZE;
     while ( isSymbl( *p = toupper(*gLinPtr) )) {
         if (p++ >= pp)
             goto ERR;
@@ -3350,7 +3333,7 @@ static int  getMnemonic(void)
         *--gLinPtr     = '#';
     }
 
-    if (( q = srchOpTbl(temp) ) != NULL) {
+    if (( q = srchOpTbl((char const*)temp) ) != NULL) {
         if ((q->option & OPR_M6800) && !gM6800_f )
             warning("[WARNING] M6800 mnemonic used without -6.");
         if (q->option & OPR_UNDOC6809) {
@@ -3389,13 +3372,13 @@ static int  getMnemonic(void)
 
 static uint8_t *getLine(void)
 {
-    gLinPtr = gLineBuf + LINEHEAD;
-    return fgets(gLinPtr, MAXCHAR - LINEHEAD, gSrcFp);
+    gLinPtr = (uint8_t*)gLineBuf + LINEHEAD;
+    return (uint8_t*)fgets((char*)gLinPtr, MAXCHAR - LINEHEAD, gSrcFp);
 }
 
 static uint8_t oneLine(void)
 {
-    uint8_t temp[LBLSIZE + 1];
+    char temp[LBLSIZE + 1];
     uint8_t c, f, gf;
 
     while (getLine() == NULL) {
@@ -3458,7 +3441,7 @@ static void initPass(void)
         fprintf(STDERR, (gPass == -1) ? "<pass 1.5>\n" : "<pass %d>\n", gPass);
 }
 
-static void assemble(int argc, char * *argv)
+static void assemble(int argc, char * * argv)
 {
     int     i;
     uint8_t f;
@@ -3565,11 +3548,11 @@ static void assemble(int argc, char * *argv)
 
 /*---------------------------------------------------------------------------*/
 
-static uint16_t xstrtoui(uint8_t *p, uint8_t * *q)
+static uint16_t xstrtoui(uint8_t const *p, uint8_t const **q)
 {
-    uint16_t w;
+    uint16_t w = 0;
 
-    for (w = 0; isxdigit(*p); p++)
+    for (; isxdigit(*p); p++)
         w = w * 16 +
             ( isdigit(*p) ? (*p - '0') :
              (toupper(*p) - 'A' + 10) );
@@ -3578,14 +3561,15 @@ static uint16_t xstrtoui(uint8_t *p, uint8_t * *q)
     return w;
 }
 
-static void getModNam(char *modnam, char *fnam)
+static void getModNam(char * modnam, char const *fnam)
 {
-    char *  ep;
-    int     i;
-    char *  s;
+    char const *ep = NULL;
+    int     i = MODNAMSZ;
+    char const *s = fnam;
+    char *dst;
 
-    for (ep = NULL, s = fnam, i = MODNAMSZ; *s != '\0' && i--; ++s) {
-        if (isKanji(*(uint8_t *) s)) {
+    for (; *s != '\0' && i--; ++s) {
+        if (isKanji(*(uint8_t const *) s)) {
             if (*(++s) == '\0')
                 break;
         } else if (*s == '/'
@@ -3602,14 +3586,14 @@ static void getModNam(char *modnam, char *fnam)
     if (ep == NULL || ep < fnam)
         ep = s;
 
-    for (s = modnam; (*s = *fnam) != '\0' && fnam < ep; ++s, ++fnam) { ; }
+    for (dst = modnam; (*dst = *fnam) != '\0' && fnam < ep; ++dst, ++fnam) { ; }
 
-    *s = '\0';
+    *dst = '\0';
 }
 
 
 /*---------------------------------------------------------------------------*/
-static char *   oLstFName, *oObjFName;
+static char const *oLstFName, *oObjFName;
 static uint8_t  oList_f, oSymbol_f;
 
 static void printLog(void)
@@ -3665,10 +3649,10 @@ static void usage(void)
     exit(0);
 }
 
-static void optsDefLbl(int argc, char * *argv)
+static void optsDefLbl(int argc, char * * argv)
 {
     char    temp[LBLSIZE + 1];
-    char *  p;
+    char const *p;
     int     i;
 
     for (i = 1; i < argc; ++i) {
@@ -3681,7 +3665,7 @@ static void optsDefLbl(int argc, char * *argv)
             e_puts("No label name specified for -d.\n");
             continue;
         }
-        gLinPtr        = strncpy(gLineBuf+LINEHEAD, p, MAXCHAR - LINEHEAD - 2);
+        gLinPtr        = (uint8_t*)strncpy(gLineBuf+LINEHEAD, p, MAXCHAR - LINEHEAD - 2);
         getLabel(temp);
         defLabel(temp, 2, 1); /* set,global label */
         gLblPtr->line  = 1;
@@ -3691,7 +3675,7 @@ static void optsDefLbl(int argc, char * *argv)
                 gLinPtr++;
                 gLblPtr->value = (int) xstrtoui(gLinPtr, NULL);
             } else {
-                gLblPtr->value = atoi(gLinPtr);
+                gLblPtr->value = atoi((char const*)gLinPtr);
             }
         } else {
             gLblPtr->value = 1;
@@ -3701,12 +3685,12 @@ static void optsDefLbl(int argc, char * *argv)
     }
 }
 
-static void options(uint8_t *p)
+static void options(char const *p)
 {
-    uint8_t *   pp;
+    uint8_t const *pp;
     uint8_t     c;
 
-    while ( (c = *p) != '\0') {
+    while ( (c = *(uint8_t const*)p) != '\0') {
         if (*++p == '=')
             ++p;
 
@@ -3785,7 +3769,7 @@ static void options(uint8_t *p)
             if (*p)
                 gErrFName = p;
             else
-                gErrFName = (uint8_t *) (~0);
+                gErrFName = (char const *) (~0);
             goto LOOPOUT;
 
      #ifdef OPT_OA_FILE
@@ -3836,12 +3820,12 @@ static void options(uint8_t *p)
             gFlex_f        = 0;
             gRmb_sp        = 0;
             if (*p) {
-                gStartAddr = xstrtoui(p, &pp);
-                p          = pp;
+                gStartAddr = xstrtoui((uint8_t const*)p, &pp);
+                p          = (char const*)pp;
                 if (gStartAddr == 0)
                     gStartAddr = 0xFFFF;
                 if (*p == ',') {
-                    gEntryAddr = xstrtoui(p + 1, &pp);
+                    gEntryAddr = xstrtoui((uint8_t const*)p + 1, &pp);
                     /*p = pp;*/
                 }
                 if (gEntryAddr == 0)
@@ -3875,8 +3859,8 @@ static void options(uint8_t *p)
 
 int main(int argc, char *argv[])
 {
-    static char *   title = "HD6309 cross assembler version 01.45T\n";
-    char *          p;
+    static char const * title = "HD6309 cross assembler version 01.45T\n";
+    char const *p;
     int             i;
 
     gCmdName       = argv[0];
@@ -3912,8 +3896,9 @@ int main(int argc, char *argv[])
         exit(1);
     }
     if (oObjFName == NULL && gObjct) {
-        oObjFName = mallocE(FNAMESZ+1);
-        FIL_ChgExt(strcpy(oObjFName, gSrcFName),
+        char * filename = mallocE(FNAMESZ + 1);
+        oObjFName = filename;
+        FIL_ChgExt(strcpy(filename, gSrcFName),
       #ifdef OPT_OA_FILE
             (gObjct == OB_ASM) ? "oa" :
       #endif
@@ -3922,8 +3907,9 @@ int main(int argc, char *argv[])
             "o");
     }
     if (gErrFName == (char *) (~0)) {
-        gErrFName = mallocE(FNAMESZ + 1);
-        FIL_ChgExt(strcpy(gErrFName, gSrcFName), "err");
+        char * filename = mallocE(FNAMESZ + 1);
+        gErrFName = filename;
+        FIL_ChgExt(strcpy(filename, gSrcFName), "err");
     }
     if (*gModName == '\0') {
         getModNam(gModName, gSrcFName);

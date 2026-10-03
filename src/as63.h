@@ -18,15 +18,16 @@
 #if __STDC_VERSION__ >= 199901L || _MSC_VER >= 1600
 #include <stdint.h>
 #else
+typedef signed char     int8_t;     /* 1-byte signed integer type */
 typedef unsigned char   uint8_t;    /* 1-byte unsigned integer type */
-typedef unsigned short  uint16_t;   /* 2-byte unsigned integer type */
 typedef short           int16_t;    /* 2-byte signed integer type */
+typedef unsigned short  uint16_t;   /* 2-byte unsigned integer type */
 #endif
 
 #define __(x)           x
 
 #define STDERR          stderr
-#define toXDigit(c)     (isdigit(c) ? (c - '0') : (toupper(c) - 'A' + 10))
+#define toXDigit(c)     (isdigit((uint8_t)(c)) ? (c - '0') : (toupper((uint8_t)(c)) - 'A' + 10))
 #define e_puts(s)       fprintf(STDERR,"%s", s)
 #ifndef OS9
 #define stpcpy(d,s)     (strcpy((d),(s)),(d)+strlen(d))
@@ -176,12 +177,11 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define OPR_M6800      0x04
 
 typedef struct optbl_t {
-        char   *mnemonic;
+        char const* mnemonic;
         uint8_t prefix;
         uint8_t opcode;
         uint8_t option;
         void  (*process)(void);
-        struct optbl_t *nl;
 } OPTBL_T;
 
 /* label table */
@@ -202,7 +202,7 @@ typedef struct lbltbl_t {
 
 /* assembly */
 EXTERN FILE    *gSrcFp;
-EXTERN OPTBL_T *gOprPtr;
+EXTERN OPTBL_T const* gOprPtr;
 EXTERN int      gErrors , gPass;
 EXTERN int      gImVal  , gIndirect;
 EXTERN int      remBlock, failSeen, offsetActive;
@@ -246,14 +246,14 @@ EXTERN uint8_t  gSjis_f;
 
 
 /* listing and message display */
-EXTERN char   *gCmdName;
+EXTERN char const *gCmdName;
 EXTERN int     gList;
 EXTERN FILE   *gLstFp;
-EXTERN char   *gLinPtr;
+EXTERN uint8_t *gLinPtr;
 EXTERN uint8_t gVerbos_f;
 EXTERN char    gLineBuf[MAXCHAR+2];
 EXTERN FILE   *gErrFp;
-EXTERN char   *gErrFName;
+EXTERN char const *gErrFName;
 
  /* for optimization (long->short branch) */
  EXTERN int    *gOptStk, gOpt_sp, gOptChg, gOptCount;
@@ -275,9 +275,9 @@ EXTERN struct FILSTK2_tag {
             char srcname[FNAMESZ+1];
         } gFilStk2[MAXLIB];
 #ifdef INCLUDIR
- EXTERN char *gIncDirName;
+EXTERN char const* gIncDirName;
 #endif
-EXTERN char *extraIncDirs[EXTRA_INCDIRS];
+EXTERN char* extraIncDirs[EXTRA_INCDIRS];
 EXTERN int   extraIncCount;
 
 #ifdef OPT_OA_FILE  /* -a option */
@@ -288,10 +288,10 @@ EXTERN int   extraIncCount;
  EXTERN OATBL_T *gOAStk;
  EXTERN uint8_t  gOAchk_f;
  EXTERN int      gOA_sp;
- void oa_putStr(char *, int);
+ void oa_putStr(char const *, int);
 #endif
 
-extern OPTBL_T gOpTab[];
+extern OPTBL_T const gOpTab[];
 
 
 /*-- Function --*/
