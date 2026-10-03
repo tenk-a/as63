@@ -26,6 +26,15 @@
 
 /*--------------------------------------------------------------------------*/
 
+#define IS_KANJI(c)  ( (unsigned) ( (c) ^ 0x20 ) - 0xa1U < 0x3cU )
+//#define isKanji2(c) (c >= 0x40 && c <= 0xfc && (c) != 0x7f)
+
+int     isKanji(int c)
+{
+    return gSjis_f && IS_KANJI(c);
+}
+
+
 FILE    *fopenE(char const * fname, char const * atr)
 {
     FILE * fp = fopen(fname, atr);
@@ -542,14 +551,6 @@ static LBLTBL_T *refLabel(char const * lbl)
 
 
 /*---------------------------------------------------------------------------*/
-
-#define IS_KANJI(c)  ( (unsigned) ( (c) ^ 0x20 ) - 0xa1U < 0x3cU )
-//#define isKanji2(c) (c >= 0x40 && c <= 0xfc && (c) != 0x7f)
-
-int     isKanji(int c)
-{
-    return gSjis_f && IS_KANJI(c);
-}
 
 int     isSymbl(int c)
 {
@@ -2428,7 +2429,7 @@ void    org(void)
         gCSectSw   = 1;
         gCSectBase = origin;
     } else {
-        if (gOprPtr->prefix || gOrg_f == 0
+        if (gCompatMode == COMPAT_LWASM || gOprPtr->prefix || gOrg_f == 0
             || (gOrgSFmt_f && (gObjct == OB_SFMT || gFlex_f))
         ) {
             flushObj();
@@ -2614,7 +2615,7 @@ void incbin(void)
             }
         }
     }
-    if ((offset < 0 && !gOprPtr->prefix) || length < -1) {
+    if ((offset < 0 && !gOprPtr->prefix && gCompatMode != COMPAT_LWASM) || length < -1) {
         error("Invalid INCBIN offset or length.");
         return;
     }
@@ -2664,13 +2665,21 @@ void alignData(void)
     if (gOprPtr->prefix == 1) {
         skipSpace();
         boundary = invExpr();
-        if (boundary <= 0 || boundary > 65536L) {
-            error("ALIGN boundary must be 1..65536.");
-            return;
-        }
-        if (nextComma()) {
-            skipSpace();
-            fill = expression() & 255;
+        if (gCompatMode == COMPAT_VASM) {
+            if (boundary < 0 || boundary > 16) {
+                error("ALIGN exponent must be 0..16.");
+                return;
+            }
+            boundary = 1L << boundary;
+        } else {
+            if (boundary <= 0 || boundary > 65536L) {
+                error("ALIGN boundary must be 1..65536.");
+                return;
+            }
+            if (nextComma()) {
+                skipSpace();
+                fill = expression() & 255;
+            }
         }
     } else if (gOprPtr->prefix == 2) {
         skipSpace();
@@ -3762,10 +3771,11 @@ static uint16_t xstrtoui(uint8_t const *p, uint8_t const **q)
 {
     uint16_t w = 0;
 
-    for (; isxdigit(*p); p++)
+    for (; isxdigit(*p); p++) {
         w = w * 16 +
             ( isdigit(*p) ? (*p - '0') :
              (toupper(*p) - 'A' + 10) );
+    }
     if (q)
         *q = p;
     return w;
@@ -3807,6 +3817,7 @@ static void usage(void)
 {
     fprintf(STDERR, "usage: %s [-opts] src_file...\n", gCmdName);
     e_puts(" -?  Show this help\n");
+    e_puts(" -3  6309 mode (default)\n");
     e_puts(" -8  6809 mode\n");
     e_puts(" -9  OS-9 standard ASM mode\n");
     e_puts(" -6  Enable M6800-family mnemonic compatibility\n");
@@ -3819,17 +3830,18 @@ static void usage(void)
     e_puts(" -j  use SJIS character.\n");
     e_puts(" -m<mod_name>  Set the $modnam string variable\n");
     e_puts(" -d<LBL>[=Val] Define LBL as Val (default: 1)\n");
-    e_puts(" -l[lst_file]  Write assembly listing to lst_file\n");
-    e_puts(" -o[obj_file]  Write binary object to obj_file\n");
-    e_puts(" -f[obj_file]  Write S-Record object to obj_file\n");
-    e_puts(" -x[obj_file]  Write a FLEX binary executable to obj_file\n");
+    e_puts(" -t=<ASM>      Assembler compatibility mode: as63 lwasm vasm\n");
+    e_puts(" -o[=FILE]     Write binary object to FILE\n");
+    e_puts(" -f[=FILE]     Write S-Record object to FILE\n");
+    e_puts(" -x[=FILE]     Write a FLEX binary executable to FILE\n");
  #ifdef OPT_OA_FILE
-    e_puts(" -a[obj_file]  Write object as FCB data to obj_file\n");
+    e_puts(" -a[=FILE]     Write object as FCB data to FILE\n");
  #endif
-    e_puts(" -e[err_file]  Write source errors to err_file\n");
+    e_puts(" -e[=ERR_FILE] Write source errors to ERR_FILE\n");
  #ifdef INCLUDIR
-    e_puts(" -i[lib_file]  Set the directory referenced by $INC\n");
+    e_puts(" -i[=INC_DIR]  Set the directory referenced by $INC\n");
  #endif
+    e_puts(" -l[=LST_FILE] Write assembly listing to LIST_FILE\n");
  #ifdef OPT_FBAS
     e_puts(" -k[Start[,Enter]]  Write an F-BASIC machine-language file\n");
     e_puts(" -r  In F-BASIC format, omit trailing zeros after RMB\n");
@@ -3922,6 +3934,11 @@ static void options(char const *p)
         case 'Z':
             gUndoc_f   = 1;
             break;
+
+        case '3':
+            gM6809_f   = 0;
+            break;
+
         case '8':
             gM6809_f   = 1;
             break;
@@ -3933,6 +3950,7 @@ static void options(char const *p)
         case '9':
             gOs9_f     = gUpLo_f = 1;
             break;
+
         case 'S':
             oSymbol_f  = 1;
             break;
@@ -3940,6 +3958,19 @@ static void options(char const *p)
         case 'J':
             gSjis_f    = 1;
             break;
+
+        case 'T':
+            if (!strcasecmp(p, "lwasm")) {
+                gCompatMode = COMPAT_LWASM;
+            } else if (!strcasecmp(p, "vasm")) {
+                gCompatMode = COMPAT_VASM;
+            } else if (!strcasecmp(p, "as63")) {
+                gCompatMode = COMPAT_AS63;
+            } else {
+                e_puts("Unknown compatibility mode. Use -t=as63, -t=lwasm or -t=vasm.\n");
+                exit(1);
+            }
+            goto LOOPOUT;
 
         case 'L':
             if (*p) {

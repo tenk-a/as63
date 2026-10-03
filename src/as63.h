@@ -226,6 +226,10 @@ EXTERN uint8_t  gByte_f;
 EXTERN uint8_t  gWord_f;
 EXTERN uint8_t  gIdxOfs_f;
 EXTERN char     gModName[MODNAMSZ+1];
+#define COMPAT_AS63     0
+#define COMPAT_LWASM    1
+#define COMPAT_VASM     2
+EXTERN uint8_t gCompatMode;
 EXTERN uint8_t  gM6809_f;
 EXTERN uint8_t  gM6800_f;
 EXTERN uint8_t  gUndoc_f;
@@ -351,8 +355,8 @@ void
     undoc_imm8(void), undoc_imm16(void), undoc_flag(void),
     opeq(void), none_wq(void),
     oped(void), none_d(void),
-  mnm6800(void),       mnm68hc11(void),  hc11BitOp(void),
-  hc11BitBranch(void), hc11MinMax(void), hc11Emuls(void),
+    mnm6800(void),       mnm68hc11(void),  hc11BitOp(void),
+    hc11BitBranch(void), hc11MinMax(void), hc11Emuls(void),
     endop(void);
 
 #endif
