@@ -48,12 +48,7 @@ typedef short           int16_t;    /* 2-byte signed integer type */
 typedef int  val_t;           /* int<->long: use int/long for constant arithmetic */
 
 #define OPT_OA_FILE           /* enable -a option support                    */
-#define OPT_OPTIMIZE          /* enable optimization (-y)                    */
 #define OPT_FBAS              /* enable -k (FBASIC machine-code file output) */
-#define OPT_FLEX              /* enable -x (FLEX executable file output)     */
-#define OPT_EXT_INST          /* enable extended instructions                */
-#define OPT_UNDOC             /* enable 6809 undocument instructions         */
-#define OPT_M6800             /* enable 6800 family mnemonic                 */
 
 #ifdef OPT_OA_FILE
 # define OA_MAX         500
@@ -177,12 +172,8 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define RS_SET          0x02
 
 /* opcode table */
-#ifdef OPT_UNDOC
 #define OPR_UNDOC6809  0x02
-#endif
-#ifdef OPT_M6800
 #define OPR_M6800      0x04
-#endif
 
 typedef struct optbl_t {
         char   *mnemonic;
@@ -222,12 +213,8 @@ EXTERN uint8_t  gOs9_f  , gOrg_f , gOrgSFmt_f;
 EXTERN uint8_t  gByte_f , gWord_f, gIdxOfs_f;
 EXTERN char     gModName[MODNAMSZ+1];
 EXTERN uint8_t  gM6809_f;
-#ifdef OPT_M6800
- EXTERN uint8_t gM6800_f;
-#endif
-#ifdef OPT_UNDOC
- EXTERN uint8_t gUndoc_f;
-#endif
+EXTERN uint8_t  gM6800_f;
+EXTERN uint8_t  gUndoc_f;
 
 /* object output */
 EXTERN FILE    *gObjFp;
@@ -243,11 +230,9 @@ EXTERN int      gRmb_sp;
 EXTERN int      rsCounter, soCounter, foCounter;
 EXTERN uint8_t  rsDefined, soDefined, foDefined;
 EXTERN uint16_t savedCodeLc, lastOffset, rorgBase;
+EXTERN uint8_t  gFlex_f;
 #ifdef OPT_FBAS
  EXTERN uint8_t gFBasic_f;
-#endif
-#ifdef OPT_FLEX
- EXTERN uint8_t gFlex_f;
 #endif
 
 /* labels */
@@ -270,11 +255,9 @@ EXTERN char    gLineBuf[MAXCHAR+2];
 EXTERN FILE   *gErrFp;
 EXTERN char   *gErrFName;
 
-#ifdef OPT_OPTIMIZE
  /* for optimization (long->short branch) */
  EXTERN int    *gOptStk, gOpt_sp, gOptChg, gOptCount;
  EXTERN uint8_t gOpt_f;
-#endif
 
 /* manage 'if' (conditional assembly) */
 EXTERN int   gCo_sp;
@@ -323,22 +306,16 @@ void
     fcc(void),  fcs(void),  org(void),      setdp(void),
     vsct(void), psct(void), csct(void),     endsct(void),
     opt(void),  nam(void),  page(void),     spc(void),
-    alignData(void), rsOffset(void),
+    alignData(void), rsOffset(void),        argumentOffsets(void),
     ignoreOperand(void), commentBlock(void), failDirective(void),
-    relativeData(void), relativeOrg(void), offsetSection(void), argumentOffsets(void),
+    relativeData(void), relativeOrg(void), offsetSection(void),
     printText(void), printValue(void),
     library(void), incbin(void), incdir(void),
- #ifdef OPT_UNDOC
     undoc_imm8(void), undoc_imm16(void), undoc_flag(void),
- #endif
- #ifdef OPT_EXT_INST
     opeq(void), none_wq(void),
     oped(void), none_d(void),
- #endif
- #ifdef OPT_M6800
   mnm6800(void),       mnm68hc11(void),  hc11BitOp(void),
   hc11BitBranch(void), hc11MinMax(void), hc11Emuls(void),
- #endif
     endop(void);
 
 #endif

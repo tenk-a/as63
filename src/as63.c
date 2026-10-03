@@ -172,7 +172,6 @@ void    flushObj(void)
             put2hex(~oChkSum);
             putc('\n', gObjFp);
         }
-     #ifdef OPT_FLEX
         else if (gFlex_f) {
             putc(0x02, gObjFp);
             putc(gObjLc >> 8, gObjFp);
@@ -180,7 +179,6 @@ void    flushObj(void)
             putc(gObjPos, gObjFp);
             fwrite(gObjBuf, gObjPos, 1, gObjFp);
         }
-     #endif
      #ifdef OPT_OA_FILE
         else if (gObjct == OB_ASM && gObjPos) {
             fprintf(gObjFp, "\tfcb $%02x", gObjBuf[0]);
@@ -206,12 +204,10 @@ void    termObj(void)
         put4hex(gEntryAddr);
         put2hex(~oChkSum);
         putc('\n', gObjFp);
- #ifdef OPT_FLEX
     } else if (gFlex_f) {
         putc(0x16, gObjFp);
         putc(gEntryAddr >> 8, gObjFp);
         putc(gEntryAddr, gObjFp);
- #endif
     }
 }
 
@@ -1076,12 +1072,10 @@ int     getReg(int r)
         }
     }
     if (gM6809_f && (reg & X63REG)) {
-     #ifdef OPT_UNDOC
         if (reg == V) {
             if (!gUndoc_f)
                 warning("[WARNING] Register V used in 6809 mode.");
         } else
-     #endif
         {
             error("Register E, F, W, or V used in 6809 mode.");
         }
@@ -1379,7 +1373,6 @@ void bitTransfer(void)
     putByte(offset);
 }
 
-#ifdef OPT_UNDOC
 void undoc_imm8(void)
 {
     skipSpace();
@@ -1419,7 +1412,6 @@ void undoc_flag(void)
     }
     gOprPtr->opcode    = opcode;
 }
-#endif
 
 void    load4(void)
 {
@@ -1455,7 +1447,6 @@ void    none(void)
     putCode(GROUP0, NO_MODE);
 }
 
-#ifdef OPT_M6800
 void    mnm68hc11(void)
 {
     static const struct {
@@ -1692,9 +1683,7 @@ void    hc11Emuls(void)
     put1Byte(0x1f); put1Byte(0x60);                 /* tfr w,d */
     put1Byte(0x10); put1Byte(0x39);                 /* puls w */
 }
-#endif
 
-#ifdef OPT_M6800
 void    mnm6800(void)
 {
     static const struct {
@@ -1748,7 +1737,6 @@ void    mnm6800(void)
     for (j = 0; j < tbl[gOprPtr->opcode].len; ++j)
         put1Byte(p[j]);
 }
-#endif
 
 void    setdp(void)
 {
@@ -1769,9 +1757,7 @@ void    transfer(void)
     if (( r2 = regNo(ALLREG | X63REG) ) < 0 )
         goto ERR;
     if (
-     #ifdef OPT_UNDOC
         !gUndoc_f &&
-     #endif
         ( (r1 ^ r2) & 0x08 ) && r1 != 0x0c && r2 != 0x0c
    ) {
         warning("[WARNING] Registers have different sizes.");
@@ -1833,12 +1819,7 @@ static void pshpul(uint8_t u, uint8_t h)
     skipSpace();
 
     do {
-     #ifdef OPT_EXT_INST
-        switch ( getReg(ALLREG | W) )
-     #else
-        switch ( getReg(ALLREG) )
-     #endif
-        {
+        switch (getReg(ALLREG | W)) {
         case CC:
             m2 = 0x01;
             break;
@@ -1873,11 +1854,9 @@ static void pshpul(uint8_t u, uint8_t h)
         case PC:
             m2 = 0x80;
             break;
-     #ifdef OPT_EXT_INST
         case W:
             m2 = 0x100;
             break;
-     #endif
         default:
             break;
         }
@@ -1885,7 +1864,6 @@ static void pshpul(uint8_t u, uint8_t h)
             error("The same register is specified more than once.");
         m1 |= m2;
     } while ( checkChar(',') );
- #ifdef OPT_EXT_INST
     if (m1 & 0x100) {                       /* w */
         if (h)
             put1Word(u ? 0x103b : 0x1039);  /* puluw pulsw */
@@ -1899,10 +1877,6 @@ static void pshpul(uint8_t u, uint8_t h)
         putCode(GROUP0, NO_MODE);
         putByte(m1);
     }
- #else
-    putCode(GROUP0, NO_MODE);
-    putByte(m1);
- #endif
 }
 
 void    pshs(void)
@@ -1941,21 +1915,17 @@ void    branch(void)
 
 void    lbranch(void)
 {
-#ifdef OPT_OPTIMIZE
     OPTBL_T shortop;
     val_t   val;
-#endif
     uint8_t f;
 
     skipSpace();
     f = checkChar('>');
     switch (gPass) {
     case 1:
-     #ifdef OPT_OPTIMIZE
         if (gOpt_f && gOpt_sp < MAXOPTIM) {
             gOptStk[gOpt_sp++] = gLinLc;
         }
-     #endif
      #ifdef OPT_OA_FILE
         if (gObjct == OB_ASM)
             expression();
@@ -1964,7 +1934,6 @@ void    lbranch(void)
         putWord(0);
         return;
 
- #ifdef OPT_OPTIMIZE
     case -1:
         if (gOpt_f && gOpt_sp < MAXOPTIM) {
             if (gOptStk[gOpt_sp] == -1) {
@@ -1984,13 +1953,11 @@ void    lbranch(void)
         putCode(GROUP0, NO_MODE);
         putWord(0);
         return;
- #endif
 
  #ifdef OPT_OA_FILE
     case -2:
  #endif
     case 2:
-     #ifdef OPT_OPTIMIZE
         if (gOpt_f && gOpt_sp < MAXOPTIM && gOptStk[gOpt_sp++] == -1) {
             printChar('<', 4);
             gOptCount++;
@@ -2002,7 +1969,6 @@ void    lbranch(void)
             putByte(expression() - gLinLc - 2);
             return;
         }
-     #endif
         putCode(GROUP0, NO_MODE);
         putWord( expression() - gLinLc - (gOprPtr->prefix ? 4 : 3) );
         return;
@@ -2273,9 +2239,7 @@ void    rmb(void)
     } else if (!gCSectSw) {
         if (gOrgSFmt_f
             && (gObjct == OB_SFMT
-                 #ifdef OPT_FLEX
                     || gFlex_f
-                 #endif
                 )
        ) {
             base   = invExpr();
@@ -2327,9 +2291,7 @@ void    org(void)
         if (gOrg_f == 0
             || ( gOrgSFmt_f
                 && (gObjct == OB_SFMT
-                  #ifdef OPT_FLEX
                     || gFlex_f
-                  #endif
                    )
                )
        ) {
@@ -2876,7 +2838,6 @@ void    page(void)
 
 /*---------------------------------------------------------------------------*/
 
-#ifdef OPT_EXT_INST
 void    none_d(void)
 {
     uint8_t *       p;
@@ -2904,13 +2865,11 @@ void    none_d(void)
         putCode(GROUP0, NO_MODE);               /*  none(); */
         return;
     }
- #ifdef OPT_UNDOC
     if (gM6809_f && gUndoc_f && gOprPtr->opcode == 0x40) {
         printByte(putB(0x50), 10);              /* negb */
         printByte(putB(0x42), 12);              /* ngca */
         return;
     }
- #endif
     p = (uint8_t *) (tbl[gOprPtr->opcode - 0x40]);
     for (i = 10, l = *p++; l--; i += 2)
         printByte(putB(*p++), i);
@@ -3021,9 +2980,7 @@ void    oped(void)  /* andd  ord  eord  adcd  sbcd */
         }
     }
 }
-#endif
 
-#ifdef OPT_EXT_INST
 void    none_wq(void)
 {
     static uint8_t  tbl[] = {
@@ -3183,7 +3140,6 @@ void        opeq(void)  /* addq  subq */
         }
     }
 }
-#endif
 
 
 /*---------------------------------------------------------------------------*/
@@ -3395,18 +3351,14 @@ static int  getMnemonic(void)
     }
 
     if (( q = srchOpTbl(temp) ) != NULL) {
-     #ifdef OPT_M6800
         if ((q->option & OPR_M6800) && !gM6800_f )
             warning("[WARNING] M6800 mnemonic used without -6.");
-     #endif
-     #ifdef OPT_UNDOC
         if (q->option & OPR_UNDOC6809) {
             if (!gM6809_f)
                 error("6809 undocumented instruction requires -8.");
             else if (!gUndoc_f)
                 warning("[WARNING] 6809 undocumented instruction used without -z.");
         } else
-     #endif
         if (gM6809_f && (q->option & 0x01)) {
             error("6309 instruction used in 6809 mode.");
         }
@@ -3498,19 +3450,12 @@ static void initPass(void)
     gOA_sp    =
  #endif
     gSrcLine  =
- #ifdef OPT_OPTIMIZE
     gOptCount = gOpt_sp = gOptChg  =
- #endif
     gFile_sp  = gLineNo = gErrors  = gP1_sp   = gCo_sp = gObjPos = gRmb_sp =
     gObjCnt   = gLc     = gDp      = gObjLc   =
     gEOF_f    = gGrp    = gCSectSw = gPSect_f = gOrg_f = (uint8_t) 0;
- #ifdef OPT_OPTIMIZE
     if (gVerbos_f)
         fprintf(STDERR, (gPass == -1) ? "<pass 1.5>\n" : "<pass %d>\n", gPass);
- #else
-    if (gVerbos_f)
-        fprintf(STDERR, "<pass %d>\n", gPass);
- #endif
 }
 
 static void assemble(int argc, char * *argv)
@@ -3678,27 +3623,20 @@ static void printLog(void)
     fprintf(STDERR, "    Total Errors %d\n", gErrors);
     if (gVerbos_f)
         fprintf(STDERR, "    Total labels %d\n", gLabels);
- #ifdef OPT_OPTIMIZE
     if (gOpt_f)
         fprintf(STDERR, "    Total Optimized Branch %d\n", gOptCount);
- #endif
 }
 
 static void usage(void)
 {
     fprintf(STDERR, "usage: %s [-opts] src_file...\n", gCmdName);
     e_puts(" -?  Show this help\n");
-    e_puts(" -9  OS-9 standard ASM mode   -8  6809 mode\n");
- #ifdef OPT_M6800
+    e_puts(" -8  6809 mode\n");
+    e_puts(" -9  OS-9 standard ASM mode\n");
     e_puts(" -6  Enable M6800-family mnemonic compatibility\n");
- #endif
- #ifdef OPT_UNDOC
     e_puts(" -z  Enable undocumented 6809/6309 opcodes/operands\n");
- #endif
     e_puts(" -p  Selectable 0, 5, 8, or 16-bit offsets.\n");
- #ifdef OPT_OPTIMIZE
     e_puts(" -y  Replace long branches with short branches when possible\n");
- #endif
     e_puts(" -q  Allow address gaps caused by ORG or RMB\n");
     e_puts(" -u  Case-sensitive labels    -n  Case-insensitive labels\n");
     e_puts(" -s  Show symbol table        -v  Show progress\n");
@@ -3708,9 +3646,7 @@ static void usage(void)
     e_puts(" -l[lst_file]  Write assembly listing to lst_file\n");
     e_puts(" -o[obj_file]  Write binary object to obj_file\n");
     e_puts(" -f[obj_file]  Write S-Record object to obj_file\n");
- #ifdef OPT_FLEX
     e_puts(" -x[obj_file]  Write a FLEX binary executable to obj_file\n");
- #endif
  #ifdef OPT_OA_FILE
     e_puts(" -a[obj_file]  Write object as FCB data to obj_file\n");
  #endif
@@ -3725,9 +3661,7 @@ static void usage(void)
  #ifdef DEBUG
     e_puts(" -c  Debug mode\n");
  #endif
- #ifdef OPT_EXT_INST
     DEBMSGF( (STDERR, "Extended instructions enabled (D,Q)\n") );
- #endif
     exit(0);
 }
 
@@ -3809,20 +3743,16 @@ static void options(uint8_t *p)
             gVerbos_f  = 1;
             break;
 
-     #ifdef OPT_UNDOC
         case 'Z':
             gUndoc_f   = 1;
             break;
-     #endif
         case '8':
             gM6809_f   = 1;
             break;
 
-     #ifdef OPT_M6800
         case '6':
             gM6800_f   = 1;
             break;
-     #endif
 
         case '9':
             gOs9_f     = gUpLo_f = 1;
@@ -3864,29 +3794,22 @@ static void options(uint8_t *p)
                 e_puts("Not enough memory for the -a option.\n");
                 break;
             }
-         #ifdef OPT_FLEX
             gFlex_f        = 0;
-         #endif
             gObjBufSz      = 16;
             gObjct         = OB_ASM;
             goto OB;
      #endif
 
         case 'O':
-         #ifdef OPT_FLEX
             gFlex_f        = 0;
-         #endif
             gObjct         = OB_BIN;
             goto OB;
 
         case 'F':
-         #ifdef OPT_FLEX
             gFlex_f        = 0;
-         #endif
             gObjct         = OB_SFMT;
             goto OB;
 
-     #ifdef OPT_FLEX
         case 'X':
             gFlex_f        = 1;
          #ifdef OPT_FBAS
@@ -3894,13 +3817,11 @@ static void options(uint8_t *p)
          #endif
             gObjct         = OB_BIN;
             goto OB;
-     #endif
           OB:
             if (*p)
                 oObjFName  = p;
             goto LOOPOUT;
 
-     #ifdef OPT_OPTIMIZE
         case 'Y':
             if ((gOptStk   = (int *)malloc(sizeof(int) * MAXOPTIM)) == NULL) {
                 e_puts("Not enough memory for branch optimization.\n");
@@ -3908,14 +3829,11 @@ static void options(uint8_t *p)
             }
             gOpt_f         = 1;
             break;
-     #endif
 
      #ifdef OPT_FBAS
         case 'K':
             gFBasic_f      = 1;
-         #ifdef OPT_FLEX
             gFlex_f        = 0;
-         #endif
             gRmb_sp        = 0;
             if (*p) {
                 gStartAddr = xstrtoui(p, &pp);
@@ -4000,9 +3918,7 @@ int main(int argc, char *argv[])
             (gObjct == OB_ASM) ? "oa" :
       #endif
             (gObjct == OB_SFMT) ? "s" :
-      #ifdef OPT_FLEX
             gFlex_f ? "cmd" :
-      #endif
             "o");
     }
     if (gErrFName == (char *) (~0)) {
@@ -4022,7 +3938,6 @@ int main(int argc, char *argv[])
     DEBMSGF( (STDERR, "enter pass 1\n") );
     assemble(argc, argv);
 
- #ifdef OPT_OPTIMIZE
     if (gOpt_f) {
         gPass = -1;
         DEBMSGF( (STDERR, "enter pass 1.5\n") );
@@ -4030,7 +3945,6 @@ int main(int argc, char *argv[])
             assemble(argc, argv);
         } while (gOptChg);
     }
- #endif
 
  #ifdef OPT_OA_FILE
     if (gObjct == OB_ASM) {
