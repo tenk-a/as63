@@ -3046,14 +3046,14 @@ void        opeq(void)  /* addq  subq */
                         if (checkChar('+')) {
                             putOpeqR(op, 2, 0x84, reg);
                             put1Byte((reg == Y) ? 0x31 :
-                                     (reg == U) ? 0x32 :
-                                     (reg == S) ? 0x33 : 0x30 );
+                                     (reg == U) ? 0x33 :
+                                     (reg == S) ? 0x32 : 0x30 );
                             put1Byte(index0(4, reg));
                         } else {
                             putOpeqR(op, 2, 0x84, reg);
                             put1Byte((reg == Y) ? 0x31 :
-                                     (reg == U) ? 0x32 :
-                                     (reg == S) ? 0x33 : 0x30 );
+                                     (reg == U) ? 0x33 :
+                                     (reg == S) ? 0x32 : 0x30 );
                             put1Byte(index0(3, reg));
                         }
                     } else {
