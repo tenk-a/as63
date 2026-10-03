@@ -2856,19 +2856,6 @@ void    opt(void)
     }
 }
 
-void    spc(void)
-{
-}
-
-void    nam(void)
-{
-}
-
-void    page(void)
-{
-}
-
-
 /*---------------------------------------------------------------------------*/
 
 void    none_d(void)
@@ -3349,6 +3336,8 @@ static int  getMnemonic(void)
     uint8_t* pp = temp + MNEMOSIZE;
     OPTBL_T const*  q;
 
+  NEXT_MNEMONIC:
+    p = temp;
     skipSpace();
     if (*gLinPtr == '\n' || *gLinPtr == '\0')
         return 0;
@@ -3403,12 +3392,18 @@ static int  getMnemonic(void)
             skipSpace();
             condition = invExpr();
             skipSpace();
+            if (checkChar(','))
+                skipSpace();
             if (!condition) {
                 while (*gLinPtr && *gLinPtr != '\n')
                     ++gLinPtr;
                 return 0;
             }
-            return getMnemonic();
+            if (!*gLinPtr || *gLinPtr == '\n' || *gLinPtr == ';') {
+                error("Missing instruction after IIF.");
+                return 0;
+            }
+            goto NEXT_MNEMONIC;
         }
         gOprPtr = q;
         return 1;

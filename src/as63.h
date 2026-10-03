@@ -307,7 +307,7 @@ void
     rzb(void),  fcb(void),  fdb(void),      flb(void),
     fcc(void),  fcs(void), fcn(void),  org(void),      setdp(void),
     vsct(void), psct(void), csct(void),     endsct(void),
-    opt(void),  nam(void),  page(void),     spc(void),
+    opt(void),
     alignData(void), rsOffset(void),        argumentOffsets(void),
     ignoreOperand(void), commentBlock(void), failDirective(void),
     relativeData(void), relativeOrg(void), offsetSection(void),

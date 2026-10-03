@@ -548,16 +548,12 @@ OPTBL_T const gOpTab[] = {
     { ".ELSE",    CO_ELSE,    0x00,    0x00,           NULL        },
     { ".ELSIF",   CO_ELIF,    0x00,    0x00,           NULL        },
     { ".ENDIF",   CO_ENDC,    0x00,    0x00,           NULL        },
-    { "IIF",      0,          0,       0,              nam         },
+    { "IIF",      0,          0,       0,              ignoreOperand },
 
     /* etc */
-    { "SPC",      0x00,       0x00,    0x00,           spc         },
-    { "NAM",      0x00,       0x00,    0x00,           nam         },
-    { "TTL",      0x00,       0x00,    0x00,           nam         },
     { "OPT",      0x00,       0x00,    0x00,           opt         },
     { "LIST",  LIST_ABSOLUTE, 1,       0,              opt         },
     { "NOLIST",LIST_ABSOLUTE, 0,       0,              opt         },
-    { "PAG",      0x00,       0x00,    0x00,           page        },
     { "REM",      1,          0,       0,              commentBlock},
     { "EREM",     0,          0,       0,              commentBlock},
     { "ECHO",     0,          0,       0,              printText   },
@@ -568,9 +564,13 @@ OPTBL_T const gOpTab[] = {
     { "ERROR",    1,          0,       0,              failDirective },
     { "WARNING",  2,          0,       0,              failDirective },
 
+    { "SPC",      0x00,       0x00,    0x00,           ignoreOperand },
+    { "NAM",      0x00,       0x00,    0x00,           ignoreOperand },
+    { "TTL",      0x00,       0x00,    0x00,           ignoreOperand },
+    { "PAG",      0x00,       0x00,    0x00,           ignoreOperand },
     { "COMMENT",  0,          0,       0,              ignoreOperand },
     { "OUTPUT",   0,          0,       0,              ignoreOperand },
-    { ".MODULE",  0,          0,          0,           ignoreOperand },
+    { ".MODULE",  0,          0,       0,              ignoreOperand },
 
     /* end of table */
     { "",         0x00,       0x00,    0x00,           none        }
