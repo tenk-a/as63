@@ -2932,14 +2932,17 @@ void    oped(void)  /* andd  ord  eord  adcd  sbcd */
                 break;
 
             case PC:
-                for (++val, i = 1; i >= 0; --i, --val) {
+                /* Offset is relative to the end of the complete expansion. */
+                val2 = val + 1 + ((checkByte(val) && -128 <= val && val <= 127) ? 3 : 4);
+                for (i = 1; i >= 0; --i) {
+                    int disp = i ? val2 : val;
                     put1Byte(gOprPtr->opcode + 0x20 + i * 0x40);
-                    if (checkByte(val)) {
-                        put1Byte( index0(0x8c, 0) );
-                        put1Byte(val);
+                    if (checkByte(disp) && -128 <= disp && disp <= 127) {
+                        put1Byte(index0(0x8c, 0));
+                        put1Byte(disp);
                     } else {
-                        put1Byte( index0(0x8d, 0) );
-                        put1Word(val);
+                        put1Byte(index0(0x8d, 0));
+                        put1Word(disp);
                     }
                 }
                 break;
