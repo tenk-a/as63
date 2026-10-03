@@ -479,8 +479,29 @@ OPTBL_T gOpTab[] = {
     { "RS.L",     4,          0,       0,              rsOffset    },
     { "RSRESET",  0,          RS_RESET,0,              rsOffset    },
     { "RSSET",    0,          RS_SET,  0,              rsOffset    },
+    { "SO",       2,          16,      0,              rsOffset    },
+    { "SO.B",     1,          16,      0,              rsOffset    },
+    { "SO.W",     2,          16,      0,              rsOffset    },
+    { "SO.L",     4,          16,      0,              rsOffset    },
+    { "CLRSO",    0,      16|RS_RESET, 0,              rsOffset    },
+    { "SETSO",    0,      16|RS_SET,   0,              rsOffset    },
+    { "FO",       2,          32,      0,              rsOffset    },
+    { "FO.B",     1,          32,      0,              rsOffset    },
+    { "FO.W",     2,          32,      0,              rsOffset    },
+    { "FO.L",     4,          32,      0,              rsOffset    },
+    { "CLRFO",    0,      32|RS_RESET, 0,              rsOffset    },
+    { "SETFO",    0,      32|RS_SET,   0,              rsOffset    },
+
+    { "RORG",     0,          0,       0,              relativeOrg },
+    { "DR.B",     1,          0,       0,              relativeData},
+    { "DR.W",     2,          0,       0,              relativeData},
+    { "DR.L",     4,          0,       0,              relativeData},
+
+    { "CARGS",    0,          0,       0,              argumentOffsets },
+    { "OFFSET",   0,          0,       0,              offsetSection   },
 
     { "EVEN",     0,          0,       0,              alignData   },
+    { "ODD",      3,          0,       0,              alignData   },
     { "ALIGN",    1,          0,       0,              alignData   },
     { "CNOP",     2,          0,       0,              alignData   },
 
@@ -489,10 +510,13 @@ OPTBL_T gOpTab[] = {
     { "SET",      0x00,  EQU_RESOLVED, 0x00,           equ         },
     { "CSECT",    0x00,       0x00,    0x00,           csct        },
     { "ENDSECT",  0x00,       0x00,    0x00,           endsct      },
+    { "VSECT",    0x00,       0x00,    0x00,           vsct        },
+    { "PSECT",    0x00,       0x00,    0x00,           psct        },
 
-    { "SETDP",    0x00,       0x00,    0x00,           setdp       },
     { "ORG",      0x00,       0x00,    0x00,           org         },
     { "END",      0x00,       0x00,    0x00,           endop       },
+
+    { "SETDP",    0x00,       0x00,    0x00,           setdp       },
 
     { "LIB",      0x00,       0x00,    0x00,           library     },
     { "USE",      0x00,       0x00,    0x00,           library     },
@@ -526,19 +550,22 @@ OPTBL_T gOpTab[] = {
     { "IFNC",     CO_IFNC,    0,       0,              NULL        },
 
     /* etc */
-    { "VSECT",    0x00,       0x00,    0x00,           vsct        },
-    { "PSECT",    0x00,       0x00,    0x00,           psct        },
     { "SPC",      0x00,       0x00,    0x00,           spc         },
     { "NAM",      0x00,       0x00,    0x00,           nam         },
     { "TTL",      0x00,       0x00,    0x00,           nam         },
-    { "FAIL",     0x00,       0x00,    0x00,           nam         },
     { "OPT",      0x00,       0x00,    0x00,           opt         },
     { "LIST",  LIST_ABSOLUTE, 1,       0,              opt         },
     { "NOLIST",LIST_ABSOLUTE, 0,       0,              opt         },
     { "PAG",      0x00,       0x00,    0x00,           page        },
+    { "REM",      1,          0,       0,              commentBlock},
+    { "EREM",     0,          0,       0,              commentBlock},
     { "ECHO",     0,          0,       0,              printText   },
     { "PRINTT",   0,          0,       0,              printText   },
     { "PRINTV",   0,          0,       0,              printValue  },
+    { "FAIL",     0x00,       0x00,    0x00,           failDirective },
+    { "COMMENT",  0,          0,       0,              ignoreOperand },
+    { "OUTPUT",   0,          0,       0,              ignoreOperand },
+    { "IIF",      0,          0,       0,              nam         },
     /* end of table */
     { "",         0x00,       0x00,    0x00,           none        }
 };

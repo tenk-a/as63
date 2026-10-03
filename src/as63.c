@@ -254,6 +254,10 @@ void    put2obj(int w)
 
 uint8_t    putB(int b)
 {
+    if (offsetActive) {
+        ++gLc;
+        return (uint8_t)b;
+    }
     if (gRmb_f && gFBasic_f && gObjct == OB_BIN && gRmb_sp) {
         while (gRmb_sp-- > 0)
             putObj(0);
@@ -690,10 +694,17 @@ static val_t   term(void)
         getLabel(temp);
         if (rsDefined && !strcasecmp(temp, "__RS") )
             return rsCounter;
+        if (soDefined && !strcasecmp(temp, "__SO"))
+            return soCounter;
+        if (foDefined && !strcasecmp(temp, "__FO"))
+            return foCounter;
         if (strcasecmp(temp, "defined") == 0 || strcasecmp(temp, "used") == 0) {
             checkCh_e('(');
             getLabel(temp);
-            if (rsDefined && !strcasecmp(temp, "__RS")) {
+            if ((rsDefined && !strcasecmp(temp, "__RS"))
+             || (soDefined && !strcasecmp(temp, "__SO"))
+             || (foDefined && !strcasecmp(temp, "__FO"))
+            ) {
                 checkCh_e(')');
                 return 1;
             }
@@ -2253,7 +2264,13 @@ void    rmb(void)
     val_t       b;
 
     skipSpace();
-    if (!gCSectSw) {
+    if (offsetActive) {
+        base = invExpr();
+        if (base > 65535L - gLc)
+            error("OFFSET exceeds address space.");
+        else
+            gLc += base;
+    } else if (!gCSectSw) {
         if (gOrgSFmt_f
             && (gObjct == OB_SFMT
                  #ifdef OPT_FLEX
@@ -2294,6 +2311,11 @@ void    org(void)
 {
     uint16_t origin;
 
+    if (offsetActive) {
+        lastOffset   = gLc;
+        gLc          = savedCodeLc;
+        offsetActive = 0;
+    }
     skipSpace();
     origin = (uint16_t) invExpr();
     if (gStartAddr == 0xFFFF && gOrg_f == 0)
@@ -2321,6 +2343,8 @@ void    org(void)
         }
     }
     printAddress(origin);
+    if (!gOrg_f)
+        rorgBase = origin;
     gOrg_f = 1;
 }
 
@@ -2337,12 +2361,17 @@ void    csct(void)
 
 void    endsct(void)
 {
-    if (gCSectSw > 1)
+    if (offsetActive) {
+        lastOffset   = gLc;
+        gLc          = savedCodeLc;
+        offsetActive = 0;
+    } else if (gCSectSw > 1) {
         gCSectSw = 0;
-    else if (gPSect_f)
+    } else if (gPSect_f) {
         gPSect_f = 0;
-    else
+    } else {
         error("ENDSECT without a matching section.");
+    }
 }
 
 void    psct(void)
@@ -2527,6 +2556,7 @@ void alignData(void)
 {
     val_t   offset = 0, boundary = 2, bits;
     long    count;
+    val_t   position = (gCSectSw == 2) ? gCSectBase : gLc;
     if (gOprPtr->prefix == 1) {
         skipSpace();
         bits       = invExpr();
@@ -2548,34 +2578,156 @@ void alignData(void)
             return;
         }
     }
-    count = (boundary - gLc % boundary) % boundary + offset;
-    fillBlock(count, 0, 1, BLOCK_CHECK);
+    count = (gOprPtr->prefix == 3)
+          ? !(position & 1)
+          : (boundary - position % boundary) % boundary + offset;
+    if (gCSectSw == 2) {
+        if (count > 65535L - position)
+            error("Alignment exceeds offset range.");
+        else
+            gCSectBase += (uint16_t)count;
+        clearAddress();
+    } else fillBlock(count, 0, 1, BLOCK_CHECK);
 }
 
 void rsOffset(void)
 {
-    val_t   count;
+    int   mode = gOprPtr->opcode & 15;
+    int   kind = gOprPtr->opcode >> 4;
+    val_t *counter = (kind == 1) ? &soCounter : kind == 2 ? &foCounter : &rsCounter;
+    val_t count;
+    val_t next;
     clearAddress();
-    if (gOprPtr->opcode == RS_RESET) {
-        rsCounter = 0;
-    } else if (gOprPtr->opcode == RS_SET) {
+    if (mode == RS_RESET) {
+        *counter = 0;
+    } else if (mode == RS_SET) {
         skipSpace();
-        count      = invExpr();
-        if (count < 0 || count > 65535) {
-            error("RS offset is outside 0..65535.");
+        count = invExpr();
+        if (count < (kind == 2 ? -65535 : 0) || count > 65535) {
+            error(kind == 0 ? "RS offset is outside 0..65535." : "Offset is outside the supported range.");
             return;
         }
-        rsCounter  = count;
+        *counter = count;
     } else {
-        skipSpace();
-        count      = invExpr();
+        skipSpace(); count = invExpr();
         if (count < 0 || count > 65535 / gOprPtr->prefix) {
             error("RS count is outside the supported range.");
             return;
         }
-        rsCounter = offsetField(rsCounter, count * gOprPtr->prefix, 1);
+        next = *counter + (kind == 2 ? -1 : 1) * count * gOprPtr->prefix;
+        if (next < (kind == 2 ? -65535 : 0) || next > 65535) {
+            error("RS offset is outside 0..65535.");
+            return;
+        }
+        labelValue(*counter);
+        *counter = next;
     }
-    rsDefined = 1;
+    if (kind == 1)
+        soDefined = 1;
+    else if (kind == 2)
+        foDefined = 1;
+    else
+        rsDefined = 1;
+}
+
+void ignoreOperand(void)
+{
+    clearAddress();
+    while (*gLinPtr && *gLinPtr != '\n')
+        ++gLinPtr;
+}
+
+void commentBlock(void)
+{
+    remBlock = gOprPtr->prefix;
+    ignoreOperand();
+}
+
+void failDirective(void)
+{
+    char message[MAXCHAR + 1];
+    skipSpace();
+    if (!textOperand(message, sizeof(message)))
+        return;
+    error(message);
+    failSeen = 1;
+}
+
+void relativeData(void)
+{
+    val_t value;
+    skipSpace();
+    do {
+        skipSpace();
+        value = expression() - gLc;
+        dataValue(value, gOprPtr->prefix, 1);
+    } while (nextComma());
+}
+
+void relativeOrg(void)
+{
+    val_t target;
+    skipSpace();
+    target = invExpr();
+    if (target < 0 || target > 65535L - rorgBase || target + rorgBase < gLc) {
+        error("Invalid RORG operand.");
+        return;
+    }
+    fillBlock(target + rorgBase - gLc, 0, 1, BLOCK_CHECK);
+}
+
+void offsetSection(void)
+{
+    val_t start;
+    skipSpace();
+    start = (*gLinPtr == '\n' || *gLinPtr == ';') ?
+            (offsetActive ? gLc : lastOffset) : invExpr();
+    if (start < 0 || start > 65535) {
+        error("Invalid OFFSET operand.");
+        return;
+    }
+    if (!offsetActive) {
+        flushObj();
+        savedCodeLc = gLc;
+    }
+    offsetActive = 1;
+    gLc          = start;
+    clearAddress();
+}
+
+void argumentOffsets(void)
+{
+    val_t offset = 4;
+    char  name[LBLSIZE + 1];
+    int   size;
+    skipSpace();
+    if (checkChar('#')) {
+        offset = invExpr();
+        skipSpace();
+        if (!checkCh_e(','))
+            return;
+    }
+    do {
+        skipSpace();
+        getLabel(name);
+        size = 2;
+        if (strlen(name) > 2 && name[strlen(name)-2] == '.') {
+            int suffix = toupper(name[strlen(name)-1]);
+            if (suffix != 'B' && suffix != 'W' && suffix != 'L') {
+                error("Invalid CARGS size.");
+                return;
+            }
+            size = (suffix == 'L') ? 4 : 2;
+            name[strlen(name)-2] = 0;
+        }
+        if (offset < -65535 || offset > 65535) {
+            error("CARGS offset is outside the supported range.");
+            return;
+        }
+        defLabel(name, 1, 1);
+        labelValue(offset);
+        offset += size;
+    } while (nextComma());
 }
 
 void printText(void)
@@ -2595,9 +2747,10 @@ void printText(void)
             while ( n && isspace( (uint8_t) text[n - 1] ) )
                 --n;
             text[n] = 0;
-            if (*gLinPtr == ';')
+            if (*gLinPtr == ';') {
                 while (*gLinPtr && *gLinPtr != '\n')
                     ++gLinPtr;
+            }
         }
         if (gPass == 2)
             printf("%s\n", text);
@@ -2642,7 +2795,7 @@ void    library(void)
     if (gVerbos_f)
         fprintf(STDERR, "[%s]\n", fname);
     DEBMSGF( (STDERR, "include %s  (#%d)\n", fname, gFile_sp + 1) );
-    fp                         = openSearch( (char const *) fname, "r" );
+    fp  = openSearch(fname, "r");
     if (!fp) {
         error("Cannot open include file.");
         return;
@@ -3101,8 +3254,10 @@ static void co_if(uint8_t f)
         skipSpace();
         getLabel(name);
         lp     = refLabel(name);
-        val    = ( rsDefined && !strcasecmp(name, "__RS") )
-                 || (lp && lp->line < gLineNo);
+        val    =  (rsDefined && !strcasecmp(name, "__RS"))
+               || (soDefined && !strcasecmp(name, "__SO"))
+               || (foDefined && !strcasecmp(name, "__FO"))
+               || (lp && lp->line < gLineNo);
         if (f == CO_IFND)
             val = !val;
     } else if (f == CO_IFC || f == CO_IFNC) {
@@ -3260,6 +3415,18 @@ static int  getMnemonic(void)
             return 0;
         } else if (gCoStk[gCo_sp] < 0)
             return 0;
+        if (strcmp(q->mnemonic, "IIF") == 0) {
+            val_t condition;
+            skipSpace();
+            condition = invExpr();
+            skipSpace();
+            if (!condition) {
+                while (*gLinPtr && *gLinPtr != '\n')
+                    ++gLinPtr;
+                return 0;
+            }
+            return getMnemonic();
+        }
         gOprPtr = q;
         return 1;
     }
@@ -3287,6 +3454,18 @@ static uint8_t oneLine(void)
 
     initLine();
     c = *gLinPtr;
+    if (remBlock) {
+        char word[MNEMOSIZE + 1];
+        int  n = 0;
+        skipSpace();
+        while (isSymbl(*gLinPtr) && n < MNEMOSIZE)
+            word[n++] = toupper(*gLinPtr++);
+        word[n]       = 0;
+        if (strcmp(word, "EREM") == 0)
+            remBlock  = 0;
+        clearAddress();
+        return 0;
+    }
 
     if (c == '*' || c == '#') {
         clearAddress();
@@ -3295,9 +3474,8 @@ static uint8_t oneLine(void)
         if (!isspace(c) && c != '\n')
             gf = getLabel(temp);
      #ifdef OPT_OA_FILE
-        if (gObjct == OB_ASM && gf && gPass == 2) {
+        if (gObjct == OB_ASM && gf && gPass == 2)
             oa_putStr(gLineBuf + LINEHEAD, 0);
-        }
      #endif
         f  = getMnemonic();
         if (temp[0] && gCoStk[gCo_sp] >= 0)
@@ -3313,6 +3491,8 @@ static void initPass(void)
         free(extraIncDirs[--extraIncCount]);
 
     rsCounter = rsDefined = 0;
+    soCounter = foCounter = soDefined    = foDefined  = 0;
+    remBlock  = failSeen  = offsetActive = lastOffset = rorgBase = 0;
     gImVal    = 512;
  #ifdef OPT_OA_FILE
     gOA_sp    =
@@ -3326,7 +3506,7 @@ static void initPass(void)
     gEOF_f    = gGrp    = gCSectSw = gPSect_f = gOrg_f = (uint8_t) 0;
  #ifdef OPT_OPTIMIZE
     if (gVerbos_f)
-        fprintf(STDERR, gPass == -1 ? "<pass 1.5>\n" : "<pass %d>\n", gPass);
+        fprintf(STDERR, (gPass == -1) ? "<pass 1.5>\n" : "<pass %d>\n", gPass);
  #else
     if (gVerbos_f)
         fprintf(STDERR, "<pass %d>\n", gPass);
@@ -3366,8 +3546,9 @@ static void assemble(int argc, char * *argv)
             } else if (f != 0) {
                 if (gCSectSw > 1
                    && strcmp(gOprPtr->mnemonic, "RMB")
-                   && strcmp(gOprPtr->mnemonic, "ENDSECT") )
-                {
+                   && strcmp(gOprPtr->mnemonic, "ENDSECT")
+                   && !(gCSectSw == 2 && gOprPtr->process == alignData)
+                ) {
                     if (gCSectSw == 3) {
                         if (strcmp(gOprPtr->mnemonic, "FDB")
                          && strcmp(gOprPtr->mnemonic, "FCB")
@@ -3426,6 +3607,13 @@ static void assemble(int argc, char * *argv)
         putObj(0x1a);
     }
  #endif
+    if (remBlock)
+        error("REM without EREM.");
+    if (offsetActive) {
+        lastOffset   = gLc;
+        gLc          = savedCodeLc;
+        offsetActive = 0;
+    }
     gObjSiz = gObjCnt;
 }
 
@@ -3769,7 +3957,7 @@ static void options(uint8_t *p)
 
 int main(int argc, char *argv[])
 {
-    static char *   title = "HD6309 cross assembler version 01.43T\n";
+    static char *   title = "HD6309 cross assembler version 01.45T\n";
     char *          p;
     int             i;
 
@@ -3882,8 +4070,11 @@ int main(int argc, char *argv[])
     printLog();
 
     DEBMSGF( (STDERR, "close all files\n") );
-    if (gObjct)
+    if (gObjct) {
         fclose(gObjFp);
+        if (failSeen)
+            remove(oObjFName);
+    }
     if (oList_f)
         fclose(gLstFp);
     if (gErrFName == NULL)

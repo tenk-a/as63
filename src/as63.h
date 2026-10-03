@@ -214,13 +214,12 @@ EXTERN FILE    *gSrcFp;
 EXTERN OPTBL_T *gOprPtr;
 EXTERN int      gErrors , gPass;
 EXTERN int      gImVal  , gIndirect;
-EXTERN val_t    rsCounter;
+EXTERN int      remBlock, failSeen, offsetActive;
 EXTERN uint16_t gDp;
 EXTERN uint16_t gLc     , gLinLc , gObjLc;
 EXTERN uint8_t  gValid_f, gEOF_f;
 EXTERN uint8_t  gOs9_f  , gOrg_f , gOrgSFmt_f;
 EXTERN uint8_t  gByte_f , gWord_f, gIdxOfs_f;
-EXTERN uint8_t  rsDefined;
 EXTERN char     gModName[MODNAMSZ+1];
 EXTERN uint8_t  gM6809_f;
 #ifdef OPT_M6800
@@ -239,7 +238,11 @@ EXTERN int      gObjPos;
 EXTERN int      gObjBufSz;
 EXTERN uint8_t  gObjBuf[OBJSIZE];
 EXTERN uint8_t  gCrcBuf[3];
-EXTERN int      gRmb_sp,    gRmb_f;
+EXTERN uint8_t  gRmb_f;
+EXTERN int      gRmb_sp;
+EXTERN int      rsCounter, soCounter, foCounter;
+EXTERN uint8_t  rsDefined, soDefined, foDefined;
+EXTERN uint16_t savedCodeLc, lastOffset, rorgBase;
 #ifdef OPT_FBAS
  EXTERN uint8_t gFBasic_f;
 #endif
@@ -308,7 +311,6 @@ EXTERN int   extraIncCount;
 extern OPTBL_T gOpTab[];
 
 
-
 /*-- Function --*/
 void
     none(void), load(void), load2(void),    store(void),
@@ -322,6 +324,8 @@ void
     vsct(void), psct(void), csct(void),     endsct(void),
     opt(void),  nam(void),  page(void),     spc(void),
     alignData(void), rsOffset(void),
+    ignoreOperand(void), commentBlock(void), failDirective(void),
+    relativeData(void), relativeOrg(void), offsetSection(void), argumentOffsets(void),
     printText(void), printValue(void),
     library(void), incbin(void), incdir(void),
  #ifdef OPT_UNDOC
