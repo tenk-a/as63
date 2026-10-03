@@ -312,7 +312,7 @@ extern OPTBL_T gOpTab[];
 /*-- Function --*/
 void
     none(void), load(void), load2(void),    store(void),
-    ccr(void),  lea(void),  memory(void),   transfer(void),
+    ccr(void),  bitTransfer(void), lea(void),  memory(void),   transfer(void),
     pshs(void), puls(void), pshu(void),     pulu(void),
     tfm(void),  load4(void),immemory(void),
     mod(void),  emod(void), branch(void),   lbranch(void),

@@ -1328,6 +1328,46 @@ void    ccr(void)
     operand(GROUP0, IMMEDIATE);
 }
 
+void bitTransfer(void)
+{
+    /* reg[7:6], src_bit[5:3], dst_bit[2:0]. */
+    int   reg;
+    val_t source, destination, address, offset;
+
+    skipSpace();
+    reg = getReg(CC | A | B);
+    if (reg && reg != CC && reg != A && reg != B)
+        error("Invalid register for bit operation; use CC, A, or B.");
+    skipSpace();
+    if (!checkCh_e(','))
+        return;
+    skipSpace();
+    source = expression();
+    if ((gValid_f || gPass == 2) && (source < 0 || source > 7))
+        error("Source bit must be 0..7.");
+    skipSpace();
+    if (!checkCh_e(','))
+        return;
+    skipSpace();
+    destination = expression();
+    if ((gValid_f || gPass == 2) && (destination < 0 || destination > 7))
+        error("Destination bit must be 0..7.");
+    skipSpace();
+    if (!checkCh_e(','))
+        return;
+    skipSpace();
+    address = expression();
+    offset  = address - (gDp << 8);
+    if (gWord_f)
+        error("Bit operations require direct addressing.");
+    else if (!gByte_f && (gValid_f || gPass == 2) && (offset < 0 || offset > 255))
+        error("Bit operation address is outside the direct page.");
+    putCode(GROUP0, NO_MODE);
+    postByte( (reg == A ? 0x40 : reg == B ? 0x80 : 0)
+             |((source & 7) << 3) | (destination & 7) );
+    putByte(offset);
+}
+
 #ifdef OPT_UNDOC
 void undoc_imm8(void)
 {

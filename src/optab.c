@@ -258,6 +258,7 @@ OPTBL_T gOpTab[] = {
     { "RORD",     0x10,       0x46,    0x00,           none_d      },
     { "TSTD",     0x10,       0x4d,    0x00,           none_d      },
  #endif
+
  /* HD6309         */
  #ifndef OPT_EXT_INST
     { "ADCD",     0x10,       0x89,    0x01,           load2       },
@@ -322,6 +323,15 @@ OPTBL_T gOpTab[] = {
     { "TIM",      0x00,       0x0B,    0x01,           immemory    },
     { "EIM",      0x00,       0x05,    0x01,           immemory    },
     { "OIM",      0x00,       0x01,    0x01,           immemory    },
+    /* DP bit operations: reg,src_bit,dst_bit,address. */
+    { "BAND",     0x11,       0x30,    0x01,           bitTransfer },
+    { "BIAND",    0x11,       0x31,    0x01,           bitTransfer },
+    { "BOR",      0x11,       0x32,    0x01,           bitTransfer },
+    { "BIOR",     0x11,       0x33,    0x01,           bitTransfer },
+    { "BEOR",     0x11,       0x34,    0x01,           bitTransfer },
+    { "BIEOR",    0x11,       0x35,    0x01,           bitTransfer },
+    { "LDBT",     0x11,       0x36,    0x01,           bitTransfer },
+    { "STBT",     0x11,       0x37,    0x01,           bitTransfer },
     /* E */
     { "ADDE",     0x11,       0x8b,    0x01,           load        },
     { "CLRE",     0x11,       0x4f,    0x01,           none        },
@@ -366,6 +376,7 @@ OPTBL_T gOpTab[] = {
  #endif
     /* md */
     { "BITMD",    0x11,       0x3c,    0x01,           ccr         },
+    { "LDMD",     0x11,       0x3d,    0x01,           ccr         },
 
  #ifdef OPT_M6800
     /* M6800 aliases with an identical 6809 encoding. */
