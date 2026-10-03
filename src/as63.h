@@ -43,7 +43,7 @@ typedef unsigned short  uint16_t;   /* 2-byte unsigned integer type */
 
 #define LINEHEAD        24    /* source line display position in listing     */
 #define OBJSIZE         32    /* obj output buffer size (bytes): one S-record line */
-#define MNEMOSIZE       8     /* maximum number of mnemonic characters       */
+#define MNEMOSIZE       10    /* maximum number of mnemonic characters       */
 #define MODNAMSZ        29    /* maximum number of characters in module name */
 
 typedef int  val_t;           /* int<->long: use int/long for constant arithmetic */
@@ -167,6 +167,7 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 /* Pseudo-op prefix is the element size or mode; opcode holds behavior flags. */
 #define BLOCK_FILL      0x01  /* accept an optional fill value */
 #define BLOCK_CHECK     0x02  /* validate counts, values and address space */
+#define BLOCK_REVERSED  0x04  /* fill value precedes count */
 #define EQU_RESOLVED    0x01  /* SET requires a resolved expression */
 #define LIST_ABSOLUTE   0x01  /* LIST/NOLIST set state; OPT changes its depth */
 #define RS_RESET        0x01
@@ -229,7 +230,8 @@ EXTERN uint8_t  gRmb_f;
 EXTERN int      gRmb_sp;
 EXTERN int      rsCounter, soCounter, foCounter;
 EXTERN uint8_t  rsDefined, soDefined, foDefined;
-EXTERN uint16_t savedCodeLc, lastOffset, rorgBase;
+EXTERN uint16_t savedCodeLc, lastOffset, rorgBase, previousOrg;
+EXTERN uint8_t reorgValid;
 EXTERN uint8_t  gFlex_f;
 #ifdef OPT_FBAS
  EXTERN uint8_t gFBasic_f;
@@ -303,7 +305,7 @@ void
     mod(void),  emod(void), branch(void),   lbranch(void),
     equ(void),              rmb(void),      os9svc(void),
     rzb(void),  fcb(void),  fdb(void),      flb(void),
-    fcc(void),  fcs(void),  org(void),      setdp(void),
+    fcc(void),  fcs(void), fcn(void),  org(void),      setdp(void),
     vsct(void), psct(void), csct(void),     endsct(void),
     opt(void),  nam(void),  page(void),     spc(void),
     alignData(void), rsOffset(void),        argumentOffsets(void),

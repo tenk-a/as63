@@ -421,16 +421,39 @@ OPTBL_T const gOpTab[] = {
     { "MOD",      0x00,       0x00,    0x00,           mod         },
     { "EMOD",     0x00,       0x00,    0x00,           emod        },
 
+    { "REORG",    1,          0,          0,           org         },
+
     { "FCB",      0x00,       0x00,    0x00,           fcb         },
     { "DC.B",     0x00,       0x00,    0x00,           fcb         },
+    { ".DB",      0,          0,          0,           fcb         },
+    { ".BYTE",    0,          0,          0,           fcb         },
     { "FDB",      0x00,       0x00,    0x00,           fdb         },
     { "DC.W",     0x00,       0x00,    0x00,           fdb         },
+    { ".DW",      0,          0,          0,           fdb         },
+    { ".WORD",    0,          0,          0,           fdb         },
+    { "FQB",      0,          0,          0,           flb         },
     { "DC.L",     0x00,       0x00,    0x00,           flb         },
-    { "FCC",      0x00,       0x00,    0x00,           fcc         },
-    { "FCS",      0x00,       0x00,    0x00,           fcs         },
-    { "RMB",      0x00,       0x00,    0x00,           rmb         },
+    { ".QUAD",    0,          0,          0,           flb         },
+    { ".4BYTE",   0,          0,          0,           flb         },
 
-    { "RZB",      0x00,       0x00,    0x00,           rzb         },
+    { "FCC",      0x00,       0x00,    0x00,           fcc         },
+    { ".ASCII",   0,          0,          0,           fcc         },
+    { ".STR",     0,          0,          0,           fcc         },
+    { "FCS",      0x00,       0x00,    0x00,           fcs         },
+    { ".ASCIS",   0,          0,          0,           fcs         },
+    { ".STRS",    0,          0,          0,           fcs         },
+    { "FCN",      0,          0,          0,           fcn         },
+    { ".ASCIZ",   0,          0,          0,           fcn         },
+    { ".STRZ",    0,          0,          0,           fcn         },
+
+    { "RMB",      0x00,       0x00,    0x00,           rmb         },
+    { "RMD",      2, BLOCK_CHECK,         0,           rmb         },
+    { "RMQ",      4, BLOCK_CHECK,         0,           rmb         },
+    { ".BLKB",    1, BLOCK_CHECK,         0,           rmb         },
+    { ".DS",      1, BLOCK_CHECK,         0,           rmb         },
+    { ".RS",      1, BLOCK_CHECK,         0,           rmb         },
+
+    { "RZB",      0,           0,            0,        rzb         },
     { "DS",       2, BLOCK_CHECK,            0,        rzb         },
     { "DS.B",     1, BLOCK_CHECK,            0,        rzb         },
     { "DS.W",     2, BLOCK_CHECK,            0,        rzb         },
@@ -443,6 +466,10 @@ OPTBL_T const gOpTab[] = {
     { "BLK.B",    1, BLOCK_CHECK|BLOCK_FILL, 0,        rzb         },
     { "BLK.W",    2, BLOCK_CHECK|BLOCK_FILL, 0,        rzb         },
     { "BLK.L",    4, BLOCK_CHECK|BLOCK_FILL, 0,        rzb         },
+    { "ZMB",      1, BLOCK_CHECK,            0,        rzb         },
+    { "ZMD",      2, BLOCK_CHECK,            0,        rzb         },
+    { "ZMQ",      4, BLOCK_CHECK,            0,        rzb         },
+    { "FILL",     1, BLOCK_CHECK|BLOCK_REVERSED, 0,    rzb         },
 
     { "RS",       2,          0,       0,              rsOffset    },
     { "RS.B",     1,          0,       0,              rsOffset    },
@@ -494,6 +521,7 @@ OPTBL_T const gOpTab[] = {
     { "INCLUDE",  0x00,       0x00,    0x00,           library     },
     { ".INCLUDE", 0x00,       0x00,    0x00,           library     },
     { "INCBIN",   0,          0,       0,              incbin      },
+    { "INCLUDEBIN",1,         0,          0          , incbin      },
     { "INCDIR",   0,          0,       0,              incdir      },
 
     /* if */
@@ -510,15 +538,17 @@ OPTBL_T const gOpTab[] = {
     { "ELSIF",    CO_ELIF,    0x00,    0x00,           NULL        },
     { "ENDIF",    CO_ENDC,    0x00,    0x00,           NULL        },
     { "ENDC",     CO_ENDC,    0x00,    0x00,           NULL        },
+    { "IFDEF",    CO_IFD,     0x00,    0x00,           NULL        },
+    { "IFNDEF",   CO_IFND,    0x00,    0x00,           NULL        },
+    { "IFD",      CO_IFD,     0x00,    0x00,           NULL        },
+    { "IFND",     CO_IFND,    0x00,    0x00,           NULL        },
+    { "IFC",      CO_IFC,     0x00,    0x00,           NULL        },
+    { "IFNC",     CO_IFNC,    0x00,    0x00,           NULL        },
     { ".IF",      CO_IF,      0x00,    0x00,           NULL        },
     { ".ELSE",    CO_ELSE,    0x00,    0x00,           NULL        },
     { ".ELSIF",   CO_ELIF,    0x00,    0x00,           NULL        },
     { ".ENDIF",   CO_ENDC,    0x00,    0x00,           NULL        },
-
-    { "IFD",      CO_IFD,     0,       0,              NULL        },
-    { "IFND",     CO_IFND,    0,       0,              NULL        },
-    { "IFC",      CO_IFC,     0,       0,              NULL        },
-    { "IFNC",     CO_IFNC,    0,       0,              NULL        },
+    { "IIF",      0,          0,       0,              nam         },
 
     /* etc */
     { "SPC",      0x00,       0x00,    0x00,           spc         },
@@ -533,10 +563,15 @@ OPTBL_T const gOpTab[] = {
     { "ECHO",     0,          0,       0,              printText   },
     { "PRINTT",   0,          0,       0,              printText   },
     { "PRINTV",   0,          0,       0,              printValue  },
-    { "FAIL",     0x00,       0x00,    0x00,           failDirective },
+
+    { "FAIL",     0,          0,       0,              failDirective },
+    { "ERROR",    1,          0,       0,              failDirective },
+    { "WARNING",  2,          0,       0,              failDirective },
+
     { "COMMENT",  0,          0,       0,              ignoreOperand },
     { "OUTPUT",   0,          0,       0,              ignoreOperand },
-    { "IIF",      0,          0,       0,              nam         },
+    { ".MODULE",  0,          0,          0,           ignoreOperand },
+
     /* end of table */
     { "",         0x00,       0x00,    0x00,           none        }
 };

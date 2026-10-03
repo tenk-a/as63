@@ -2105,6 +2105,10 @@ static void fccs(uint8_t a)
     uint8_t     c;
 
     skipSpace();
+    if (!*gLinPtr || *gLinPtr == '\n') {
+        error("Missing string operand.");
+        return;
+    }
     do {
         c = *gLinPtr++;
         if (c == '$' && toupper(*gLinPtr) == 'M') {
@@ -2112,7 +2116,7 @@ static void fccs(uint8_t a)
             if (strcasecmp(temp, "modnam") == 0 && gModName) {
                 p = (uint8_t const*)gModName;
                 while ( (b = *p++) != '\0') {
-                    if (a && *p == '\0')
+                    if (a == 1 && *p == '\0')
                         b |= 0x80;
                     put1Byte(b);
                 }
@@ -2128,12 +2132,14 @@ static void fccs(uint8_t a)
                     error("Missing closing delimiter.");
                     return;
                 } else {
-                    if (a && *gLinPtr == c)
+                    if (a == 1 && *gLinPtr == c)
                         b |= 0x80;
                     put1Byte(b);
                 }
             }
         }
+        if (a == 2)
+            put1Byte(0);
     } while (*gLinPtr++ == ',');
     --gLinPtr;
 }
@@ -2146,6 +2152,11 @@ void    fcc(void)
 void    fcs(void)
 {
     fccs(1);
+}
+
+void fcn(void)
+{
+    fccs(2);
 }
 
 static int nextComma(void);
@@ -2184,6 +2195,13 @@ void    rzb(void)
     int size = gOprPtr->prefix ? gOprPtr->prefix : 1;
     int mode = gOprPtr->opcode;
     skipSpace();
+    if (mode & BLOCK_REVERSED) {
+        fill = expression();
+        skipSpace();
+        if (!checkCh_e(','))
+            return;
+        skipSpace();
+    }
     count = invExpr();
     if ((mode & BLOCK_FILL) && nextComma()) {
         skipSpace();
@@ -2214,40 +2232,35 @@ static val_t offsetField(val_t base, val_t count, int checked)
 
 void    rmb(void)
 {
-    uint16_t    base;
-    val_t       b;
+    val_t count;
+    int   size     = gOprPtr->prefix ? gOprPtr->prefix : 1;
+    int   checked  = gOprPtr->opcode & BLOCK_CHECK;
+    val_t position = gCSectSw ? gCSectBase : gLc;
 
     skipSpace();
+    count = invExpr();
+    if (checked && (count < 0 || count > 65535 / size
+        || count > (65536L - position) / size)) {
+        error("Reservation exceeds address space or has a negative count.");
+        return;
+    }
+    count *= size;
     if (offsetActive) {
-        base = invExpr();
-        if (base > 65535L - gLc)
+        if (count < 0 || count > 65535L - gLc)
             error("OFFSET exceeds address space.");
-        else
-            gLc += base;
-    } else if (!gCSectSw) {
-        if (gOrgSFmt_f
-            && (gObjct == OB_SFMT
-                    || gFlex_f
-                )
-       ) {
-            base   = invExpr();
-            flushObj();
-            gLc   += base;
-        } else {
-            if (gRmb_f && gFBasic_f) {
-                skipSpace();
-                b          = (int) ( invExpr() );
-                printWord(gLc, 5);
-                gRmb_sp   += b;
-                gObjCnt   += b;
-                gLc       += b;
-            } else {
-                rzb();
-            }
-        }
+        else gLc += (uint16_t)count;
+    } else if (gCSectSw) {
+        gCSectBase = (uint16_t)offsetField(gCSectBase, count, checked);
+    } else if (gOrgSFmt_f && (gObjct == OB_SFMT || gFlex_f)) {
+        flushObj();
+        gLc += (uint16_t)count;
+    } else if (gRmb_f && gFBasic_f) {
+        printWord(gLc, 5);
+        gRmb_sp += count;
+        gObjCnt += count;
+        gLc     += (uint16_t)count;
     } else {
-        base           = invExpr();
-        gCSectBase = (uint16_t)offsetField(gCSectBase, base, 0);
+        fillBlock(count, 0, 1, 0);
     }
 }
 
@@ -2269,14 +2282,26 @@ void    org(void)
         offsetActive = 0;
     }
     skipSpace();
-    origin = (uint16_t) invExpr();
+    if (gOprPtr->prefix) {
+        if (!reorgValid) {
+            error("REORG without a previous ORG.");
+            return;
+        }
+        origin = previousOrg;
+    } else {
+        origin = (uint16_t)invExpr();
+    }
+    if (!gOprPtr->prefix) {
+        previousOrg = gOs9_f ? gCSectBase : gLc;
+        reorgValid = 1;
+    }
     if (gStartAddr == 0xFFFF && gOrg_f == 0)
         gStartAddr = origin;
     if (gOs9_f) {
         gCSectSw   = 1;
         gCSectBase = origin;
     } else {
-        if (gOrg_f == 0
+        if (gOprPtr->prefix || gOrg_f == 0
             || ( gOrgSFmt_f
                 && (gObjct == OB_SFMT
                     || gFlex_f
@@ -2465,7 +2490,7 @@ void incbin(void)
             }
         }
     }
-    if (offset < 0 || length < -1) {
+    if ((offset < 0 && !gOprPtr->prefix) || length < -1) {
         error("Invalid INCBIN offset or length.");
         return;
     }
@@ -2474,11 +2499,14 @@ void incbin(void)
         error("Cannot open INCBIN file.");
         return;
     }
-    if (fseek(fp, 0, SEEK_END)
-      || ( fileSize = ftell(fp) ) < 0
-      || offset > fileSize
-      || fseek(fp, offset, SEEK_SET) )
-    {
+    if (fseek(fp, 0, SEEK_END) || (fileSize = ftell(fp)) < 0) {
+        error("Unreadable INCBIN file.");
+        fclose(fp);
+        return;
+    }
+    if (offset < 0)
+        offset += fileSize;
+    if (offset < 0 || offset > fileSize || fseek(fp, offset, SEEK_SET)) {
         error("Invalid INCBIN offset or unreadable file.");
         fclose(fp);
         return;
@@ -2504,17 +2532,22 @@ void incbin(void)
 
 void alignData(void)
 {
-    val_t   offset = 0, boundary = 2, bits;
+    val_t   offset   = 0;
+    val_t   boundary = 2;
+    val_t   fill     = 0;
     long    count;
     val_t   position = (gCSectSw == 2) ? gCSectBase : gLc;
     if (gOprPtr->prefix == 1) {
         skipSpace();
-        bits       = invExpr();
-        if (bits < 0 || bits > 16) {
-            error("ALIGN exponent must be 0..16.");
+        boundary = invExpr();
+        if (boundary <= 0 || boundary > 65536L) {
+            error("ALIGN boundary must be 1..65536.");
             return;
         }
-        boundary   = 1L << bits;
+        if (nextComma()) {
+            skipSpace();
+            fill = expression() & 255;
+        }
     } else if (gOprPtr->prefix == 2) {
         skipSpace();
         offset     = invExpr();
@@ -2537,7 +2570,9 @@ void alignData(void)
         else
             gCSectBase += (uint16_t)count;
         clearAddress();
-    } else fillBlock(count, 0, 1, BLOCK_CHECK);
+    } else {
+        fillBlock(count, fill, 1, BLOCK_CHECK);
+    }
 }
 
 void rsOffset(void)
@@ -2597,10 +2632,20 @@ void failDirective(void)
 {
     char message[MAXCHAR + 1];
     skipSpace();
-    if (!textOperand(message, sizeof(message)))
+    if (gOprPtr->prefix) {
+        int n = 0;
+        while (*gLinPtr && *gLinPtr != '\n' && n < MAXCHAR)
+            message[n++] = *gLinPtr++;
+        message[n] = 0;
+    } else if (!textOperand(message, sizeof(message))) {
         return;
-    error(message);
-    failSeen = 1;
+    }
+    if (gOprPtr->prefix == 2) {
+        warning(message);
+    } else {
+        error(message);
+        failSeen = 1;
+    }
 }
 
 void relativeData(void)
@@ -3431,6 +3476,7 @@ static void initPass(void)
     rsCounter = rsDefined = 0;
     soCounter = foCounter = soDefined    = foDefined  = 0;
     remBlock  = failSeen  = offsetActive = lastOffset = rorgBase = 0;
+    previousOrg = reorgValid = 0;
     gImVal    = 512;
  #ifdef OPT_OA_FILE
     gOA_sp    =
@@ -3476,7 +3522,7 @@ static void assemble(int argc, char * * argv)
                 break;
             } else if (f != 0) {
                 if (gCSectSw > 1
-                   && strcmp(gOprPtr->mnemonic, "RMB")
+                   && gOprPtr->process != rmb
                    && strcmp(gOprPtr->mnemonic, "ENDSECT")
                    && !(gCSectSw == 2 && gOprPtr->process == alignData)
                 ) {
