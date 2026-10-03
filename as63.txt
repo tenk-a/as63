@@ -575,6 +575,17 @@
     .ASCII/.STR=FCC、.ASCIZ/.STRZ=FCN、.ASCIS/.STRS=FCS。
     .BLKB/.DS/.RS=RMB（バイト単位）。ドットなしの DS / RS は従来通りです。
 
+□  pragma 設定[,設定...]
+    6809 / 6309 / 6800compat / cescapes を切り替えます。no 接頭辞で解除します。
+    CESCAPES は FCC/FCS/FCN の C 形式エスケープを有効にします（初期状態は無効）。
+
+□  *pragma 設定[,設定...]
+□  *pragmapush 設定[,設定...] / *pragmapop 設定[,設定...]
+    行頭の *PRAGMA は未対応設定を無視します。PUSH/POP はファイル内で設定を保存／復元。
+
+□  ifpragma 設定
+    指定した設定が有効なら、ENDC/ENDIF までをアセンブルします。
+
 □  comment 任意の文字列
 □  rem ～ erem
     行の残り／範囲をコメントとして読み飛ばします。

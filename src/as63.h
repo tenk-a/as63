@@ -141,6 +141,7 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define CO_IFND         12
 #define CO_IFC          13
 #define CO_IFNC         14
+#define CO_IFPRAGMA     15
 
 /* none_wq */
 #define WQ_TSTQ         0
@@ -189,7 +190,8 @@ typedef struct optbl_t {
 typedef struct lbltbl_t {
         int     line;
         val_t   value;
-        struct lbltbl_t *left, *right;
+        struct lbltbl_t *left;
+        struct lbltbl_t *right;
         char    flg;           /* 0:used  1:EQU  2:SET */
         uint8_t grp;
         char    name[LBLSIZE + 1];
@@ -204,14 +206,25 @@ typedef struct lbltbl_t {
 /* assembly */
 EXTERN FILE    *gSrcFp;
 EXTERN OPTBL_T const* gOprPtr;
-EXTERN int      gErrors , gPass;
-EXTERN int      gImVal  , gIndirect;
-EXTERN int      remBlock, failSeen, offsetActive;
+EXTERN int      gErrors;
+EXTERN int      gPass;
+EXTERN int      gImVal;
+EXTERN int      gIndirect;
+EXTERN int      remBlock;
+EXTERN int      failSeen;
+EXTERN int      offsetActive;
 EXTERN uint16_t gDp;
-EXTERN uint16_t gLc     , gLinLc , gObjLc;
-EXTERN uint8_t  gValid_f, gEOF_f;
-EXTERN uint8_t  gOs9_f  , gOrg_f , gOrgSFmt_f;
-EXTERN uint8_t  gByte_f , gWord_f, gIdxOfs_f;
+EXTERN uint16_t gLc;
+EXTERN uint16_t gLinLc;
+EXTERN uint16_t gObjLc;
+EXTERN uint8_t  gValid_f;
+EXTERN uint8_t  gEOF_f;
+EXTERN uint8_t  gOs9_f;
+EXTERN uint8_t  gOrg_f;
+EXTERN uint8_t  gOrgSFmt_f;
+EXTERN uint8_t  gByte_f;
+EXTERN uint8_t  gWord_f;
+EXTERN uint8_t  gIdxOfs_f;
 EXTERN char     gModName[MODNAMSZ+1];
 EXTERN uint8_t  gM6809_f;
 EXTERN uint8_t  gM6800_f;
@@ -219,8 +232,10 @@ EXTERN uint8_t  gUndoc_f;
 
 /* object output */
 EXTERN FILE    *gObjFp;
-EXTERN uint16_t gObjSiz,    gObjCnt;
-EXTERN uint16_t gStartAddr, gEntryAddr;
+EXTERN uint16_t gObjSiz;
+EXTERN uint16_t gObjCnt;
+EXTERN uint16_t gStartAddr;
+EXTERN uint16_t gEntryAddr;
 EXTERN uint8_t  gObjct;
 EXTERN int      gObjPos;
 EXTERN int      gObjBufSz;
@@ -228,9 +243,16 @@ EXTERN uint8_t  gObjBuf[OBJSIZE];
 EXTERN uint8_t  gCrcBuf[3];
 EXTERN uint8_t  gRmb_f;
 EXTERN int      gRmb_sp;
-EXTERN int      rsCounter, soCounter, foCounter;
-EXTERN uint8_t  rsDefined, soDefined, foDefined;
-EXTERN uint16_t savedCodeLc, lastOffset, rorgBase, previousOrg;
+EXTERN int      rsCounter;
+EXTERN int      soCounter;
+EXTERN int      foCounter;
+EXTERN uint8_t  rsDefined;
+EXTERN uint8_t  soDefined;
+EXTERN uint8_t  foDefined;
+EXTERN uint16_t savedCodeLc;
+EXTERN uint16_t lastOffset;
+EXTERN uint16_t rorgBase;
+EXTERN uint16_t previousOrg;
 EXTERN uint8_t reorgValid;
 EXTERN uint8_t  gFlex_f;
 #ifdef OPT_FBAS
@@ -239,10 +261,13 @@ EXTERN uint8_t  gFlex_f;
 
 /* labels */
 EXTERN LBLTBL_T *gLblPtr;
-EXTERN int      gLabels,  gLineNo;
+EXTERN int      gLabels;
+EXTERN int      gLineNo;
 EXTERN uint16_t gCSectBase;
-EXTERN uint8_t  gGrp,     gCSectSw;
-EXTERN uint8_t  gUpLo_f,  gPSect_f;
+EXTERN uint8_t  gGrp;
+EXTERN uint8_t  gCSectSw;
+EXTERN uint8_t  gUpLo_f;
+EXTERN uint8_t  gPSect_f;
 
 EXTERN uint8_t  gSjis_f;
 
@@ -258,7 +283,10 @@ EXTERN FILE   *gErrFp;
 EXTERN char const *gErrFName;
 
  /* for optimization (long->short branch) */
- EXTERN int    *gOptStk, gOpt_sp, gOptChg, gOptCount;
+ EXTERN int    *gOptStk;
+ EXTERN int    gOpt_sp;
+ EXTERN int    gOptChg;
+ EXTERN int    gOptCount;
  EXTERN uint8_t gOpt_f;
 
 /* manage 'if' (conditional assembly) */
@@ -295,6 +323,13 @@ EXTERN int   extraIncCount;
 
 extern OPTBL_T const gOpTab[];
 
+#define PRAGMA_KINDS    4
+#define PRAGMA_DEPTH    64
+EXTERN uint8_t pragmaEscapes;
+EXTERN uint8_t pragmaDefaults[3];
+EXTERN uint8_t pragmaStacks[MAXLIB + 1][PRAGMA_KINDS][PRAGMA_DEPTH];
+EXTERN uint8_t pragmaDepth[ MAXLIB + 1][PRAGMA_KINDS];
+
 
 /*-- Function --*/
 void
@@ -304,10 +339,10 @@ void
     tfm(void),  load4(void),immemory(void),
     mod(void),  emod(void), branch(void),   lbranch(void),
     equ(void),              rmb(void),      os9svc(void),
-    rzb(void),  fcb(void),  fdb(void),      flb(void),
+    rzb(void),  fcb(void),  fdb(void),      fqb(void),
     fcc(void),  fcs(void), fcn(void),  org(void),      setdp(void),
     vsct(void), psct(void), csct(void),     endsct(void),
-    opt(void),
+    opt(void), pragmaDirective(void),
     alignData(void), rsOffset(void),        argumentOffsets(void),
     ignoreOperand(void), commentBlock(void), failDirective(void),
     relativeData(void), relativeOrg(void), offsetSection(void),

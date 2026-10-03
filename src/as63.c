@@ -1021,10 +1021,10 @@ void    putCode(int grp, int mode)
 int     getReg(int r)
 {
     int         reg = 0;
-    uint8_t     c, b, d;
-    uint8_t *l_p = gLinPtr;
-
-    b      = toupper(*gLinPtr);
+    uint8_t     c;
+    uint8_t     d;
+    uint8_t*    l_p = gLinPtr;
+    uint8_t     b   = toupper(*gLinPtr);
     gLinPtr++;
     c      = toupper(*gLinPtr);
     if (!isSymbl3(c)) {
@@ -1194,8 +1194,9 @@ static void operand(int grp, int mode)
                     error(",W+ is not allowed.");
                 else
                     indexM(0x80, reg);
-            } else
+            } else {
                 indexM(0x84, reg);
+            }
         }
     } else if ((mode & INDEX) && ( reg = getReg(OFFSETRG) ) > 0) {
         if (checkCh_e(',')) {
@@ -1328,7 +1329,10 @@ void bitTransfer(void)
 {
     /* reg[7:6], src_bit[5:3], dst_bit[2:0]. */
     int   reg;
-    val_t source, destination, address, offset;
+    val_t source;
+    val_t destination;
+    val_t address;
+    val_t offset;
 
     skipSpace();
     reg = getReg(CC | A | B);
@@ -1408,7 +1412,8 @@ void undoc_flag(void)
 
 void    load4(void)
 {
-    int16_t val, val2;
+    int16_t val;
+    int16_t val2;
 
     skipSpace();
     if (checkChar('#')) {
@@ -1735,7 +1740,8 @@ void    setdp(void)
 
 void    transfer(void)
 {
-    int r1, r2;
+    int r1;
+    int r2;
 
     skipSpace();
     putCode(GROUP0, NO_MODE);
@@ -1757,10 +1763,9 @@ void    transfer(void)
 
 void    tfm(void)
 {
-    int     r1, r2;
-    uint8_t md;
-
-    md = ' ';
+    int     r1;
+    int     r2;
+    uint8_t md = ' ';
     skipSpace();
     if (( r1 = regNo(INDEXREG | D) ) < 0 )
         goto ER;
@@ -1801,11 +1806,10 @@ void    tfm(void)
 
 static void pshpul(uint8_t u, uint8_t h)
 {
-    uint16_t m1, m2;
+    uint16_t m1 = 0;
+    uint16_t m2 = 0;
 
-    m1 = m2 = 0;
     skipSpace();
-
     do {
         switch (getReg(ALLREG | W)) {
         case CC:
@@ -1975,8 +1979,9 @@ void    os9svc(void)
 
 void    mod(void)
 {
-    uint16_t    os9hdr[4];
-    uint8_t     sum, l;
+    uint16_t      os9hdr[4];
+    uint8_t       sum;
+    uint8_t       l;
     uint8_t const *p;
 
     gOs9_f     = 1;
@@ -2056,7 +2061,7 @@ void    fdb(void)
     } while ( checkChar(',') );
 }
 
-void    flb(void)
+void    fqb(void)
 {
     val_t val;
 
@@ -2077,7 +2082,8 @@ void    fcb(void)
             }
         } else if (checkChar('#')) {
             for (;;) {
-                uint8_t b, c;
+                uint8_t b;
+                uint8_t c;
                 b  = *gLinPtr;
                 if (!isxdigit(b) )
                     break;
@@ -2097,12 +2103,121 @@ void    fcb(void)
     } while ( checkChar(',') );
 }
 
+static int pragmaName(char const *name, int *enabled)
+{
+    static char const * const names[] = { "6809", "6309", "6800compat", "cescapes" };
+    int     i;
+    *enabled     = 1;
+    if (!strncmp(name, "no", 2)) {
+        name    += 2;
+        *enabled = 0;
+    }
+    for (i = 0; i < PRAGMA_KINDS; ++i)
+        if (!strcmp(name, names[i])) return i;
+    return -1;
+}
+
+static int pragmaValue(int kind)
+{
+    if (kind == 0) return gM6809_f != 0;
+    if (kind == 1) return gM6809_f == 0;
+    if (kind == 2) return gM6800_f != 0;
+    return pragmaEscapes != 0;
+}
+
+static void pragmaSet(int kind, int enabled)
+{
+    if (kind == 0)      gM6809_f = enabled;
+    else if (kind == 1) gM6809_f = !enabled;
+    else if (kind == 2) gM6800_f = enabled;
+    else pragmaEscapes = enabled;
+}
+
+static int readPragma(int *enabled)
+{
+    char name[LBLSIZE + 1];
+    int n = 0;
+    skipSpace();
+    while (isSymbl(*gLinPtr)) {
+        if (n < LBLSIZE) name[n++] = tolower(*gLinPtr);
+        ++gLinPtr;
+    }
+    name[n] = 0;
+    return pragmaName(name, enabled);
+}
+
+static void handlePragma(int mode)
+{
+    int       enabled = 0;
+
+    clearAddress();
+    do {
+        int kind = readPragma(&enabled);
+        if (kind < 0) {
+            if (!mode)
+                error("Unknown or unsupported pragma.");
+        } else if (mode < 2) {
+            pragmaSet(kind, enabled);
+        } else {
+            uint8_t* depth = &pragmaDepth[gFile_sp][kind];
+            if (mode == 2) {
+                if (*depth < PRAGMA_DEPTH)
+                    pragmaStacks[gFile_sp][kind][(*depth)++] = pragmaValue(kind);
+            } else if (*depth) {
+                pragmaSet(kind, pragmaStacks[gFile_sp][kind][--*depth]);
+            }
+        }
+        skipSpace();
+    } while (checkChar(','));
+
+    while (*gLinPtr && *gLinPtr != '\n')
+        ++gLinPtr;
+}
+
+void pragmaDirective(void)
+{
+    handlePragma(0);
+}
+
+static int stringEscape(void)
+{
+    int     value;
+    int     digits;
+    int     c = *gLinPtr++;
+    switch (c) {
+    case 'a': return 7;
+    case 'b': return 8;
+    case 't': return 9;
+    case 'n': return 10;
+    case 'v': return 11;
+    case 'f': return 12;
+    case 'r': return 13;
+    case 'x':
+        value  = 0;
+        digits = 0;
+        while (isxdigit(*gLinPtr)) {
+            value = ((value << 4) | toXDigit(*gLinPtr)) & 255;
+            ++gLinPtr;
+            ++digits;
+        }
+        if (!digits)
+            error("Missing hexadecimal string escape digits.");
+        return value;
+    default:
+        if (c >= '0' && c <= '7') {
+            value = c - '0';
+            for (digits = 1; digits < 3 && *gLinPtr >= '0' && *gLinPtr <= '7'; ++digits)
+                value = value * 8 + *gLinPtr++ - '0';
+            return value & 255;
+        }
+        return c;
+    }
+}
+
 static void fccs(uint8_t a)
 {
-    char        temp[MNEMOSIZE + 1];
-    uint8_t const *p;
-    uint8_t     b;
-    uint8_t     c;
+    char    temp[MNEMOSIZE + 1];
+    uint8_t b;
 
     skipSpace();
     if (!*gLinPtr || *gLinPtr == '\n') {
@@ -2110,11 +2225,11 @@ static void fccs(uint8_t a)
         return;
     }
     do {
-        c = *gLinPtr++;
+        uint8_t c = *gLinPtr++;
         if (c == '$' && toupper(*gLinPtr) == 'M') {
             getLabel(temp);
             if (strcasecmp(temp, "modnam") == 0 && gModName) {
-                p = (uint8_t const*)gModName;
+                uint8_t const* p = (uint8_t const*)gModName;
                 while ( (b = *p++) != '\0') {
                     if (a == 1 && *p == '\0')
                         b |= 0x80;
@@ -2132,6 +2247,13 @@ static void fccs(uint8_t a)
                     error("Missing closing delimiter.");
                     return;
                 } else {
+                    if (pragmaEscapes && b == '\\') {
+                        if (!*gLinPtr || *gLinPtr == '\n') {
+                            error("Missing closing delimiter.");
+                            return;
+                        }
+                        b = (uint8_t)stringEscape();
+                    }
                     if (a == 1 && *gLinPtr == c)
                         b |= 0x80;
                     put1Byte(b);
@@ -2191,9 +2313,11 @@ static void fillBlock(val_t count, val_t fill, int size, int mode)
 
 void    rzb(void)
 {
-    val_t count, fill = 0;
-    int size = gOprPtr->prefix ? gOprPtr->prefix : 1;
-    int mode = gOprPtr->opcode;
+    val_t count;
+    val_t fill = 0;
+    int   size = gOprPtr->prefix ? gOprPtr->prefix : 1;
+    int   mode = gOprPtr->opcode;
+
     skipSpace();
     if (mode & BLOCK_REVERSED) {
         fill = expression();
@@ -2212,7 +2336,8 @@ void    rzb(void)
 
 static void labelValue(val_t value)
 {
-    if (gLblPtr) gLblPtr->value = value;
+    if (gLblPtr)
+        gLblPtr->value = value;
     clearAddress();
     printWord(value, 5);
 }
@@ -2240,7 +2365,8 @@ void    rmb(void)
     skipSpace();
     count = invExpr();
     if (checked && (count < 0 || count > 65535 / size
-        || count > (65536L - position) / size)) {
+        || count > (65536L - position) / size))
+    {
         error("Reservation exceeds address space or has a negative count.");
         return;
     }
@@ -2248,7 +2374,8 @@ void    rmb(void)
     if (offsetActive) {
         if (count < 0 || count > 65535L - gLc)
             error("OFFSET exceeds address space.");
-        else gLc += (uint16_t)count;
+        else
+            gLc += (uint16_t)count;
     } else if (gCSectSw) {
         gCSectBase = (uint16_t)offsetField(gCSectBase, count, checked);
     } else if (gOrgSFmt_f && (gObjct == OB_SFMT || gFlex_f)) {
@@ -2302,12 +2429,8 @@ void    org(void)
         gCSectBase = origin;
     } else {
         if (gOprPtr->prefix || gOrg_f == 0
-            || ( gOrgSFmt_f
-                && (gObjct == OB_SFMT
-                    || gFlex_f
-                   )
-               )
-       ) {
+            || (gOrgSFmt_f && (gObjct == OB_SFMT || gFlex_f))
+        ) {
             flushObj();
             gObjLc = gLc = origin;
         } else if (gLc > origin) {
@@ -2470,11 +2593,12 @@ void incdir(void)
 
 void incbin(void)
 {
-    FILE *fp;
+    FILE*   fp;
     char    name[FNAMESZ + 1];
-    val_t   offset = 0, length = -1;
-    long    fileSize, available;
-    int     c;
+    val_t   offset    = 0;
+    val_t   length    = -1;
+    long    fileSize  = 0;
+    long    available = 0;
 
     if (!textOperand(name, sizeof(name)) )
         return;
@@ -2520,7 +2644,7 @@ void incbin(void)
         return;
     }
     while (available-- > 0) {
-        c = fgetc(fp);
+        int c = fgetc(fp);
         if (c == EOF) {
             error("Cannot read INCBIN file.");
             break;
@@ -2594,7 +2718,8 @@ void rsOffset(void)
         }
         *counter = count;
     } else {
-        skipSpace(); count = invExpr();
+        skipSpace();
+        count = invExpr();
         if (count < 0 || count > 65535 / gOprPtr->prefix) {
             error("RS count is outside the supported range.");
             return;
@@ -2764,7 +2889,8 @@ void printValue(void)
         val = expression();
         if (gPass == 2) {
             unsigned int    u = (unsigned int) val;
-            char            ascii[5], binary[33];
+            char            ascii[5];
+            char            binary[33];
             int             i;
             for (i = 0; i < 4; ++i) {
                 int c = ( u >> ( (3 - i) * 8 ) ) & 255;
@@ -2810,6 +2936,7 @@ void    library(void)
 
 int     popFile(void)
 {
+    memset(pragmaDepth[gFile_sp], 0, sizeof(pragmaDepth[gFile_sp]));
     if (gFile_sp <= 0)
         return 0;
     gSrcFp     = gFileStk[--gFile_sp];
@@ -2861,7 +2988,8 @@ void    opt(void)
 void    none_d(void)
 {
     uint8_t const* p;
-    uint8_t        i, l;
+    uint8_t        i;
+    uint8_t        l;
     static uint8_t const tbl[16][5] = {
         { 4, 0x40, 0x50, 0x82, 0x00          }, /* negd 0x1040 */
         { 0, 0,    0,    0,    0             },
@@ -2911,7 +3039,9 @@ static void putOpedR(uint8_t d1, uint8_t d2, int reg)
 void    oped(void)  /* andd  ord  eord  adcd  sbcd */
 {
     int val;
-    int reg, i, val2;
+    int reg;
+    int i;
+    int val2;
 
     if (gM6809_f == 0) {
         load2();
@@ -3044,7 +3174,8 @@ void        opeq(void)  /* addq  subq */
 {
     int16_t     val;
     int16_t     val2;
-    int16_t     reg, i;
+    int16_t     reg;
+    int16_t     i;
     uint16_t    op[2];
 
     op[0]      = gOprPtr->prefix + 0x1000;  /* d */
@@ -3223,7 +3354,11 @@ static void co_if(uint8_t f)
         return;
     }
 
-    if (f == CO_IFD || f == CO_IFND) {
+    if (f == CO_IFPRAGMA) {
+        int enabled;
+        int kind = readPragma(&enabled);
+        val = kind >= 0 && pragmaValue(kind) == enabled;
+    } else if (f == CO_IFD || f == CO_IFND) {
         char        name[LBLSIZE + 1];
         LBLTBL_T *  lp;
         skipSpace();
@@ -3236,7 +3371,8 @@ static void co_if(uint8_t f)
         if (f == CO_IFND)
             val = !val;
     } else if (f == CO_IFC || f == CO_IFNC) {
-        char a[MAXCHAR + 1], b[MAXCHAR + 1];
+        char a[MAXCHAR + 1];
+        char b[MAXCHAR + 1];
         if (!textOperand(a, sizeof(a)))
             return;
         skipSpace();
@@ -3284,6 +3420,7 @@ static void co_if(uint8_t f)
     case CO_IFLT:
         val                = (val < 0);
 
+    case CO_IFPRAGMA:
     case CO_IFD:
     case CO_IFND:
     case CO_IFC:
@@ -3378,15 +3515,15 @@ static int  getMnemonic(void)
                 error("6809 undocumented instruction requires -8.");
             else if (!gUndoc_f)
                 warning("[WARNING] 6809 undocumented instruction used without -z.");
-        } else
-        if (gM6809_f && (q->option & 0x01)) {
+        } else if (gM6809_f && (q->option & 0x01)) {
             error("6309 instruction used in 6809 mode.");
         }
         if (q->process == NULL) {
             co_if(q->prefix);
             return 0;
-        } else if (gCoStk[gCo_sp] < 0)
+        } else if (gCoStk[gCo_sp] < 0) {
             return 0;
+        }
         if (strcmp(q->mnemonic, "IIF") == 0) {
             val_t condition;
             skipSpace();
@@ -3421,8 +3558,10 @@ static uint8_t *getLine(void)
 
 static uint8_t oneLine(void)
 {
-    char temp[LBLSIZE + 1];
-    uint8_t c, f, gf;
+    char    temp[LBLSIZE + 1];
+    uint8_t c;
+    uint8_t f;
+    uint8_t gf;
 
     while (getLine() == NULL) {
         fclose(gSrcFp);
@@ -3446,6 +3585,24 @@ static uint8_t oneLine(void)
     }
 
     if (c == '*' || c == '#') {
+        if (c == '*') {
+            char     word[MNEMOSIZE + 1];
+            int      n     = 0;
+            int      mode  = -1;
+            uint8_t* start = ++gLinPtr;
+            while (isSymbl(*gLinPtr) && n < MNEMOSIZE)
+                word[n++]  = toupper(*gLinPtr++);
+            word[n] = 0;
+            if      (!strcmp(word, "PRAGMA"))     mode = 1;
+            else if (!strcmp(word, "PRAGMAPUSH")) mode = 2;
+            else if (!strcmp(word, "PRAGMAPOP"))  mode = 3;
+
+            if (mode >= 0 && (!*gLinPtr || isspace(*gLinPtr))) {
+                if (gCoStk[gCo_sp] >= 0) handlePragma(mode);
+            } else {
+                gLinPtr = start;
+            }
+        }
         clearAddress();
     } else {
         gf = temp[0] = '\0';
@@ -3465,6 +3622,15 @@ static uint8_t oneLine(void)
 
 static void initPass(void)
 {
+    if (gPass == 1) {
+        pragmaDefaults[0] = gM6809_f;
+        pragmaDefaults[1] = gM6800_f;
+        pragmaDefaults[2] = pragmaEscapes;
+    }
+    gM6809_f      = pragmaDefaults[0];
+    gM6800_f      = pragmaDefaults[1];
+    pragmaEscapes = pragmaDefaults[2];
+    memset(pragmaDepth, 0, sizeof(pragmaDepth));
     while (extraIncCount)
         free(extraIncDirs[--extraIncCount]);
 
@@ -3608,8 +3774,8 @@ static uint16_t xstrtoui(uint8_t const *p, uint8_t const **q)
 static void getModNam(char * modnam, char const *fnam)
 {
     char const *ep = NULL;
-    int     i = MODNAMSZ;
-    char const *s = fnam;
+    int         i  = MODNAMSZ;
+    char const *s  = fnam;
     char *dst;
 
     for (; *s != '\0' && i--; ++s) {
@@ -3695,9 +3861,9 @@ static void usage(void)
 
 static void optsDefLbl(int argc, char * * argv)
 {
-    char    temp[LBLSIZE + 1];
+    char        temp[LBLSIZE + 1];
     char const *p;
-    int     i;
+    int         i;
 
     for (i = 1; i < argc; ++i) {
         p              = argv[i];
