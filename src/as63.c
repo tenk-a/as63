@@ -116,7 +116,7 @@ char const *FIL_BaseName(char const *adr)
 
 char    *FIL_ChgExt(char * filename, char const * ext)
 {
-    char *p = strrchr(FIL_BaseName(filename), '.');
+    char *p = strrchr((char*)FIL_BaseName(filename), '.');
 
     if (p == NULL) {
         strcat(filename, ".");
