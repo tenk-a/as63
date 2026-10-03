@@ -1228,7 +1228,7 @@ static void operand(int grp, int mode)
             case U:
             case S:
             case W:
-                if (gValid_f && val == 0
+                if (gValid_f && val == 0 && (!gIdxOfs_f || gIndirect || reg == W)
                          && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
                     indexM(0x84, reg);
                 } else if (gValid_f && -16 <= val && val <= 15
@@ -2461,7 +2461,7 @@ void    oped(void)
                     put1Byte(gOprPtr->opcode + 0x20 + i * 0x40);
                     if (gValid_f && -16 <= val && val <= 15
                             && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
-                        put1Byte(index0(val ? (val & 0x1f) : 0x84, reg));
+                        put1Byte(index0((val || gIdxOfs_f) ? (val & 0x1f) : 0x84, reg));
                     } else if (checkByte(val)) {
                         put1Byte(index0(0x88, reg));
                         put1Byte(val);
@@ -2615,7 +2615,7 @@ void        opeq(void)  /* addq  subq */
                     put1Word(op[i] + 0x20);
                     if (gValid_f && -16 <= val && val <= 15
                             && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
-                        put1Byte(index0(val ? (val & 0x1f) : 0x84, reg));
+                        put1Byte(index0((val || gIdxOfs_f) ? (val & 0x1f) : 0x84, reg));
                     } else if (checkByte(val)) {
                         put1Byte(index0(0x88, reg));
                         put1Byte(val);
@@ -3063,7 +3063,7 @@ static void usage(void)
   #ifdef OPT_UNDOC
     e_puts(" -z  Enable undocumented 6809/6309 opcodes/operands\n");
   #endif
-    e_puts(" -p  Force < and > to select 8- and 16-bit indexed offsets\n");
+    e_puts(" -p  Selectable 0, 5, 8, or 16-bit offsets.\n");
   #ifdef OPT_OPTIMIZE
     e_puts(" -y  Replace long branches with short branches when possible\n");
   #endif
