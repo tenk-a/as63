@@ -62,7 +62,6 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define FNAMESZ         127   /* maximum file name (path list) length        */
 #define MAXLIB          16    /* maximum include nesting depth               */
 #define LBLSIZE         21    /* maximum label name length                   */
-#define MAXOPTIM        3000  /* maximum number of long branches convertible to short */
 #define GCO_MAX         40    /* maximum if nesting depth                    */
 #define GP1_MAX         100   /* maximum number of ifp1 uses                 */
 #define EXTRA_INCDIRS   8
@@ -72,7 +71,6 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define FNAMESZ         16384 /* maximum file name (path list) length        */
 #define MAXLIB          256   /* maximum include nesting depth               */
 #define LBLSIZE         128   /* maximum label name length                   */
-#define MAXOPTIM        8192  /* maximum number of long branches convertible to short */
 #define GCO_MAX         256   /* maximum if nesting depth                    */
 #define GP1_MAX         1024  /* maximum number of ifp1 uses                 */
 #define EXTRA_INCDIRS   64
@@ -194,6 +192,8 @@ typedef struct lbltbl_t {
         struct lbltbl_t *right;
         char    flg;           /* 0:used  1:EQU  2:SET */
         uint8_t grp;
+        uint8_t hidden;
+        int     region;
         char    name[LBLSIZE + 1];
 } LBLTBL_T;
 
@@ -286,13 +286,6 @@ EXTERN char    gLineBuf[MAXCHAR+2];
 EXTERN FILE   *gErrFp;
 EXTERN char const *gErrFName;
 
- /* for optimization (long->short branch) */
- EXTERN int    *gOptStk;
- EXTERN int    gOpt_sp;
- EXTERN int    gOptChg;
- EXTERN int    gOptCount;
- EXTERN uint8_t gOpt_f;
-
 /* manage 'if' (conditional assembly) */
 EXTERN int   gCo_sp;
 EXTERN int   gCoStk[GCO_MAX+1];
@@ -327,10 +320,16 @@ EXTERN int   extraIncCount;
 
 extern OPTBL_T const gOpTab[];
 
-#define PRAGMA_KINDS    4
+#define PRAGMA_KINDS    10
 #define PRAGMA_DEPTH    64
 EXTERN uint8_t pragmaEscapes;
-EXTERN uint8_t pragmaDefaults[3];
+EXTERN uint8_t pragmaPcAsPcr;
+EXTERN uint8_t pragmaIndex0;
+EXTERN uint8_t pragmaForwardMax;
+EXTERN uint8_t pragmaAutoBranch;
+EXTERN uint8_t pragmaNoList;
+EXTERN uint8_t pragmaNoListCode;
+EXTERN uint8_t pragmaDefaults[PRAGMA_KINDS];
 EXTERN uint8_t pragmaStacks[MAXLIB + 1][PRAGMA_KINDS][PRAGMA_DEPTH];
 EXTERN uint8_t pragmaDepth[ MAXLIB + 1][PRAGMA_KINDS];
 

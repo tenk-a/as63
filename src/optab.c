@@ -521,7 +521,7 @@ OPTBL_T const gOpTab[] = {
     { "INCLUDE",  0x00,       0x00,    0x00,           library     },
     { ".INCLUDE", 0x00,       0x00,    0x00,           library     },
     { "INCBIN",   0,          0,       0,              incbin      },
-    { "INCLUDEBIN",1,         0,          0          , incbin      },
+    { "INCLUDEBIN",0,         0,          0          , incbin      },
     { "INCDIR",   0,          0,       0,              incdir      },
 
     /* if */
@@ -570,6 +570,9 @@ OPTBL_T const gOpTab[] = {
     { "NAM",      0x00,       0x00,    0x00,           ignoreOperand },
     { "TTL",      0x00,       0x00,    0x00,           ignoreOperand },
     { "PAG",      0x00,       0x00,    0x00,           ignoreOperand },
+    { "PAGE",     0,          0,       0,              ignoreOperand },
+    { "LLEN",     0,          0,       0,              ignoreOperand },
+    { "PLEN",     0,          0,       0,              ignoreOperand },
     { "COMMENT",  0,          0,       0,              ignoreOperand },
     { "OUTPUT",   0,          0,       0,              ignoreOperand },
     { ".MODULE",  0,          0,       0,              ignoreOperand },

@@ -13,6 +13,8 @@
 #define EXT
 #include    "as63.h"
 
+#define AS63_TITLE      "HD6309 cross assembler version 01.46T\n"
+
 #ifdef _MSC_VER
  #define strcasecmp     _stricmp
  #define ITOA10(i,a)    _itoa( (i), (a), 10 )
@@ -139,6 +141,63 @@ char    *FIL_ChgExt(char * filename, char const * ext)
 
 /*---------------------------------------------------------------------------*/
 
+typedef struct line_state {
+    int     address;
+    int     size;
+    int     branchSize;
+    int     branchLong;
+} LINE_STATE;
+
+static LINE_STATE*  lineStates;
+static size_t       lineCapacity;
+static int          relaxRequested;
+static int          relaxChanges;
+static int          branchChanges;
+static int          relaxFailed;
+static int          addressRegion;
+static int          expressionForward;
+static int          expressionFixedForward;
+static int          expressionLiteralZero;
+static int          expressionDepth;
+static int          lineCode;
+static int          restoringPragmas;
+static uint8_t      pragmaConfigured[PRAGMA_KINDS];
+static uint8_t      pragmaConfigStacks[MAXLIB + 1][PRAGMA_KINDS][PRAGMA_DEPTH];
+
+LINE_STATE *lineState(void)
+{
+    size_t  index = (size_t)gLineNo;
+    if (index >= lineCapacity) {
+        size_t      capacity = lineCapacity ? lineCapacity * 2 : 1024;
+        LINE_STATE *data;
+        while (index >= capacity)
+            capacity *= 2;
+        data = mallocE(capacity * sizeof(*data));
+        memset(data, 0, capacity * sizeof(*data));
+        if (lineCapacity)
+            memcpy(data, lineStates, lineCapacity * sizeof(*data));
+        free(lineStates);
+        lineStates = data;
+        lineCapacity = capacity;
+    }
+    return &lineStates[index];
+}
+
+void finishLine(void)
+{
+    if (relaxRequested) {
+        LINE_STATE *state = lineState();
+        int size = gLc - gLinLc;
+        if (gPass == -1 && (state->address != gLinLc || state->size != size))
+            ++relaxChanges;
+        state->address = gLinLc;
+        state->size    = size;
+    }
+}
+
+
+/*---------------------------------------------------------------------------*/
+
 static uint16_t oChkSum;    /* Checksum for each line of S-format */
 
 static uint8_t hexDigit(uint8_t x)
@@ -256,6 +315,7 @@ void    put2obj(int w)
 
 uint8_t    putB(int b)
 {
+    lineCode = 1;
     if (offsetActive) {
         ++gLc;
         return (uint8_t)b;
@@ -360,6 +420,7 @@ void    initLine(void)
     char *p;
 
     gLblPtr    = NULL;
+    lineCode   = 0;
     oPostf     = 15;
     oPos       = 10;
     ++gLineNo;
@@ -374,8 +435,9 @@ void    initLine(void)
 
 void    putLine(void)
 {
-    if (gPass == 2 && gList > 0)
+    if (gPass == 2 && gList > 0 && !pragmaNoListCode && (!pragmaNoList || lineCode)) {
         fputs(gLineBuf, gLstFp);
+    }
 }
 
 static void flushLine(void)
@@ -426,7 +488,7 @@ static void printNode(LBLTBL_T const * lp)
     if (lp == NULL)
         return;
     printNode(lp->right);
-    if (lp->line) {
+    if (lp->line && !lp->hidden) {
         fprintf(gLstFp, "%15s %4d %04x", lp->name, lp->line, lp->value);
         fprintf(gLstFp, oLrf++ % 3 ? " " : "\n");
     }
@@ -474,6 +536,10 @@ void    defLabel(char const * temp, uint8_t f, uint8_t gf)
                 if (lp->line != gLineNo && (f == 1 || lp->flg == 1) )
                     errLbl("Duplicate label definition", temp);
                 (gLblPtr = lp)->value = gLinLc;
+                if (f) {
+                    lp->hidden = pragmaNoList || pragmaNoListCode;
+                    lp->region = addressRegion;
+                }
                 if (lp->flg == 0) {
                     lp->flg    = f;
                     lp->line   = gLineNo;
@@ -514,6 +580,8 @@ void    defLabel(char const * temp, uint8_t f, uint8_t gf)
         lp->grp = 0;
     else
         lp->grp = gGrp;
+    lp->hidden = f && (pragmaNoList || pragmaNoListCode);
+    lp->region = addressRegion;
     lp->flg    = f;
     if (f)
         lp->line = gLineNo;
@@ -627,6 +695,56 @@ int     checkCh_e(uint8_t c)
 /*---------------------------------------------------------------------------*/
 val_t       expression(void);
 
+static int compatibleNumber(val_t *result)
+{
+    uint8_t*    start = gLinPtr;
+    uint8_t*    end   = start;
+    unsigned long value = 0;
+    int base   = 10;
+    int digit  = 0;
+    int prefix = 0;
+    if (*start == '@' || *start == '&') {
+        if (gCompatMode != COMPAT_LWASM)
+            return 0;
+        base = *start == '@' ? 8 : 10;
+        prefix = 1;
+        ++start;
+        end = start;
+        while (isdigit(*end))
+            ++end;
+    } else if (isdigit(*start)) {
+        if (*start == '0' && (toupper(*(start + 1)) == 'X'
+            || (toupper(*(start + 1)) == 'B' && isdigit(*(start + 2)))))
+            return 0;
+        while (isalnum(*end))
+            ++end;
+        switch (toupper(*(end - 1))) {
+        case 'H': base = 16; break;
+        case 'B': base = 2; break;
+        case 'Q':
+        case 'O': base = 8; break;
+        default: return 0;
+        }
+        --end;
+    } else {
+        return 0;
+    }
+    if (start == end)
+        error("Missing digits in numeric constant.");
+    while (start < end) {
+        digit = isdigit(*start) ? *start - '0' : toupper(*start) - 'A' + 10;
+        if (digit < 0 || digit >= base) {
+            error("Invalid digit in numeric constant.");
+            digit = 0;
+        }
+        value = value * base + digit;
+        ++start;
+    }
+    gLinPtr = end + (prefix ? 0 : 1);
+    *result = (val_t)value;
+    return 1;
+}
+
 static val_t   term(void)
 {
     char        temp[LBLSIZE + 1];
@@ -634,6 +752,8 @@ static val_t   term(void)
     val_t       tv;
     uint16_t    c;
 
+    if (compatibleNumber(&tv))
+        return tv;
     switch ( (c = *gLinPtr++) ) {
     case '+':
         return term();
@@ -689,6 +809,7 @@ static val_t   term(void)
         if (foDefined && !strcasecmp(temp, "__FO"))
             return foCounter;
         if (strcasecmp(temp, "defined") == 0 || strcasecmp(temp, "used") == 0) {
+            int definitionOnly = strcasecmp(temp, "defined") == 0;
             checkCh_e('(');
             getLabel(temp);
             if ((rsDefined && !strcasecmp(temp, "__RS"))
@@ -698,7 +819,7 @@ static val_t   term(void)
                 checkCh_e(')');
                 return 1;
             }
-            if (temp[4])
+            if (definitionOnly)
                 lp = refLabel(temp);
             else
                 lp = refLbl0(temp);
@@ -707,8 +828,14 @@ static val_t   term(void)
         } else if (gPass == 1 && refLbl0(temp) == NULL) {
             defLabel(temp, 0, 1);
         } else if (( lp = refLabel(temp) ) != NULL) {
-            if (gLineNo < lp->line)
-                gValid_f = 0;
+            if (gLineNo < lp->line) {
+                ++expressionForward;
+                if (lp->region != addressRegion)
+                    expressionFixedForward = 1;
+                if ((!pragmaConfigured[6] && gCompatMode != COMPAT_LWASM)
+                    || pragmaForwardMax || gPass == 1)
+                    gValid_f = 0;
+            }
             return (lp->value);
         }
      #ifdef OPT_OA_FILE
@@ -939,14 +1066,26 @@ static val_t   expLOR(void)
 val_t   expression(void)
 {
     val_t val;
+    uint8_t *start = gLinPtr;
+    int byteForced = 0;
+    int wordForced = 0;
 
-    gValid_f   = 1;
-    gByte_f    = gWord_f = 0;
+    if (!expressionDepth) {
+        expressionForward = expressionFixedForward = 0;
+        gValid_f = 1;
+        gByte_f = gWord_f = 0;
+    }
+    ++expressionDepth;
     if (checkChar('<') )
-        gByte_f = 1;
+        byteForced = 1;
     else if (checkChar('>') )
-        gWord_f = 1;
-    val        = expLOR();
+        wordForced = 1;
+    start = gLinPtr;
+    val = expLOR();
+    gByte_f |= byteForced;
+    gWord_f |= wordForced;
+    if (!--expressionDepth)
+        expressionLiteralZero = *start == '0' && gLinPtr == start + 1;
     switch (*gLinPtr) {
     case ' ':
     case '\t':
@@ -1072,6 +1211,8 @@ int     getReg(int r)
             error("Register E, F, W, or V used in 6809 mode.");
         }
     }
+    if (reg == PC && (r & PCR) && (pragmaPcAsPcr || gCompatMode == COMPAT_VASM))
+        reg = PCR;
     if (r & reg)
         return reg;
     if (r == OFFSETRG)
@@ -1160,6 +1301,23 @@ static void indexM(int frame, int reg)
     postByte( index0(frame, reg) );
 }
 
+static int indexSmallAllowed(void)
+{
+    return (!gIdxOfs_f && gCompatMode != COMPAT_LWASM && !pragmaConfigured[5])
+        || (!gByte_f && !gWord_f);
+}
+
+static int indexZeroAllowed(val_t value, int reg)
+{
+    if (!gValid_f || value != 0)
+        return 0;
+    if (gCompatMode == COMPAT_LWASM || pragmaConfigured[5]) {
+        return !gByte_f && !gWord_f
+            && (reg == W || (!gIdxOfs_f && pragmaIndex0 && !expressionLiteralZero));
+    }
+    return (!gIdxOfs_f || reg == W) && indexSmallAllowed();
+}
+
 static void operand(int grp, int mode)
 {
     val_t   val;
@@ -1238,12 +1396,10 @@ static void operand(int grp, int mode)
             case U:
             case S:
             case W:
-                if (gValid_f && val == 0 && (!gIdxOfs_f || reg == W)
-                   && ( !gIdxOfs_f || (!gByte_f && !gWord_f) ) )
-                {
+                if (indexZeroAllowed(val, reg) ) {
                     indexM(0x84, reg);
                 } else if (gValid_f && -16 <= val && val <= 15
-                          && ( !gIdxOfs_f || (!gByte_f && !gWord_f) )
+                          && indexSmallAllowed()
                           && !gIndirect && reg != W)
                 {
                     indexM(val & 0x1f, reg);
@@ -1895,10 +2051,69 @@ void    pulu(void)
 
 /*----------------------------------*/
 
+static void automaticBranch(int originallyLong)
+{
+    OPTBL_T        op          = *gOprPtr;
+    OPTBL_T const* original    = gOprPtr;
+    LINE_STATE*    state       = lineState();
+    val_t          target      = 0;
+    val_t          distance    = 0;
+    int shortOpcode = originallyLong
+        ? (op.opcode == 0x16 ? 0x20 : op.opcode == 0x17 ? 0x8d : op.opcode)
+        : op.opcode;
+    int longSize = (shortOpcode == 0x20 || shortOpcode == 0x8d) ? 3 : 4;
+    int size     = state->branchSize;
+    int resolved = 0;
+    skipSpace();
+    target   = expression();
+    resolved = gValid_f || (gPass != 1 && expressionForward && !pragmaForwardMax);
+    distance = target - gLinLc - 2;
+    if (gPass != 2 && gPass != -2) {
+        if (gPass != 1 && expressionForward == 1 && !expressionFixedForward
+            && state->branchSize)
+            distance = target - state->address - state->branchSize;
+        size = (!state->branchLong && resolved && -128 <= distance && distance <= 127)
+            ? 2 : longSize;
+        if (state->branchSize == 2 && size != 2 && !gByte_f)
+            state->branchLong = 1;
+    }
+    if (gByte_f) {
+        size = 2;
+    } else if (gWord_f) {
+        size = longSize;
+    }
+    state->branchSize = size;
+    if (size == 2) {
+        op.prefix = 0;
+        op.opcode = shortOpcode;
+        if (gPass == 2 && (target - gLinLc - 2 < -128 || target - gLinLc - 2 > 127))
+            error("Short branch target is out of range.");
+        if (originallyLong)
+            ++branchChanges;
+    } else {
+        op.prefix = longSize == 4 ? 0x10 : 0;
+        op.opcode = shortOpcode == 0x20 ? 0x16 : shortOpcode == 0x8d ? 0x17 : shortOpcode;
+        if (!originallyLong)
+            ++branchChanges;
+    }
+    gOprPtr = &op;
+    putCode(GROUP0, NO_MODE);
+    if (size == 2) {
+        putByte(target - gLinLc - size);
+    } else {
+        putWord(target - gLinLc - size);
+    }
+    gOprPtr = original;
+}
+
 void    branch(void)
 {
     val_t val;
 
+    if (pragmaAutoBranch) {
+        automaticBranch(0);
+        return;
+    }
     skipSpace();
     if ((val = expression() - gLinLc - 2) < -128 || 127 < val )
         error("Short branch target is out of range.");
@@ -1908,64 +2123,15 @@ void    branch(void)
 
 void    lbranch(void)
 {
-    OPTBL_T shortop;
-    val_t   val;
-    uint8_t f;
-
-    skipSpace();
-    f = checkChar('>');
-    switch (gPass) {
-    case 1:
-        if (gOpt_f && gOpt_sp < MAXOPTIM) {
-            gOptStk[gOpt_sp++] = gLinLc;
-        }
-     #ifdef OPT_OA_FILE
-        if (gObjct == OB_ASM)
-            expression();
-     #endif
-        putCode(GROUP0, NO_MODE);
-        putWord(0);
-        return;
-
-    case -1:
-        if (gOpt_f && gOpt_sp < MAXOPTIM) {
-            if (gOptStk[gOpt_sp] == -1) {
-                gOpt_sp++;
-                putWord(0);
-                return;
-            }
-            val                = expression() - gOptStk[gOpt_sp] - 2;
-            if (f == 0 && -128 <= val && val <= 127) {
-                gOptChg++;
-                gOptStk[gOpt_sp++] = -1;
-                putWord(0);
-                return;
-            }
-            gOptStk[gOpt_sp++] = gLinLc;
-        }
-        putCode(GROUP0, NO_MODE);
-        putWord(0);
-        return;
-
- #ifdef OPT_OA_FILE
-    case -2:
- #endif
-    case 2:
-        if (gOpt_f && gOpt_sp < MAXOPTIM && gOptStk[gOpt_sp++] == -1) {
-            printChar('<', 4);
-            gOptCount++;
-            shortop.prefix = 0;
-            shortop.opcode = (gOprPtr->opcode == 0x16 ? 0x20 :
-                              gOprPtr->opcode == 0x17 ? 0x8d : gOprPtr->opcode);
-            gOprPtr        = &shortop;
-            putCode(GROUP0, NO_MODE);
-            putByte(expression() - gLinLc - 2);
-            return;
-        }
-        putCode(GROUP0, NO_MODE);
-        putWord( expression() - gLinLc - (gOprPtr->prefix ? 4 : 3) );
+    val_t target = 0;
+    if (pragmaAutoBranch) {
+        automaticBranch(1);
         return;
     }
+    skipSpace();
+    target = expression();
+    putCode(GROUP0, NO_MODE);
+    putWord(target - gLinLc - (gOprPtr->prefix ? 4 : 3));
 }
 
 
@@ -2097,7 +2263,14 @@ void    fcb(void)
                 gLinPtr++;
             }
         } else if (checkChar('>')) {
-            dataValue(expression(), 2, 1);
+            val_t value = expression();
+            if (gCompatMode == COMPAT_LWASM) {
+                error("FCB > prefix is not supported in lwasm mode.");
+            } else if (gCompatMode == COMPAT_VASM) {
+                dataValue((value >> 8) & 255, 1, 0);
+            } else {
+                dataValue(value, 2, 1);
+            }
         } else {
             dataValue(bytExpr(), 1, 1);
         }
@@ -2106,9 +2279,19 @@ void    fcb(void)
 
 static int pragmaName(char const *name, int *enabled)
 {
-    static char const * const names[] = { "6809", "6309", "6800compat", "cescapes" };
+    static char const * const names[] = {
+        "6809", "6309", "6800compat", "cescapes", "pcaspcr",
+        "index0tonone", "forwardrefmax", "autobranchlength", "nolist", "nolistcode"
+    };
     int     i;
-    *enabled     = 1;
+    *enabled = 1;
+    for (i = 0; i < PRAGMA_KINDS; ++i)
+        if (!strcmp(name, names[i]))
+            return i;
+    if (!strcmp(name, "list") || !strcmp(name, "listcode")) {
+        *enabled = 0;
+        return !strcmp(name, "list") ? 8 : 9;
+    }
     if (!strncmp(name, "no", 2)) {
         name    += 2;
         *enabled = 0;
@@ -2120,18 +2303,45 @@ static int pragmaName(char const *name, int *enabled)
 
 static int pragmaValue(int kind)
 {
-    if (kind == 0) return gM6809_f != 0;
-    if (kind == 1) return gM6809_f == 0;
-    if (kind == 2) return gM6800_f != 0;
-    return pragmaEscapes != 0;
+    switch (kind) {
+    case 0: return gM6809_f         != 0;
+    case 1: return gM6809_f         == 0;
+    case 2: return gM6800_f         != 0;
+    case 3: return pragmaEscapes    != 0;
+    case 4: return pragmaPcAsPcr    != 0;
+    case 5: return pragmaIndex0     != 0;
+    case 6: return pragmaForwardMax != 0;
+    case 7: return pragmaAutoBranch != 0;
+    case 8: return pragmaNoList     != 0;
+    case 9: return pragmaNoListCode != 0;
+    }
+    return 0;
 }
 
 static void pragmaSet(int kind, int enabled)
 {
-    if (kind == 0)      gM6809_f = enabled;
-    else if (kind == 1) gM6809_f = !enabled;
-    else if (kind == 2) gM6800_f = enabled;
-    else pragmaEscapes = enabled;
+    if (!restoringPragmas)
+        pragmaConfigured[kind] = 1;
+    switch (kind) {
+    case 0: gM6809_f         = enabled; break;
+    case 1: gM6809_f         = !enabled;break;
+    case 2: gM6800_f         = enabled; break;
+    case 3: pragmaEscapes    = enabled; break;
+    case 4: pragmaPcAsPcr    = enabled; break;
+    case 5: pragmaIndex0     = enabled; break;
+    case 6:
+        pragmaForwardMax     = enabled;
+        if (!enabled && !restoringPragmas)
+            relaxRequested   = 1;
+        break;
+    case 7:
+        pragmaAutoBranch     = enabled;
+        if (enabled)
+            relaxRequested   = 1;
+        break;
+    case 8: pragmaNoList     = enabled; break;
+    case 9: pragmaNoListCode = enabled; break;
+    }
 }
 
 static int readPragma(int *enabled)
@@ -2162,10 +2372,13 @@ static void handlePragma(int mode)
         } else {
             uint8_t* depth = &pragmaDepth[gFile_sp][kind];
             if (mode == 2) {
-                if (*depth < PRAGMA_DEPTH)
+                if (*depth < PRAGMA_DEPTH) {
+                    pragmaConfigStacks[gFile_sp][kind][*depth] = pragmaConfigured[kind];
                     pragmaStacks[gFile_sp][kind][(*depth)++] = pragmaValue(kind);
+                }
             } else if (*depth) {
                 pragmaSet(kind, pragmaStacks[gFile_sp][kind][--*depth]);
+                pragmaConfigured[kind] = pragmaConfigStacks[gFile_sp][kind][*depth];
             }
         }
         skipSpace();
@@ -2319,6 +2532,8 @@ void    rzb(void)
     int   size = gOprPtr->prefix ? gOprPtr->prefix : 1;
     int   mode = gOprPtr->opcode;
 
+    if (!strcmp(gOprPtr->mnemonic, "DS") && gCompatMode != COMPAT_VASM)
+        size = 1;
     skipSpace();
     if (mode & BLOCK_REVERSED) {
         fill = expression();
@@ -2404,6 +2619,7 @@ void    org(void)
 {
     uint16_t origin;
 
+    ++addressRegion;
     if (offsetActive) {
         lastOffset   = gLc;
         gLc          = savedCodeLc;
@@ -2485,6 +2701,30 @@ void    vsct(void)
 
 
 /*----------------------------------*/
+
+static int comparisonOperand(char *dst, int size)
+{
+    int quote  = 0;
+    int length = 0;
+    skipSpace();
+    if (*gLinPtr == '\"' || *gLinPtr == '\'')
+        quote = *gLinPtr++;
+    while (*gLinPtr && *gLinPtr != '\n') {
+        if (quote ? *gLinPtr == quote : (*gLinPtr == ',' || isspace(*gLinPtr) || *gLinPtr == ';'))
+            break;
+        if (length >= size - 1) {
+            error("Comparison operand is too long.");
+            return 0;
+        }
+        dst[length++] = *gLinPtr++;
+    }
+    dst[length] = 0;
+    if (quote && !checkChar(quote)) {
+        error("Missing closing quote.");
+        return 0;
+    }
+    return 1;
+}
 
 static int textOperand(char * dst, int size)
 {
@@ -2615,10 +2855,6 @@ void incbin(void)
             }
         }
     }
-    if ((offset < 0 && !gOprPtr->prefix && gCompatMode != COMPAT_LWASM) || length < -1) {
-        error("Invalid INCBIN offset or length.");
-        return;
-    }
     fp = openSearch(name, "rb");
     if (!fp) {
         error("Cannot open INCBIN file.");
@@ -2694,9 +2930,11 @@ void alignData(void)
             return;
         }
     }
-    count = (gOprPtr->prefix == 3)
-          ? !(position & 1)
-          : (boundary - position % boundary) % boundary + offset;
+    if (gOprPtr->prefix == 3) {
+        count = gCompatMode == COMPAT_VASM ? (position & 1) + 1 : !(position & 1);
+    } else {
+        count = (boundary - position % boundary) % boundary + offset;
+    }
     if (gCSectSw == 2) {
         if (count > 65535L - position)
             error("Alignment exceeds offset range.");
@@ -2715,6 +2953,9 @@ void rsOffset(void)
     val_t * counter = (kind == 1) ? &soCounter : kind == 2 ? &foCounter : &rsCounter;
     val_t count;
     val_t next;
+    int size = gOprPtr->prefix;
+    if (!strcmp(gOprPtr->mnemonic, "RS") && gCompatMode != COMPAT_VASM)
+        size = 1;
     clearAddress();
     if (mode == RS_RESET) {
         *counter = 0;
@@ -2729,11 +2970,11 @@ void rsOffset(void)
     } else {
         skipSpace();
         count = invExpr();
-        if (count < 0 || count > 65535 / gOprPtr->prefix) {
+        if (count < 0 || count > 65535 / size) {
             error("RS count is outside the supported range.");
             return;
         }
-        next = *counter + (kind == 2 ? -1 : 1) * count * gOprPtr->prefix;
+        next = *counter + (kind == 2 ? -1 : 1) * count * size;
         if (next < (kind == 2 ? -65535 : 0) || next > 65535) {
             error("RS offset is outside 0..65535.");
             return;
@@ -3089,9 +3330,8 @@ void    oped(void)  /* andd  ord  eord  adcd  sbcd */
             case S:
                 for (++val, i = 1; i >= 0; --i, --val) {
                     put1Byte(gOprPtr->opcode + 0x20 + i * 0x40);
-                    if (gValid_f && -16 <= val && val <= 15
-                            && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
-                        put1Byte( index0( (val || gIdxOfs_f) ? (val & 0x1f) : 0x84, reg ) );
+                    if (gValid_f && -16 <= val && val <= 15 && indexSmallAllowed()) {
+                        put1Byte( index0( indexZeroAllowed(val, reg) ? 0x84 : (val & 0x1f), reg ) );
                     } else if (checkByte(val)) {
                         put1Byte( index0(0x88, reg) );
                         put1Byte(val);
@@ -3248,8 +3488,8 @@ void        opeq(void)  /* addq  subq */
             case S:
                 for (val += 2, i = 1; i >= 0; --i, val -= 2) {
                     put1Word(op[i] + 0x20);
-                    if (gValid_f && -16 <= val && val <= 15 && ( !gIdxOfs_f || (!gByte_f && !gWord_f) )) {
-                        put1Byte( index0( (val || gIdxOfs_f) ? (val & 0x1f) : 0x84, reg ) );
+                    if (gValid_f && -16 <= val && val <= 15 && indexSmallAllowed()) {
+                        put1Byte( index0( indexZeroAllowed(val, reg) ? 0x84 : (val & 0x1f), reg ) );
                     } else if (checkByte(val)) {
                         put1Byte( index0(0x88, reg) );
                         put1Byte(val);
@@ -3349,7 +3589,50 @@ void initOpTbl(void)
 
 /*---------------------------------------------------------------------------*/
 
-static void co_if(uint8_t f)
+typedef struct conditional_result {
+    int kind;
+    int depth;
+    int state;
+    int consumed;
+    int value;
+    int errors;
+} CONDITIONAL_RESULT;
+
+static CONDITIONAL_RESULT *conditionalResults;
+static size_t conditionalCount;
+static size_t conditionalCapacity;
+static size_t conditionalCursor;
+
+static CONDITIONAL_RESULT *nextConditional(int kind)
+{
+    CONDITIONAL_RESULT *result;
+    if (gPass == 1) {
+        if (conditionalCount == conditionalCapacity) {
+            size_t capacity = conditionalCapacity ? conditionalCapacity * 2 : 256;
+            CONDITIONAL_RESULT *data = mallocE(capacity * sizeof(*data));
+            if (conditionalCount)
+                memcpy(data, conditionalResults, conditionalCount * sizeof(*data));
+            free(conditionalResults);
+            conditionalResults  = data;
+            conditionalCapacity = capacity;
+        }
+        result = &conditionalResults[conditionalCount++];
+        memset(result, 0, sizeof(*result));
+        result->kind = kind;
+        return result;
+    }
+    if (conditionalCursor >= conditionalCount
+        || conditionalResults[conditionalCursor].kind != kind) {
+        error("Conditional sequence differs from pass 1.");
+        return NULL;
+    }
+    result = &conditionalResults[conditionalCursor++];
+    if (result->errors)
+        error("Invalid or unresolved conditional expression in pass 1.");
+    return result;
+}
+
+static void co_ifEvaluate(uint8_t f)
 {
     int val = 0;
 
@@ -3382,12 +3665,12 @@ static void co_if(uint8_t f)
     } else if (f == CO_IFC || f == CO_IFNC) {
         char a[MAXCHAR + 1];
         char b[MAXCHAR + 1];
-        if (!textOperand(a, sizeof(a)))
+        if (!comparisonOperand(a, sizeof(a)))
             return;
         skipSpace();
         if (!checkCh_e(','))
             return;
-        if (!textOperand(b, sizeof(b)))
+        if (!comparisonOperand(b, sizeof(b)))
             return;
         val = !strcmp(a, b);
         if (f == CO_IFNC)
@@ -3475,6 +3758,53 @@ static void co_if(uint8_t f)
     }
 }
 
+static void co_if(uint8_t f)
+{
+    CONDITIONAL_RESULT *result;
+    uint8_t *start = gLinPtr;
+    int errors = gErrors;
+    if (gCompatMode == COMPAT_AS63) {
+        co_ifEvaluate(f);
+        return;
+    }
+    result = nextConditional(f);
+    if (!result)
+        return;
+    if (gPass == 1) {
+        co_ifEvaluate(f);
+        result->depth = gCo_sp;
+        result->state = gCoStk[gCo_sp];
+        result->consumed = (int)(gLinPtr - start);
+        result->errors = gErrors - errors;
+    } else {
+        if (gCo_sp > result->depth)
+            gCoStk[gCo_sp] = 0;
+        gCo_sp = result->depth;
+        gCoStk[gCo_sp] = result->state;
+        gLinPtr += result->consumed;
+    }
+}
+
+static val_t inlineCondition(void)
+{
+    CONDITIONAL_RESULT *result;
+    uint8_t *start = gLinPtr;
+    int errors = gErrors;
+    if (gCompatMode == COMPAT_AS63)
+        return invExpr();
+    result = nextConditional(0);
+    if (!result)
+        return 0;
+    if (gPass == 1) {
+        result->value = invExpr() != 0;
+        result->consumed = (int)(gLinPtr - start);
+        result->errors = gErrors - errors;
+    } else {
+        gLinPtr += result->consumed;
+    }
+    return result->value;
+}
+
 static int  getMnemonic(void)
 {
     static uint8_t  temp[MNEMOSIZE + 1];
@@ -3536,7 +3866,7 @@ static int  getMnemonic(void)
         if (strcmp(q->mnemonic, "IIF") == 0) {
             val_t condition;
             skipSpace();
-            condition = invExpr();
+            condition = inlineCondition();
             skipSpace();
             if (checkChar(','))
                 skipSpace();
@@ -3631,14 +3961,21 @@ static uint8_t oneLine(void)
 
 static void initPass(void)
 {
+    int kind = 0;
+    conditionalCursor = 0;
     if (gPass == 1) {
-        pragmaDefaults[0] = gM6809_f;
-        pragmaDefaults[1] = gM6800_f;
-        pragmaDefaults[2] = pragmaEscapes;
+        conditionalCount = 0;
+        pragmaIndex0 = gCompatMode == COMPAT_LWASM;
+        pragmaForwardMax = gCompatMode == COMPAT_LWASM;
+        for (kind = 0; kind < PRAGMA_KINDS; ++kind)
+            pragmaDefaults[kind] = pragmaValue(kind);
     }
-    gM6809_f      = pragmaDefaults[0];
-    gM6800_f      = pragmaDefaults[1];
-    pragmaEscapes = pragmaDefaults[2];
+    restoringPragmas = 1;
+    for (kind = 0; kind < PRAGMA_KINDS; ++kind)
+        pragmaSet(kind, pragmaDefaults[kind]);
+    restoringPragmas = 0;
+    memset(pragmaConfigured, 0, sizeof(pragmaConfigured));
+    addressRegion = 0;
     memset(pragmaDepth, 0, sizeof(pragmaDepth));
     while (extraIncCount)
         free(extraIncDirs[--extraIncCount]);
@@ -3652,7 +3989,7 @@ static void initPass(void)
     gOA_sp    =
  #endif
     gSrcLine  =
-    gOptCount = gOpt_sp = gOptChg  =
+    branchChanges = relaxChanges =
     gFile_sp  = gLineNo = gErrors  = gP1_sp   = gCo_sp = gObjPos = gRmb_sp =
     gObjCnt   = gLc     = gDp      = gObjLc   =
     gEOF_f    = gGrp    = gCSectSw = gPSect_f = gOrg_f = (uint8_t) 0;
@@ -3740,6 +4077,7 @@ static void assemble(int argc, char * * argv)
                                    , *gLinPtr, *gLinPtr));
                 }
             }
+            finishLine();
             putLine();
         }
     }
@@ -3809,8 +4147,8 @@ static void printLog(void)
     fprintf(STDERR, "    Total Errors %d\n", gErrors);
     if (gVerbos_f)
         fprintf(STDERR, "    Total labels %d\n", gLabels);
-    if (gOpt_f)
-        fprintf(STDERR, "    Total Optimized Branch %d\n", gOptCount);
+    if (pragmaDefaults[7] || branchChanges)
+        fprintf(STDERR, "    Total Optimized Branch %d\n", branchChanges);
 }
 
 static void usage(void)
@@ -3823,7 +4161,7 @@ static void usage(void)
     e_puts(" -6  Enable M6800-family mnemonic compatibility\n");
     e_puts(" -z  Enable undocumented 6809/6309 opcodes/operands\n");
     e_puts(" -p  Selectable 0, 5, 8, or 16-bit offsets.\n");
-    e_puts(" -y  Replace long branches with short branches when possible\n");
+    e_puts(" -y  Enable automatic branch sizing\n");
     e_puts(" -q  Allow address gaps caused by ORG or RMB\n");
     e_puts(" -u  Case-sensitive labels    -n  Case-insensitive labels\n");
     e_puts(" -s  Show symbol table        -v  Show progress\n");
@@ -4030,11 +4368,7 @@ static void options(char const *p)
             goto LOOPOUT;
 
         case 'Y':
-            if ((gOptStk   = (int *)malloc(sizeof(int) * MAXOPTIM)) == NULL) {
-                e_puts("Not enough memory for branch optimization.\n");
-                break;
-            }
-            gOpt_f         = 1;
+            pragmaAutoBranch = 1;
             break;
 
      #ifdef OPT_FBAS
@@ -4082,9 +4416,10 @@ static void options(char const *p)
 
 int main(int argc, char *argv[])
 {
-    static char const * title = "HD6309 cross assembler version 01.45T\n";
+    static char const title[] = AS63_TITLE;
     char const *p;
     int             i;
+    int relaxationPasses = 0;
 
     gCmdName       = argv[0];
     gObjBufSz      = OBJSIZE;
@@ -4147,12 +4482,16 @@ int main(int argc, char *argv[])
     DEBMSGF( (STDERR, "enter pass 1\n") );
     assemble(argc, argv);
 
-    if (gOpt_f) {
+    if (relaxRequested) {
         gPass = -1;
         DEBMSGF( (STDERR, "enter pass 1.5\n") );
         do {
             assemble(argc, argv);
-        } while (gOptChg);
+            if (relaxRequested && ++relaxationPasses >= 1024 && relaxChanges) {
+                relaxFailed = 1;
+                break;
+            }
+        } while (relaxChanges);
     }
 
  #ifdef OPT_OA_FILE
@@ -4179,6 +4518,10 @@ int main(int argc, char *argv[])
     }
 
     assemble(argc, argv);
+    if (relaxFailed) {
+        error("Instruction sizes did not converge.");
+        failSeen = 1;
+    }
 
     if (gObjct) {
         termObj();
