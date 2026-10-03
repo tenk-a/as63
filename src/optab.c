@@ -352,44 +352,44 @@ OPTBL_T const gOpTab[] = {
     { "LDMD",     0x11,       0x3d,    0x01,           ccr         },
 
     /* M6800 aliases with an identical 6809 encoding. */
-    { "CPX",      0x00,       0x8c,    OPR_M6800,      load2       },
-    { "LDAA",     0x00,       0x86,    OPR_M6800,      load        },
-    { "LDAB",     0x00,       0xc6,    OPR_M6800,      load        },
-    { "ORAA",     0x00,       0x8a,    OPR_M6800,      load        },
-    { "ORAB",     0x00,       0xca,    OPR_M6800,      load        },
-    { "STAA",     0x00,       0x87,    OPR_M6800,      store       },
-    { "STAB",     0x00,       0xc7,    OPR_M6800,      store       },
+    { "CPX",      0x00,       0x8c,    OPR_M6800,      load2       },  /* cmpx */
+    { "LDAA",     0x00,       0x86,    OPR_M6800,      load        },  /* lda */
+    { "LDAB",     0x00,       0xc6,    OPR_M6800,      load        },  /* ldb */
+    { "ORAA",     0x00,       0x8a,    OPR_M6800,      load        },  /* ora */
+    { "ORAB",     0x00,       0xca,    OPR_M6800,      load        },  /* orb */
+    { "STAA",     0x00,       0x87,    OPR_M6800,      store       },  /* sta */
+    { "STAB",     0x00,       0xc7,    OPR_M6800,      store       },  /* stb */
     /* M6800 mnemonics translated to 6809 sequences. */
-    { "CLC",      0,          0,       0,              mnm6800     },
-    { "SEC",      0,          1,       0,              mnm6800     },
-    { "CLI",      0,          2,       0,              mnm6800     },
-    { "SEI",      0,          3,       0,              mnm6800     },
-    { "CLV",      0,          4,       0,              mnm6800     },
-    { "SEV",      0,          5,       0,              mnm6800     },
-    { "CLF",      0,          6,       0,              mnm6800     },
-    { "SEF",      0,          7,       0,              mnm6800     },
-    { "CLZ",      0,          8,       0,              mnm6800     },
-    { "SEZ",      0,          9,       0,              mnm6800     },
-    { "PSHA",     0,          10,      0,              mnm6800     },
-    { "PSHB",     0,          11,      0,              mnm6800     },
-    { "PULA",     0,          12,      0,              mnm6800     },
-    { "PULB",     0,          13,      0,              mnm6800     },
-    { "PSHX",     0,          14,      0,              mnm6800     },
-    { "PULX",     0,          15,      0,              mnm6800     },
-    { "DES",      0,          16,      0,              mnm6800     },
-    { "DEX",      0,          17,      0,              mnm6800     },
-    { "INS",      0,          18,      0,              mnm6800     },
-    { "INX",      0,          19,      0,              mnm6800     },
-    { "WAI",      0,          20,      0,              mnm6800     },
-    { "TAB",      0,          21,      0,              mnm6800     },
-    { "TBA",      0,          22,      0,              mnm6800     },
-    { "TAP",      0,          23,      0,              mnm6800     },
-    { "TPA",      0,          24,      0,              mnm6800     },
-    { "TSX",      0,          25,      0,              mnm6800     },
-    { "TXS",      0,          26,      0,              mnm6800     },
-    { "ABA",      0,          27,      0,              mnm6800     },
-    { "CBA",      0,          28,      0,              mnm6800     },
-    { "SBA",      0,          29,      0,              mnm6800     },
+    { "CLC",      0,          0,       0,              mnm6800     },  /* andcc #$fe */
+    { "SEC",      0,          1,       0,              mnm6800     },  /* orcc #$01 */
+    { "CLI",      0,          2,       0,              mnm6800     },  /* andcc #$ef */
+    { "SEI",      0,          3,       0,              mnm6800     },  /* orcc #$10 */
+    { "CLV",      0,          4,       0,              mnm6800     },  /* andcc #$fd */
+    { "SEV",      0,          5,       0,              mnm6800     },  /* orcc #$02 */
+    { "CLF",      0,          6,       0,              mnm6800     },  /* andcc #$bf */
+    { "SEF",      0,          7,       0,              mnm6800     },  /* orcc #$40 */
+    { "CLZ",      0,          8,       0,              mnm6800     },  /* andcc #$fb */
+    { "SEZ",      0,          9,       0,              mnm6800     },  /* orcc #$04 */
+    { "PSHA",     0,          10,      0,              mnm6800     },  /* pshs a */
+    { "PSHB",     0,          11,      0,              mnm6800     },  /* pshs b */
+    { "PULA",     0,          12,      0,              mnm6800     },  /* puls a */
+    { "PULB",     0,          13,      0,              mnm6800     },  /* puls b */
+    { "PSHX",     0,          14,      0,              mnm6800     },  /* pshs x */
+    { "PULX",     0,          15,      0,              mnm6800     },  /* puls x */
+    { "DES",      0,          16,      0,              mnm6800     },  /* leas -1,s */
+    { "DEX",      0,          17,      0,              mnm6800     },  /* leax -1,x */
+    { "INS",      0,          18,      0,              mnm6800     },  /* leas 1,s */
+    { "INX",      0,          19,      0,              mnm6800     },  /* leax 1,x */
+    { "WAI",      0,          20,      0,              mnm6800     },  /* cwai #$ff */
+    { "TAB",      0,          21,      0,              mnm6800     },  /* tfr a,b;tsta */
+    { "TBA",      0,          22,      0,              mnm6800     },  /* tfr b,a;tsta */
+    { "TAP",      0,          23,      0,              mnm6800     },  /* tfr a,cc */
+    { "TPA",      0,          24,      0,              mnm6800     },  /* tfr cc,a */
+    { "TSX",      0,          25,      0,              mnm6800     },  /* tfr s,x */
+    { "TXS",      0,          26,      0,              mnm6800     },  /* tfr x,s */
+    { "ABA",      0,          27,      0,              mnm6800     },  /* 6309: addr b,a; 6809: pshs b; adda ,s+ */
+    { "CBA",      0,          28,      0,              mnm6800     },  /* 6309: cmpr b,a; 6809: pshs b; cmpa ,s+ */
+    { "SBA",      0,          29,      0,              mnm6800     },  /* 6309: subr b,a; 6809: pshs b; suba ,s+ */
     /* HD6301/HD6303 compatibility */
     { "XGDX",     0x1e,       0x01,    0x01,           none        },  /* exg d,x */
     { "SLP",      0x00,       0x13,    0x01,           none        },  /* sync */
