@@ -1228,7 +1228,7 @@ static void operand(int grp, int mode)
             case U:
             case S:
             case W:
-                if (gValid_f && val == 0 && (!gIdxOfs_f || gIndirect || reg == W)
+                if (gValid_f && val == 0 && (!gIdxOfs_f || reg == W)
                          && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
                     indexM(0x84, reg);
                 } else if (gValid_f && -16 <= val && val <= 15
@@ -3303,7 +3303,7 @@ static void options(uint8_t *p)
 
 int main(int argc, char *argv[])
 {
-    static char *title = "HD6309 cross assembler version 01.40T\n";
+    static char *title = "HD6309 cross assembler version 01.42T\n";
     char *p;
     int  i;
 
