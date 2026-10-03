@@ -3303,7 +3303,7 @@ static void options(uint8_t *p)
 
 int main(int argc, char *argv[])
 {
-    static char *title = "HD6309 cross assembler version 01.42T\n";
+    static char *title = "HD6309 cross assembler version 01.43T\n";
     char *p;
     int  i;
 
