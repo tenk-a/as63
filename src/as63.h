@@ -69,6 +69,7 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define MAXOPTIM        3000  /* maximum number of long branches convertible to short */
 #define GCO_MAX         40    /* maximum if nesting depth                    */
 #define GP1_MAX         100   /* maximum number of ifp1 uses                 */
+#define EXTRA_INCDIRS   8
 #else
 #define MAXCHAR         16384 /* maximum number of characters per input line */
 #define MAXLABEL        1024  /* memory allocation block size for name table (nodes) */
@@ -78,6 +79,7 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define MAXOPTIM        8192  /* maximum number of long branches convertible to short */
 #define GCO_MAX         256   /* maximum if nesting depth                    */
 #define GP1_MAX         1024  /* maximum number of ifp1 uses                 */
+#define EXTRA_INCDIRS   64
 #endif
 
 /* register notation */
@@ -139,6 +141,10 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define CO_IFGT         8
 #define CO_IFLE         9
 #define CO_IFLT         10
+#define CO_IFD          11
+#define CO_IFND         12
+#define CO_IFC          13
+#define CO_IFNC         14
 
 /* none_wq */
 #define WQ_TSTQ         0
@@ -161,6 +167,14 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define OB_SFMT         2
 /*#define OBJ_ROF */
 #define OB_ASM          4
+
+/* Pseudo-op prefix is the element size or mode; opcode holds behavior flags. */
+#define BLOCK_FILL      0x01  /* accept an optional fill value */
+#define BLOCK_CHECK     0x02  /* validate counts, values and address space */
+#define EQU_RESOLVED    0x01  /* SET requires a resolved expression */
+#define LIST_ABSOLUTE   0x01  /* LIST/NOLIST set state; OPT changes its depth */
+#define RS_RESET        0x01
+#define RS_SET          0x02
 
 /* opcode table */
 #ifdef OPT_UNDOC
@@ -200,11 +214,13 @@ EXTERN FILE    *gSrcFp;
 EXTERN OPTBL_T *gOprPtr;
 EXTERN int      gErrors , gPass;
 EXTERN int      gImVal  , gIndirect;
+EXTERN val_t    rsCounter;
 EXTERN uint16_t gDp;
 EXTERN uint16_t gLc     , gLinLc , gObjLc;
 EXTERN uint8_t  gValid_f, gEOF_f;
 EXTERN uint8_t  gOs9_f  , gOrg_f , gOrgSFmt_f;
 EXTERN uint8_t  gByte_f , gWord_f, gIdxOfs_f;
+EXTERN uint8_t  rsDefined;
 EXTERN char     gModName[MODNAMSZ+1];
 EXTERN uint8_t  gM6809_f;
 #ifdef OPT_M6800
@@ -237,6 +253,7 @@ EXTERN int      gLabels,  gLineNo;
 EXTERN uint16_t gCSectBase;
 EXTERN uint8_t  gGrp,     gCSectSw;
 EXTERN uint8_t  gUpLo_f,  gPSect_f;
+
 EXTERN uint8_t  gSjis_f;
 
 
@@ -274,6 +291,8 @@ EXTERN struct FILSTK2_tag {
 #ifdef INCLUDIR
  EXTERN char *gIncDirName;
 #endif
+EXTERN char *extraIncDirs[EXTRA_INCDIRS];
+EXTERN int   extraIncCount;
 
 #ifdef OPT_OA_FILE  /* -a option */
  typedef struct {
@@ -289,19 +308,22 @@ EXTERN struct FILSTK2_tag {
 extern OPTBL_T gOpTab[];
 
 
+
 /*-- Function --*/
 void
     none(void), load(void), load2(void),    store(void),
     ccr(void),  lea(void),  memory(void),   transfer(void),
     pshs(void), puls(void), pshu(void),     pulu(void),
+    tfm(void),  load4(void),immemory(void),
     mod(void),  emod(void), branch(void),   lbranch(void),
-    equ(void),  set(void),  rmb(void),      os9svc(void),
+    equ(void),              rmb(void),      os9svc(void),
     rzb(void),  fcb(void),  fdb(void),      flb(void),
-    library(void),
     fcc(void),  fcs(void),  org(void),      setdp(void),
     vsct(void), psct(void), csct(void),     endsct(void),
     opt(void),  nam(void),  page(void),     spc(void),
-    tfm(void),  load4(void),immemory(void),
+    alignData(void), rsOffset(void),
+    printText(void), printValue(void),
+    library(void), incbin(void), incdir(void),
  #ifdef OPT_UNDOC
     undoc_imm8(void), undoc_imm16(void), undoc_flag(void),
  #endif
@@ -310,7 +332,8 @@ void
     oped(void), none_d(void),
  #endif
  #ifdef OPT_M6800
-  mnm6800(void), mnm68hc11(void), hc11BitOp(void), hc11BitBranch(void), hc11MinMax(void), hc11Emuls(void),
+  mnm6800(void),       mnm68hc11(void),  hc11BitOp(void),
+  hc11BitBranch(void), hc11MinMax(void), hc11Emuls(void),
  #endif
     endop(void);
 

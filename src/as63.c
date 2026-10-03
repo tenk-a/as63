@@ -14,22 +14,23 @@
 #include    "as63.h"
 
 #ifdef _MSC_VER
-#define strcasecmp  _stricmp
-#define ITOA10(i,a) _itoa((i),(a),10)
+ #define strcasecmp     _stricmp
+ #define ITOA10(i,a)    _itoa( (i), (a), 10 )
 #elif defined _WIN32
-#define strcasecmp  stricmp
-#define ITOA10(i,a) snprintf((a), sizeof(a), "%d", (i))
+ #define strcasecmp     stricmp
+ #define ITOA10(i,a)    snprintf( (a), sizeof (a), "%d", (i) )
 #else
-#define ITOA10(i,a) snprintf((a), sizeof(a), "%d", (i))
+ #define ITOA10(i,a)    snprintf( (a), sizeof (a), "%d", (i) )
 #endif
+
 
 /*--------------------------------------------------------------------------*/
 
 FILE    *fopenE(char *fname, char *atr)
 {
-    FILE   *fp;
+    FILE *fp;
 
-    if ((fp = fopen(fname, atr)) == NULL) {
+    if (( fp = fopen(fname, atr) ) == NULL) {
         fprintf(STDERR, "%s: File open error. %s.\n", gCmdName, fname);
         exit(1);
     }
@@ -38,16 +39,16 @@ FILE    *fopenE(char *fname, char *atr)
 
 void   *mallocE(size_t siz)
 {
-    void   *p;
+    void *p;
 
-    if ((p = malloc(siz)) == NULL) {
+    if (( p = malloc(siz) ) == NULL) {
         fprintf(STDERR, "%s: Not enough memory.\n", gCmdName);
         exit(1);
     }
     return p;
 }
 
-void    errPrg(char * s)
+void    errPrg(char *s)
 {
     fprintf(STDERR, "%s:BUG(%s)\n", gCmdName, s);
     exit(1);
@@ -84,7 +85,7 @@ void    warning(char *s)
 
 static void errLbl(char *msg, char *lbl)
 {
-    char    buf[260];
+    char buf[260];
 
     if (gPass != 2)
         return;
@@ -99,16 +100,16 @@ char    *FIL_BaseName(char *adr)
     p = adr;
     while (*p != '\0') {
         if (*p == '/'
- #if 1  /* #ifdef MSDOS */
-         || *p == ':' || *p == '\\'
- #endif
-        ) {
+         #if defined(MSDOS) || defined(_WIN32)
+           || *p == ':' || *p == '\\'
+         #endif
+       ) {
             adr = p + 1;
         }
-      #if 0
-        if (isKanji((*(uint8_t*)p)) && *(p+1) )
+     #if 0
+        if (isKanji( (*(uint8_t *) p) ) && *(p + 1) )
             p++;
-      #endif
+     #endif
         p++;
     }
     return adr;
@@ -118,13 +119,13 @@ char    *FIL_ChgExt(char filename[], char *ext)
 {
     char *p;
 
-    p = FIL_BaseName(filename);
-    p = strrchr( p, '.');
+    p  = FIL_BaseName(filename);
+    p  = strrchr( p, '.');
     if (p == NULL) {
-        strcat(filename,".");
+        strcat(filename, ".");
         strcat( filename, ext);
     } else {
-        strcpy(p+1, ext);
+        strcpy(p + 1, ext);
     }
     return filename;
 }
@@ -132,26 +133,26 @@ char    *FIL_ChgExt(char filename[], char *ext)
 
 /*---------------------------------------------------------------------------*/
 
-static uint16_t oChkSum;            /* Checksum for each line of S-format */
+static uint16_t oChkSum;    /* Checksum for each line of S-format */
 
 static uint8_t hexDigit(uint8_t x)
 {
-    return ((x &= 0x0f) < 10) ? x + '0' : x - 10 + 'A';
+    return ( (x &= 0x0f) < 10 ) ? x + '0' : x - 10 + 'A';
 }
 
 static void put2hex(int b)
 {
     if (!gObjct)
         return;
-    b = (uint8_t)b;
+    b          = (uint8_t) b;
     putc(hexDigit(b >> 4), gObjFp);
     putc(hexDigit(b), gObjFp);
-    oChkSum += b;
+    oChkSum   += b;
 }
 
 static void put4hex(int w)
 {
-    w = (uint16_t)w;
+    w = (uint16_t) w;
     put2hex(w >> 8);
     put2hex(w);
 }
@@ -170,27 +171,30 @@ void    flushObj(void)
                 put2hex(gObjBuf[i]);
             put2hex(~oChkSum);
             putc('\n', gObjFp);
-      #ifdef OPT_FLEX
-        } else if (gFlex_f) {
+        }
+     #ifdef OPT_FLEX
+        else if (gFlex_f) {
             putc(0x02, gObjFp);
             putc(gObjLc >> 8, gObjFp);
-            putc(gObjLc, gObjFp);
+            putc(gObjLc , gObjFp);
             putc(gObjPos, gObjFp);
             fwrite(gObjBuf, gObjPos, 1, gObjFp);
-      #endif
-      #ifdef OPT_OA_FILE
-        } else if (gObjct == OB_ASM && gObjPos) {
+        }
+     #endif
+     #ifdef OPT_OA_FILE
+        else if (gObjct == OB_ASM && gObjPos) {
             fprintf(gObjFp, "\tfcb $%02x", gObjBuf[0]);
             for (i = 1; i < gObjPos; i++)
                 fprintf(gObjFp, ",$%02x", gObjBuf[i]);
             putc('\n', gObjFp);
-      #endif
-        } else {
+        }
+     #endif
+        else {
             fwrite(gObjBuf, gObjPos, 1, gObjFp);
         }
     }
-    gObjPos = 0;
-    gObjLc = gLc;
+    gObjPos    = 0;
+    gObjLc     = gLc;
 }
 
 void    termObj(void)
@@ -202,33 +206,33 @@ void    termObj(void)
         put4hex(gEntryAddr);
         put2hex(~oChkSum);
         putc('\n', gObjFp);
-  #ifdef OPT_FLEX
+ #ifdef OPT_FLEX
     } else if (gFlex_f) {
         putc(0x16, gObjFp);
         putc(gEntryAddr >> 8, gObjFp);
         putc(gEntryAddr, gObjFp);
-  #endif
+ #endif
     }
 }
 
 static void crc(int b)
 {
-    int     w;
+    int w;
 
-    b = (uint8_t)b;
-    w = b ^ gCrcBuf[0];
-    gCrcBuf[0] =  gCrcBuf[1];
-    gCrcBuf[1] =  gCrcBuf[2];
-    gCrcBuf[1] ^= w >> 7;
-    gCrcBuf[2] =  (uint8_t)(w << 1);
-    gCrcBuf[1] ^= w >> 2;
-    gCrcBuf[2] ^= w << 6;
-    w ^= w << 1;
-    w ^= w << 2;
-    w ^= w << 4;
+    b              = (uint8_t) b;
+    w              = b ^ gCrcBuf[0];
+    gCrcBuf[0]     =  gCrcBuf[1];
+    gCrcBuf[1]     =  gCrcBuf[2];
+    gCrcBuf[1]    ^= w >> 7;
+    gCrcBuf[2]     =  (uint8_t) (w << 1);
+    gCrcBuf[1]    ^= w >> 2;
+    gCrcBuf[2]    ^= w << 6;
+    w             ^= w << 1;
+    w             ^= w << 2;
+    w             ^= w << 4;
     if (w & 0x80) {
-        gCrcBuf[0] ^= 0x80;
-        gCrcBuf[2] ^= 0x21;
+        gCrcBuf[0]    ^= 0x80;
+        gCrcBuf[2]    ^= 0x21;
     }
 }
 
@@ -238,36 +242,36 @@ void    putObj(int b)
         return;
     if (gObjPos >= gObjBufSz)
         flushObj();
-    gObjBuf[gObjPos++] = (uint8_t)b;
+    gObjBuf[gObjPos++] = (uint8_t) b;
 }
 
 void    put2obj(int w)
 {
-    w = (uint16_t)w;
+    w = (uint16_t) w;
     putObj(w >> 8);
     putObj(w);
 }
 
 uint8_t    putB(int b)
 {
-    if (gRmb_f && gFBasic_f && gObjct == OB_BIN && gRmb_sp){
-        while(gRmb_sp-- > 0)
+    if (gRmb_f && gFBasic_f && gObjct == OB_BIN && gRmb_sp) {
+        while (gRmb_sp-- > 0)
             putObj(0);
         gRmb_sp++;
     }
-    b = (uint8_t)b;
+    b = (uint8_t) b;
     putObj(b);
     ++gObjCnt;
     ++gLc;
     if (gOs9_f && gPass == 2)
         crc(b);
-    return (uint8_t)b;
+    return (uint8_t) b;
 }
 
 int     put2B(uint16_t w)
 {
-    putB((uint8_t)(w >> 8));
-    putB((uint8_t)w);
+    putB( (uint8_t) (w >> 8) );
+    putB( (uint8_t) w );
     return w;
 }
 
@@ -278,10 +282,11 @@ void    oa_putStr(char *s, int n)
         return;
     flushObj();
     fputs(s, gObjFp);
-    gObjCnt += n;
-    gLc += n;
+    gObjCnt   += n;
+    gLc       += n;
 }
 #endif
+
 
 /*---------------------------------------------------------------------------*/
 
@@ -291,23 +296,23 @@ void    printByte(int b, int c)
 {
     if (gPass != 2)
         return;
-    b = (uint8_t)b;
-    gLineBuf[c] = hexDigit(b >> 4);
-    gLineBuf[c + 1] = hexDigit(b);
+    b                  = (uint8_t) b;
+    gLineBuf[c]        = hexDigit(b >> 4);
+    gLineBuf[c + 1]    = hexDigit(b);
 }
 
 void    printWord(int w, int c)
 {
     if (gPass != 2)
         return;
-    w = (uint16_t)w;
-    printByte((w >> 8), c);
+    w = (uint16_t) w;
+    printByte( (w >> 8), c );
     printByte(w, c + 2);
 }
 
 void    putByte(int b)
 {
-    b = (uint8_t)b;
+    b = (uint8_t) b;
     printByte(putB(b), oPostf);
 }
 
@@ -341,21 +346,21 @@ void    printAddress(int a)
 
 void    printChar(int c, int p)
 {
-    gLineBuf[p] = (uint8_t)c;
+    gLineBuf[p] = (uint8_t) c;
 }
 
 void    initLine(void)
 {
     char *p;
 
-    gLblPtr = NULL;
-    oPostf = 15;
-    oPos = 10;
+    gLblPtr    = NULL;
+    oPostf     = 15;
+    oPos       = 10;
     ++gLineNo;
     ITOA10(gLineNo, gLineBuf);
     ++gSrcLine;
-    p = gLineBuf;
-    while (*p++) {}
+    p          = gLineBuf;
+    while (*p++) { ; }
     for (--p; p < gLinPtr; p++)
         *p = ' ';
     printAddress(gLinLc = gLc);
@@ -374,15 +379,15 @@ static void flushLine(void)
     putLine();
     for (p = gLineBuf; p < gLineBuf + LINEHEAD; p++)
         *p = ' ';
-    *p++ = '\n';
-    *p = '\0';
+    *p++   = '\n';
+    *p     = '\0';
     printAddress(gLc);
-    oPos = 10;
+    oPos   = 10;
 }
 
 void    put1Byte(int b)
 {
-    if ((23 - 3) < oPos)
+    if ((23 - 3) < oPos )
         flushLine();
     printByte(putB(b), oPos);
     oPos += 3;
@@ -404,10 +409,11 @@ void    put1Word(int w)
     oPos += 5;
 }
 
+
 /*---------------------------------------------------------------------------*/
 
-static LBLTBL_T *oLabel;
-static int       oLrf;
+static LBLTBL_T *   oLabel;
+static int          oLrf;
 
 static void printNode(LBLTBL_T *lp)
 {
@@ -433,39 +439,39 @@ void    dumpSymbol(void)
 
 LBLTBL_T *getNode(void)
 {
-    static int gi = 0;
-    static LBLTBL_T *gp = NULL;
+    static int          gi = 0;
+    static LBLTBL_T *   gp = NULL;
 
     if (gp == NULL || gi >= MAXLABEL) {
-        gp = (LBLTBL_T *) mallocE(sizeof(LBLTBL_T) * MAXLABEL);
+        gp = (LBLTBL_T *) mallocE(sizeof (LBLTBL_T) * MAXLABEL);
         gi = 0;
-        DEBMSGF((STDERR, "alloc %d nodes\n", MAXLABEL));
+        DEBMSGF( (STDERR, "alloc %d nodes\n", MAXLABEL) );
     }
     return gp + gi++;
 }
 
 void    initNode(void)
 {
-    oLabel = getNode();
-    oLabel->name[0] = '\0';
-    oLabel->right = oLabel->left = NULL;
+    oLabel             = getNode();
+    oLabel->name[0]    = '\0';
+    oLabel->right      = oLabel->left = NULL;
 }
 
 void    defLabel(char *temp, uint8_t f, uint8_t gf)
 {
-    LBLTBL_T *lp;
-    int     i;
+    LBLTBL_T *  lp;
+    int         i;
 
     lp = oLabel;
     for (;;) {
-        if ((i = strcmp(temp, lp->name)) == 0) {
+        if (( i = strcmp(temp, lp->name) ) == 0) {
             if (lp->grp == 0 || lp->grp == gGrp) {
-                if (lp->line != gLineNo && (f == 1 || lp->flg == 1))
+                if (lp->line != gLineNo && (f == 1 || lp->flg == 1) )
                     errLbl("Duplicate label definition", temp);
                 (gLblPtr = lp)->value = gLinLc;
                 if (lp->flg == 0) {
-                    lp->flg = f;
-                    lp->line = gLineNo;
+                    lp->flg    = f;
+                    lp->line   = gLineNo;
                     if (gf)
                         lp->grp = 0;
                     else
@@ -480,16 +486,16 @@ void    defLabel(char *temp, uint8_t f, uint8_t gf)
             if (lp->right != NULL) {
                 lp = lp->right;
             } else {
-                lp->right = getNode();
-                lp = lp->right;
+                lp->right  = getNode();
+                lp         = lp->right;
                 break;
             }
         } else {
             if (lp->left != NULL) {
                 lp = lp->left;
             } else {
-                lp->left = getNode();
-                lp = lp->left;
+                lp->left   = getNode();
+                lp         = lp->left;
                 break;
             }
         }
@@ -497,30 +503,30 @@ void    defLabel(char *temp, uint8_t f, uint8_t gf)
     if (lp == NULL)
         errPrg("defLabel()");
     gLabels++;
-    gLblPtr = lp;
-    lp->value = gLinLc;
+    gLblPtr    = lp;
+    lp->value  = gLinLc;
     if (gf)
         lp->grp = 0;
     else
         lp->grp = gGrp;
-    lp->flg = f;
+    lp->flg    = f;
     if (f)
         lp->line = gLineNo;
     else
         lp->line = 0x7fff;
     strcpy(lp->name, temp);
-    lp->right = lp->left = NULL;
+    lp->right  = lp->left = NULL;
     return;
 }
 
 static LBLTBL_T *refLbl0(char *lbl)
 {
-    LBLTBL_T *lp;
-    int     i;
+    LBLTBL_T *  lp;
+    int         i;
 
     lp = oLabel;
     while (lp != NULL) {
-        if ((i = strcmp(lbl, lp->name)) == 0) {
+        if (( i = strcmp(lbl, lp->name) ) == 0) {
             if (lp->grp == 0 || lp->grp == gGrp)
                 break;
             i = (gGrp > lp->grp) ? 1 : -1;
@@ -540,9 +546,10 @@ static LBLTBL_T *refLabel(char *lbl)
     return lp;
 }
 
+
 /*---------------------------------------------------------------------------*/
 
-#define IS_KANJI(c)  ((unsigned)((c)^0x20) - 0xa1U < 0x3cU)
+#define IS_KANJI(c)  ( (unsigned) ( (c) ^ 0x20 ) - 0xa1U < 0x3cU )
 //#define isKanji2(c) ((uint8_t)(c) >= 0x40 && (uint8_t)(c) <= 0xfc && (c) != 0x7f)
 
 int     isKanji(int c)
@@ -552,33 +559,33 @@ int     isKanji(int c)
 
 int     isSymbl(int c)
 {
-    c = (uint8_t)c;
-    return (isalnum(c) || (c == '_') || (c == '.') || (c == '@'));
+    c = (uint8_t) c;
+    return ( isalnum(c) || (c == '_') || (c == '.') || (c == '@') );
 }
 
 int     isSymbl2(int c)
 {
-    c = (uint8_t)c;
-    return (isalpha(c) || (c == '_') || (c == '.'));
+    c = (uint8_t) c;
+    return ( isalpha(c) || (c == '_') || (c == '.') );
 }
 
 int     isSymbl3(int c)
 {
-    c = (uint8_t)c;
+    c = (uint8_t) c;
     return (isalnum(c) || c == '_' || c == '.' || c == '@' || c == '$');
 }
 
 uint8_t    getLabel(char *buf)
 {
-    uint8_t    *p;
-    uint8_t    gf;
+    uint8_t *   p;
+    uint8_t     gf;
 
     gf = 0;
-    if (!isSymbl2(*gLinPtr))
+    if (!isSymbl2(*gLinPtr) )
         error("Invalid label name.");
-    for (p = buf; p < (uint8_t*)buf + LBLSIZE; p++, gLinPtr++) {
+    for (p = buf; p < (uint8_t *) buf + LBLSIZE; p++, gLinPtr++) {
         *p = *gLinPtr;
-        if (!isSymbl3(*p))
+        if (!isSymbl3(*p) )
             break;
         if (gUpLo_f)
             *p = toupper(*p);
@@ -605,6 +612,7 @@ int     checkChar(uint8_t c)
         gLinPtr++;
         return 1;
     }
+
     return 0;
 }
 
@@ -621,15 +629,15 @@ int     checkCh_e(uint8_t c)
     return 0;
 }
 
-/*---------------------------------------------------------------------------*/
-val_t   expression(void);
 
-static  val_t   term(void)
+/*---------------------------------------------------------------------------*/
+val_t       expression(void);
+
+static val_t   term(void)
 {
-    val_t   expression();
-    char    temp[LBLSIZE + 1];
-    LBLTBL_T *lp;
-    val_t   tv;
+    char        temp[LBLSIZE + 1];
+    LBLTBL_T *  lp;
+    val_t       tv;
     uint16_t    c;
 
     switch (c = *gLinPtr++) {
@@ -638,7 +646,7 @@ static  val_t   term(void)
     case '-':
         return -term();
     case '^':
-    /* if (!gOs9_f) break; */
+        /* if (!gOs9_f) break; */
     case '~':
         return ~term();
     case '!':
@@ -650,24 +658,22 @@ static  val_t   term(void)
     case '*':
         return gLinLc;
     case '.':
-        if (gOs9_f && !isSymbl3(*gLinPtr))
+        if (gOs9_f && !isSymbl3(*gLinPtr) )
             return gCSectBase;
         break;
     case '\'':
-        if (isKanji(*(uint8_t*)gLinPtr))
+        if (isKanji(*(uint8_t *) gLinPtr) )
             goto DC;
         return *gLinPtr++;
     case '"':
-        /* if (!gOs9_f) break; */
       DC:
-        c = *gLinPtr++;
-        c = c * 0x100 + *gLinPtr++;
+        c  = *gLinPtr++;
+        c  = c * 0x100 + *gLinPtr++;
         return c;
     case '$':
       XDIG:
         for (tv = 0; c = *gLinPtr, isxdigit(c); gLinPtr++)
-            tv = tv * 16 +
-                (isdigit(c) ? (c - '0') : (toupper(c) - 'A' + 10));
+            tv = tv * 16 + ( isdigit(c) ? (c - '0') : (toupper(c) - 'A' + 10) );
         return tv;
     case '%':
       BDIG:
@@ -682,9 +688,15 @@ static  val_t   term(void)
     --gLinPtr;
     if (isSymbl2(c)) {
         getLabel(temp);
+        if (rsDefined && !strcasecmp(temp, "__RS") )
+            return rsCounter;
         if (strcasecmp(temp, "defined") == 0 || strcasecmp(temp, "used") == 0) {
             checkCh_e('(');
             getLabel(temp);
+            if (rsDefined && !strcasecmp(temp, "__RS")) {
+                checkCh_e(')');
+                return 1;
+            }
             if (temp[4])
                 lp = refLabel(temp);
             else
@@ -693,25 +705,25 @@ static  val_t   term(void)
             return (lp != NULL);
         } else if (gPass == 1 && refLbl0(temp) == NULL) {
             defLabel(temp, 0, 1);
-        } else if ((lp = refLabel(temp)) != NULL) {
+        } else if (( lp = refLabel(temp) ) != NULL) {
             if (gLineNo < lp->line)
                 gValid_f = 0;
             return (lp->value);
         }
      #ifdef OPT_OA_FILE
-        if (gObjct == OB_ASM && refLbl0(temp))
+        if (gObjct == OB_ASM && refLbl0(temp) )
             gOAchk_f = 1;
         else
      #endif
-            errLbl("Undefined label", temp);
-    /* DEBMSGF((STDERR,"LABEL:%s\n",temp)); */
+        errLbl("Undefined label", temp);
+        /* DEBMSGF((STDERR,"LABEL:%s\n",temp)); */
         return (gValid_f = 0);
     } else if (isdigit(c)) {
         if (c == '0') {
-            if (toupper(*(gLinPtr + 1)) == 'X') {
+            if (toupper( *(gLinPtr + 1) ) == 'X') {
                 gLinPtr += 2;
                 goto XDIG;
-            } else if (toupper(*(gLinPtr + 1)) == 'B') {
+            } else if (toupper( *(gLinPtr + 1) ) == 'B') {
                 gLinPtr += 2;
                 goto BDIG;
             }
@@ -722,12 +734,12 @@ static  val_t   term(void)
         return tv;
     } else {
         error("Invalid character in expression.");
-        DEBMSGF((STDERR, "*gLinPtr : %c(%02x)\t[term()]\n", *gLinPtr, *gLinPtr));
+        DEBMSGF( (STDERR, "*gLinPtr : %c(%02x)\t[term()]\n", *gLinPtr, *gLinPtr) );
         return (gValid_f = 0);
     }
 }
 
-static  val_t   expMUL(void)
+static val_t   expMUL(void)
 {
     val_t   val;
     char    c;
@@ -739,7 +751,7 @@ static  val_t   expMUL(void)
             gLinPtr++;
             val *= term();
         } else if (c == '/' || c == '%') {
-            val_t   v;
+            val_t v;
             gLinPtr++;
             v = term();
             if (v == 0) {
@@ -757,9 +769,9 @@ static  val_t   expMUL(void)
     return val;
 }
 
-static  val_t   expADD(void)
+static val_t   expADD(void)
 {
-    val_t   val;
+    val_t val;
 
     val = expMUL();
     for (;;) {
@@ -776,18 +788,18 @@ static  val_t   expADD(void)
     return val;
 }
 
-static  val_t   expSHIFT(void)
+static val_t   expSHIFT(void)
 {
-    val_t   val;
+    val_t val;
 
     val = expADD();
     for (;;) {
         if (*gLinPtr == '<' && *(gLinPtr + 1) == '<') {
-            gLinPtr += 2;
-            val <<= expADD();
+            gLinPtr   += 2;
+            val      <<= expADD();
         } else if (*gLinPtr == '>' && *(gLinPtr + 1) == '>') {
-            gLinPtr += 2;
-            val >>= expADD();
+            gLinPtr   += 2;
+            val      >>= expADD();
         } else {
             break;
         }
@@ -795,10 +807,10 @@ static  val_t   expSHIFT(void)
     return val;
 }
 
-static  val_t   expCO(void)
+static val_t   expCO(void)
 {
     val_t   val;
-    uint8_t    c;
+    uint8_t c;
 
     val = expSHIFT();
     for (;;) {
@@ -806,20 +818,20 @@ static  val_t   expCO(void)
         switch (*gLinPtr) {
         case '<':
             if (c == '=') {
-                gLinPtr += 2;
-                val = (val <= expSHIFT());
+                gLinPtr   += 2;
+                val        = ( val <= expSHIFT() );
             } else {
                 gLinPtr++;
-                val = (val < expSHIFT());
+                val = ( val < expSHIFT() );
             }
             break;
         case '>':
             if (c == '=') {
-                gLinPtr += 2;
-                val = (val >= expSHIFT());
+                gLinPtr   += 2;
+                val        = ( val >= expSHIFT() );
             } else {
                 gLinPtr++;
-                val = (val > expSHIFT());
+                val = ( val > expSHIFT() );
             }
             break;
         default:
@@ -831,10 +843,10 @@ static  val_t   expCO(void)
 }
 
 
-static  val_t   expEQEQ(void)
+static val_t   expEQEQ(void)
 {
     val_t   val;
-    uint8_t    c;
+    uint8_t c;
 
     val = expCO();
     for (;;) {
@@ -843,14 +855,14 @@ static  val_t   expEQEQ(void)
         case '!':
             if (c != '=')
                 goto J1;
-            gLinPtr += 2;
-            val = (val != expCO());
+            gLinPtr   += 2;
+            val        = ( val != expCO() );
             break;
         case '=':
             if (c != '=')
                 goto J1;
-            gLinPtr += 2;
-            val = (val == expCO());
+            gLinPtr   += 2;
+            val        = ( val == expCO() );
             break;
         default:
             goto J1;
@@ -861,9 +873,9 @@ static  val_t   expEQEQ(void)
 }
 
 
-static  val_t   expAND(void)
+static val_t   expAND(void)
 {
-    val_t   val;
+    val_t val;
 
     val = expEQEQ();
     while (*gLinPtr == '&' && *(gLinPtr + 1) != '&') {
@@ -873,66 +885,67 @@ static  val_t   expAND(void)
     return val;
 }
 
-static  val_t   expEOR(void)
+static val_t   expEOR(void)
 {
-    val_t   val;
+    val_t val;
 
     val = expAND();
-    while (*gLinPtr == '^' || (*gLinPtr == '?' /* && gOs9_f */ )) {
+    while ( *gLinPtr == '^' || (*gLinPtr == '?' /* && gOs9_f */ )) {
         gLinPtr++;
         val ^= expAND();
     }
     return val;
 }
 
-static  val_t   expOR(void)
+static val_t   expOR(void)
 {
-    val_t   val;
+    val_t val;
 
     val = expEOR();
-    while ((*gLinPtr == '|' && *(gLinPtr + 1) != '|')
-        || (*gLinPtr == '!' && *(gLinPtr + 1) != '=' /* && gOs9_f */ )) {
+    while ( (*gLinPtr == '|' && *(gLinPtr + 1) != '|')
+         || (*gLinPtr == '!' && *(gLinPtr + 1) != '=' /* && gOs9_f */ ) )
+    {
         gLinPtr++;
         val |= expEOR();
     }
     return val;
 }
 
-static  val_t   expLAND(void)
+static val_t   expLAND(void)
 {
-    val_t   val;
+    val_t val;
 
     val = expOR();
     while (*gLinPtr == '&' && *(gLinPtr + 1) == '&') {
-        gLinPtr += 2;
-        val = (expOR() && val);
+        gLinPtr   += 2;
+        val        = (expOR() && val);
     }
     return val;
 }
 
-static  val_t   expLOR(void)
+static val_t   expLOR(void)
 {
-    val_t   val;
+    val_t val;
 
     val = expLAND();
     while (*gLinPtr == '|' && *(gLinPtr + 1) == '|') {
-        gLinPtr += 2;
-        val = (expLAND() || val);
+        gLinPtr   += 2;
+        val        = (expLAND() || val);
     }
     return val;
 }
 
 val_t   expression(void)
 {
-    val_t   val;
+    val_t val;
 
-    gValid_f = 1;
-    gByte_f = gWord_f = 0;
-    if (checkChar('<'))
+    gValid_f   = 1;
+    gByte_f    = gWord_f = 0;
+    if (checkChar('<') )
         gByte_f = 1;
-    else if (checkChar('>'))
+    else if (checkChar('>') )
         gWord_f = 1;
-    val = expLOR();
+    val        = expLOR();
     switch (*gLinPtr) {
     case ' ':
     case '\t':
@@ -943,20 +956,19 @@ val_t   expression(void)
         break;
     default:
         error("Unexpected character.");
-        DEBMSGF((STDERR, "*gLinPtr : %c(%02x)\t[expression()]\n",
-                 *gLinPtr, *gLinPtr));
+        DEBMSGF( (STDERR, "*gLinPtr : %c(%02x)\t[expression()]\n", *gLinPtr, *gLinPtr) );
     }
     return val;
 }
 
 uint8_t    bytExpr(void)
 {
-    val_t   val;
+    val_t val;
 
     val = expression();
     if (val < -128 || 255 < val)
         error("Value does not fit in one uint8_t.");
-    return (uint8_t)(val & 0xff);
+    return (uint8_t) (val & 0xff);
 }
 
 val_t   invExpr(void)
@@ -971,17 +983,18 @@ val_t   invExpr(void)
 
 void    imm4Expr(int16_t *v1, int16_t *v2)
 {
-    val_t   val;
+    val_t val;
 
     val = expression();
     if (checkChar(',')) {
-        *v1 = (int16_t) val;
-        *v2 = (int16_t) expression();
+        *v1    = (int16_t) val;
+        *v2    = (int16_t) expression();
     } else {
-        *v1 = (int16_t) (val >> 16);
-        *v2 = (int16_t) val;
+        *v1    = (int16_t) (val >> 16);
+        *v2    = (int16_t) val;
     }
 }
+
 
 /*---------------------------------------------------------------------------*/
 
@@ -989,10 +1002,10 @@ void    putCode(int grp, int mode)
 {
     /* addressing mode offset table 'gOffset[group][mode]' */
     static int gOffset[4][4] =  {
-        {0x00, 0x00, 0x00, 0},
-        {0x00, 0x00, 0x60, 0x70},
-        {0x00, 0x10, 0x20, 0x30},
-        {0x00, 0x01, 2,    3}
+        { 0x00, 0x00, 0x00, 0             },
+        { 0x00, 0x00, 0x60, 0x70          },
+        { 0x00, 0x10, 0x20, 0x30          },
+        { 0x00, 0x01, 2,    3             }
     };
 
     if (gOprPtr->prefix) {
@@ -1007,15 +1020,15 @@ void    putCode(int grp, int mode)
 
 int     getReg(int r)
 {
-    int reg;
-    uint8_t    c, b, d;
-    uint8_t   *l_p;
+    int         reg;
+    uint8_t     c, b, d;
+    uint8_t *   l_p;
 
-    reg = 0;
-    l_p = gLinPtr;
-    b = toupper(*gLinPtr);
+    reg    = 0;
+    l_p    = gLinPtr;
+    b      = toupper(*gLinPtr);
     gLinPtr++;
-    c = toupper(*gLinPtr);
+    c      = toupper(*gLinPtr);
     if (!isSymbl3(c)) {
         switch (b) {
         case 'A':   reg = A;    break;
@@ -1043,22 +1056,21 @@ int     getReg(int r)
             } else if (b == 'D' && c == 'P') {
                 reg = DP;
             }
-        } else if (b == 'P' && c == 'C' && d == 'R'
-                   && !isSymbl3(*(gLinPtr + 1))) {
+        } else if (b == 'P' && c == 'C' && d == 'R' && !isSymbl3( *(gLinPtr + 1) )) {
             ++gLinPtr;
             reg = PCR;
         } else {
-            while (isSymbl3(*gLinPtr))
+            while ( isSymbl3(*gLinPtr) )
                 ++gLinPtr;
         }
     }
     if (gM6809_f && (reg & X63REG)) {
-      #ifdef OPT_UNDOC
+     #ifdef OPT_UNDOC
         if (reg == V) {
             if (!gUndoc_f)
                 warning("[WARNING] Register V used in 6809 mode.");
         } else
-      #endif
+     #endif
         {
             error("Register E, F, W, or V used in 6809 mode.");
         }
@@ -1074,22 +1086,22 @@ int     getReg(int r)
 
 int     regNo(int r)
 {
-    switch (getReg(r)) {
-    case D: return 0;
-    case X: return 1;
-    case Y: return 2;
-    case U: return 3;
-    case S: return 4;
-    case PC:return 5;
-    case W: return 6;
-    case V: return 7;
-    case A: return 8;
-    case B: return 9;
-    case CC:return 10;
-    case DP:return 11;
-    case N: return 12;
-    case E: return 14;
-    case F: return 15;
+    switch ( getReg(r)) {
+    case D : return 0;
+    case X : return 1;
+    case Y : return 2;
+    case U : return 3;
+    case S : return 4;
+    case PC: return 5;
+    case W : return 6;
+    case V : return 7;
+    case A : return 8;
+    case B : return 9;
+    case CC: return 10;
+    case DP: return 11;
+    case N : return 12;
+    case E : return 14;
+    case F : return 15;
     default:
         error("Unknown register.");
         return -1;
@@ -1101,12 +1113,12 @@ int     regNo(int r)
 
 int     checkByte(int b)
 {
-    return (gByte_f || (-128 <= b && b <= 127 && gValid_f && !gWord_f));
+    return ( gByte_f || (-128 <= b && b <= 127 && gValid_f && !gWord_f) );
 }
 
 int     index0(int frame, int reg)
 {
-    int     xr;
+    int xr;
 
     switch (reg) {
     case X:
@@ -1124,61 +1136,61 @@ int     index0(int frame, int reg)
     case W:
         switch (frame) {
         case 0x83:              /* ,--W */
-            frame = 0xef;
+            frame  = 0xef;
             break;
         case 0x81:              /* ,W++ */
-            frame = 0xcf;
+            frame  = 0xcf;
             break;
         case 0x84:              /* ,W */
-            frame = 0x8f;
+            frame  = 0x8f;
             break;
         case 0x89:              /* nnnn,W */
-            frame = 0xaf;
+            frame  = 0xaf;
             break;
         default:
             error("Invalid indexed addressing mode.");
         }
-        return (frame ^ (gIndirect ? 0x1f : 0));
+        return ( frame ^ (gIndirect ? 0x1f : 0) );
     default:
         xr = 0;
     }
-    return (frame | xr | (gIndirect ? 0x10 : 0));
+    return ( frame | xr | (gIndirect ? 0x10 : 0) );
 }
 
 
 static void indexM(int frame, int reg)
 {
-    postByte(index0(frame, reg));
+    postByte( index0(frame, reg) );
 }
 
 static void operand(int grp, int mode)
 {
-    val_t val;
-    int   reg;
+    val_t   val;
+    int     reg;
 
     skipSpace();
-    if ((mode & (IMMEDIATE | IMMEDIATE2)) && checkChar('#')) {
+    if (( mode & (IMMEDIATE | IMMEDIATE2) ) && checkChar('#')) {
         putCode(grp, IMMEDIATE_MODE);
         if (mode & IMMEDIATE)
-            putByte(bytExpr());
+            putByte( bytExpr() );
         else
-            putWord(expression());
+            putWord( expression() );
         return;
     }
     gIndirect = checkChar('[');
     if ((mode & INDEX) && checkChar(',')) {
         putCode(grp, INDEX_MODE);
         if (checkChar('-')) {
-            if (checkChar('-'))
-                indexM(0x83, getReg(INDEXREG | W));
+            if (checkChar('-') )
+                indexM( 0x83, getReg(INDEXREG | W) );
             else if (gIndirect)
                 error("[,-R] is not allowed.");
             else
-                indexM(0x82, getReg(INDEXREG));
+                indexM( 0x82, getReg(INDEXREG) );
         } else {
             reg = getReg(INDEXREG | W);
             if (checkChar('+')) {
-                if (checkChar('+'))
+                if (checkChar('+') )
                     indexM(0x81, reg);
                 else if (gIndirect)
                     error("[,R+] is not allowed.");
@@ -1189,51 +1201,53 @@ static void operand(int grp, int mode)
             } else
                 indexM(0x84, reg);
         }
-    } else if ((mode & INDEX) && (reg = getReg(OFFSETRG)) > 0) {
+    } else if ((mode & INDEX) && ( reg = getReg(OFFSETRG) ) > 0) {
         if (checkCh_e(',')) {
             putCode(grp, INDEX_MODE);
             switch (reg) {
             case A:
-                val = 0x86;
+                val    = 0x86;
                 break;
             case B:
-                val = 0x85;
+                val    = 0x85;
                 break;
             case D:
-                val = 0x8b;
+                val    = 0x8b;
                 break;
             case E:
-                val = 0x87;
+                val    = 0x87;
                 break;
             case F:
-                val = 0x8a;
+                val    = 0x8a;
                 break;
             case W:
-                val = 0x8e;
+                val    = 0x8e;
                 break;
             default:
                 //error("Invalid register.");
-                val = 0x86;
+                val    = 0x86;
                 break;
             }
-            indexM(val, getReg(INDEXREG));
+            indexM( val, getReg(INDEXREG) );
         }
     } else {
         val = expression();
         if ((mode & INDEX) && checkChar(',')) {
             putCode(grp, INDEX_MODE);
-            switch (reg = getReg(INDEXREG | W | PC | PCR)) {
+            switch ( reg = getReg(INDEXREG | W | PC | PCR)) {
             case X:
             case Y:
             case U:
             case S:
             case W:
                 if (gValid_f && val == 0 && (!gIdxOfs_f || reg == W)
-                         && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
+                   && ( !gIdxOfs_f || (!gByte_f && !gWord_f) ) )
+                {
                     indexM(0x84, reg);
                 } else if (gValid_f && -16 <= val && val <= 15
-                         && (!gIdxOfs_f || (!gByte_f && !gWord_f))
-                         && !gIndirect && reg != W) {
+                          && ( !gIdxOfs_f || (!gByte_f && !gWord_f) )
+                          && !gIndirect && reg != W)
+                {
                     indexM(val & 0x1f, reg);
                 } else if (checkByte(val)) {
                     indexM(0x88, reg);
@@ -1253,8 +1267,7 @@ static void operand(int grp, int mode)
                 }
                 break;
             case PCR:
-                if (checkByte(val -= gLinLc + 3 +
-                              (gOprPtr->prefix ? 1 : 0))) {
+                if (checkByte( val -= gLinLc + 3 + (gOprPtr->prefix ? 1 : 0) )) {
                     indexM(0x8c, 0);
                     putByte(val);
                 } else {
@@ -1266,10 +1279,11 @@ static void operand(int grp, int mode)
             putCode(grp, INDEX_MODE);
             postByte(0x9f);
             putWord(val);
-        } else if ((mode & DIRECT) && (gByte_f
-            || ((uint16_t) (val - (gDp << 8)) <= 255 && gValid_f && !gWord_f))) {
+        } else if ((mode & DIRECT)
+            && ( gByte_f || ( (uint16_t)( val - (gDp << 8) ) <= 255 && gValid_f && !gWord_f ) ) )
+        {
             putCode(grp, DIRECT_MODE);
-            putByte(val - (gDp << 8));
+            putByte( val - (gDp << 8) );
         } else if (mode & EXTEND) {
             putCode(grp, EXTEND_MODE);
             putWord(val);
@@ -1280,6 +1294,7 @@ static void operand(int grp, int mode)
     if (gIndirect)
         checkCh_e(']');
 }
+
 
 /*---------------------------------------------------------------------------*/
 
@@ -1317,32 +1332,32 @@ void    ccr(void)
 void undoc_imm8(void)
 {
     skipSpace();
-    if (!checkCh_e('#'))
+    if (!checkCh_e('#') )
         return;
     putCode(GROUP0, NO_MODE);
-    putByte(bytExpr());
+    putByte( bytExpr() );
 }
 
 void undoc_imm16(void)
 {
     skipSpace();
-    if (!checkCh_e('#'))
+    if (!checkCh_e('#') )
         return;
     putCode(GROUP0, NO_MODE);
-    putWord(expression());
+    putWord( expression() );
 }
 
 void undoc_flag(void)
 {
     uint8_t opcode;
-    val_t val;
+    val_t   val;
 
     skipSpace();
-    if (!checkCh_e('#'))
+    if (!checkCh_e('#') )
         return;
-    val = expression();
-    opcode = gOprPtr->opcode;
-    if (gWord_f || (!gByte_f && (val < -128 || 255 < val))) {
+    val                = expression();
+    opcode             = gOprPtr->opcode;
+    if (gWord_f || ( !gByte_f && (val < -128 || 255 < val) )) {
         gOprPtr->opcode = 0x8f;
         putCode(GROUP0, NO_MODE);
         putWord(val);
@@ -1351,13 +1366,13 @@ void undoc_flag(void)
         putCode(GROUP0, NO_MODE);
         putByte(val);
     }
-    gOprPtr->opcode = opcode;
+    gOprPtr->opcode    = opcode;
 }
 #endif
 
 void    load4(void)
 {
-    int16_t    val, val2;
+    int16_t val, val2;
 
     skipSpace();
     if (checkChar('#')) {
@@ -1381,6 +1396,7 @@ void    immemory(void)
     }
 }
 
+
 /*----------------------------------*/
 
 void    none(void)
@@ -1394,15 +1410,15 @@ void    mnm68hc11(void)
     static const struct {
         uint8_t len;
         uint8_t code[7];
-    } tbl[] = {
-        { 7, { 0x34, 0x03, 0x4f, 0x31, 0xab, 0x35, 0x03 } }, /* aby -> pshs a,cc; clra; leay d,y; puls cc,a */
-        { 6, { 0x34, 0x01, 0x31, 0x62, 0x35, 0x01 }       }, /* tsy -> pshs cc; leay 2,s; puls cc */
+    }   tbl[] = {
+        { 7, { 0x34, 0x03, 0x4f, 0x31, 0xab, 0x35, 0x03 } },                                    /* aby -> pshs a,cc; clra; leay d,y; puls cc,a */
+        { 6, { 0x34, 0x01, 0x31, 0x62, 0x35, 0x01 }       },                                    /* tsy -> pshs cc; leay 2,s; puls cc */
     };
     int j;
 
     if (gOprPtr->opcode == 0 && !gM6809_f) {
-        static const uint8_t aby6309[] = { 0x34, 0x03, 0x4f, 0x10, 0x30, 0x02, 0x35, 0x03 }; /* pshs a,cc; clra; addr d,y; puls cc,a */
-        for (j = 0; j < sizeof(aby6309); ++j)
+        static const uint8_t aby6309[] = { 0x34, 0x03, 0x4f, 0x10, 0x30, 0x02, 0x35, 0x03 };    /* pshs a,cc; clra; addr d,y; puls cc,a */
+        for (j = 0; j < sizeof (aby6309); ++j)
             put1Byte(aby6309[j]);
         return;
     }
@@ -1419,25 +1435,25 @@ typedef struct {
 
 static int  hc11IndexHere(void)
 {
-    uint8_t *p;
-    int found;
+    uint8_t *   p;
+    int         found;
 
-    p = gLinPtr;
+    p          = gLinPtr;
     skipSpace();
-    found = (toupper(*gLinPtr) == 'X' || toupper(*gLinPtr) == 'Y')
-        && !isSymbl3(*(gLinPtr + 1));
-    gLinPtr = p;
+    found      = (toupper(*gLinPtr) == 'X' || toupper(*gLinPtr) == 'Y')
+                 && !isSymbl3( *(gLinPtr + 1) );
+    gLinPtr    = p;
     return found;
 }
 
 static int  hc11IndexReg(void)
 {
     skipSpace();
-    if (toupper(*gLinPtr) == 'X' && !isSymbl3(*(gLinPtr + 1))) {
+    if (toupper(*gLinPtr) == 'X' && !isSymbl3( *(gLinPtr + 1) )) {
         ++gLinPtr;
         return 0;
     }
-    if (toupper(*gLinPtr) == 'Y' && !isSymbl3(*(gLinPtr + 1))) {
+    if (toupper(*gLinPtr) == 'Y' && !isSymbl3( *(gLinPtr + 1) )) {
         ++gLinPtr;
         return 0x20;
     }
@@ -1448,59 +1464,59 @@ static int  hc11IndexReg(void)
 /* Parse the direct or X/Y-indexed operand accepted by the HC11 bit forms. */
 static int  hc11Mem(HC11MEM_T *m)
 {
-    val_t val;
-    uint8_t *p;
-    int base;
-    int i;
+    val_t       val;
+    uint8_t *   p;
+    int         base;
+    int         i;
 
     m->indexed = m->extended = m->len = 0;
-    for (i = 0; i < sizeof(m->code); ++i)
+    for (i = 0; i < sizeof (m->code); ++i)
         m->code[i] = 0;
     skipSpace();
     if (checkChar(',')) {
-        val = 0;
-        base = hc11IndexReg();
+        val        = 0;
+        base       = hc11IndexReg();
         if (base < 0)
             return 0;
         m->indexed = 1;
     } else {
-        val = expression();
-        p = gLinPtr;
+        val    = expression();
+        p      = gLinPtr;
         if (checkChar(',') && hc11IndexHere()) {
-            base = hc11IndexReg();
+            base       = hc11IndexReg();
             if (base < 0)
                 return 0;
             m->indexed = 1;
         } else {
             gLinPtr = p;
             if (gByte_f || (gValid_f && 0 <= val && val <= 255 && !gWord_f)) {
-                if (gValid_f && (val < 0 || 255 < val))
+                if (gValid_f && (val < 0 || 255 < val) )
                     error("Direct address is out of range.");
-                m->len = 1;
-                m->code[0] = (uint8_t)val;
+                m->len     = 1;
+                m->code[0] = (uint8_t) val;
             } else {
-                if (gValid_f && (val < 0 || 65535 < val))
+                if (gValid_f && (val < 0 || 65535 < val) )
                     error("Extended address is out of range.");
-                m->extended = 1;
-                m->len = 2;
-                m->code[0] = (uint8_t)(val >> 8);
-                m->code[1] = (uint8_t)val;
+                m->extended    = 1;
+                m->len         = 2;
+                m->code[0]     = (uint8_t) (val >> 8);
+                m->code[1]     = (uint8_t) val;
             }
             return 1;
         }
     }
     if (gValid_f && -16 <= val && val <= 15 && !gByte_f && !gWord_f) {
-        m->len = 1;
-        m->code[0] = (uint8_t)((val & 0x1f) | base);
+        m->len     = 1;
+        m->code[0] = (uint8_t) ( (val & 0x1f) | base );
     } else if (gValid_f && -128 <= val && val <= 127 && !gWord_f) {
-        m->len = 2;
-        m->code[0] = (uint8_t)(0x88 | base);
-        m->code[1] = (uint8_t)val;
+        m->len     = 2;
+        m->code[0] = (uint8_t) (0x88 | base);
+        m->code[1] = (uint8_t) val;
     } else {
-        m->len = 3;
-        m->code[0] = (uint8_t)(0x89 | base);
-        m->code[1] = (uint8_t)(val >> 8);
-        m->code[2] = (uint8_t)val;
+        m->len     = 3;
+        m->code[0] = (uint8_t) (0x89 | base);
+        m->code[1] = (uint8_t) (val >> 8);
+        m->code[2] = (uint8_t) val;
     }
     return 1;
 }
@@ -1513,15 +1529,15 @@ static void hc11MemTail(const HC11MEM_T *m)
         put1Byte(m->code[i]);
 }
 
-static void hc11MemOp(uint8_t direct, uint8_t indexed, uint8_t extended, HC11MEM_T const* m)
+static void hc11MemOp(uint8_t direct, uint8_t indexed, uint8_t extended, HC11MEM_T const *m)
 {
-    put1Byte(m->indexed ? indexed : (m->extended ? extended : direct));
+    put1Byte( m->indexed ? indexed : (m->extended ? extended : direct) );
     hc11MemTail(m);
 }
 
 static int  hc11Mask(uint8_t *mask)
 {
-    if (!checkCh_e(','))
+    if (!checkCh_e(',') )
         return 0;
     skipSpace();
     checkChar('#');
@@ -1531,84 +1547,85 @@ static int  hc11Mask(uint8_t *mask)
 
 void    hc11BitOp(void)
 {
-    HC11MEM_T m;
-    uint8_t mask;
-    int clear;
+    HC11MEM_T   m;
+    uint8_t     mask;
+    int         clear;
 
     clear = gOprPtr->opcode;
-    if (!hc11Mem(&m) || !hc11Mask(&mask))
+    if (!hc11Mem(&m) || !hc11Mask(&mask) )
         return;
     if (!gM6809_f) {
-        put1Byte(m.indexed ? (clear ? 0x62 : 0x61)
-                 : (m.extended ? (clear ? 0x72 : 0x71) : (clear ? 0x02 : 0x01)));
-        put1Byte(clear ? (uint8_t)~mask : mask);
+        put1Byte( m.indexed  ? (clear ? 0x62 : 0x61)
+              : ( m.extended ? (clear ? 0x72 : 0x71)
+              :                (clear ? 0x02 : 0x01) ) );
+        put1Byte(clear ? (uint8_t) ~mask : mask);
         hc11MemTail(&m);
         return;
     }
-    put1Byte(0x34); put1Byte(0x02);                    /* pshs a */
-    hc11MemOp(0x96, 0xa6, 0xb6, &m);                   /* lda */
-    put1Byte(clear ? 0x84 : 0x8a);                     /* anda/ora */
-    put1Byte(clear ? (uint8_t)~mask : mask);           /* #mask */
-    hc11MemOp(0x97, 0xa7, 0xb7, &m);                   /* sta */
-    put1Byte(0x35); put1Byte(0x02);                    /* puls a */
+    put1Byte(0x34); put1Byte(0x02);                 /* pshs a */
+    hc11MemOp(0x96, 0xa6, 0xb6, &m);                /* lda */
+    put1Byte(clear ? 0x84 : 0x8a);                  /* anda/ora */
+    put1Byte(clear ? (uint8_t) ~mask : mask);       /* #mask */
+    hc11MemOp(0x97, 0xa7, 0xb7, &m);                /* sta */
+    put1Byte(0x35); put1Byte(0x02);                 /* puls a */
 }
 
 void    hc11BitBranch(void)
 {
-    HC11MEM_T m;
-    uint8_t mask;
-    val_t target;
-    val_t disp;
-    int set;
+    HC11MEM_T   m;
+    uint8_t     mask;
+    val_t       target;
+    val_t       disp;
+    int         set;
 
-    set = gOprPtr->opcode == 0;
-    if (!hc11Mem(&m) || !hc11Mask(&mask) || !checkCh_e(','))
+    set    = gOprPtr->opcode == 0;
+    if (!hc11Mem(&m) || !hc11Mask(&mask) || !checkCh_e(',') )
         return;
     target = expression();
-    put1Byte(0x34); put1Byte(0x03);                    /* pshs a,cc */
-    hc11MemOp(0x96, 0xa6, 0xb6, &m);                   /* lda */
-    put1Byte(0x84); put1Byte(mask);                    /* anda #mask */
+    put1Byte(0x34); put1Byte(0x03);                 /* pshs a,cc */
+    hc11MemOp(0x96, 0xa6, 0xb6, &m);                /* lda */
+    put1Byte(0x84); put1Byte(mask);                 /* anda #mask */
     if (set) {
-        put1Byte(0x81); put1Byte(mask);                /* cmpa #mask */
+        put1Byte(0x81); put1Byte(mask);             /* cmpa #mask */
     }
-    put1Byte(0x26); put1Byte(4);                       /* bne false */
-    put1Byte(0x35); put1Byte(0x03);                    /* puls a,cc */
-    disp = target - gLc - 2;
-    if (gValid_f && (disp < -128 || 127 < disp))
+    put1Byte(0x26); put1Byte(4);                    /* bne false */
+    put1Byte(0x35); put1Byte(0x03);                 /* puls a,cc */
+    disp   = target - gLc - 2;
+    if (gValid_f && (disp < -128 || 127 < disp) )
         error("Short branch target is out of range.");
-    put1Byte(0x20); put1Byte((uint8_t)disp);           /* bra target */
-    put1Byte(0x35); put1Byte(0x03);                    /* false: puls a,cc */
+    put1Byte(0x20); put1Byte((uint8_t)disp);        /* bra target */
+    put1Byte(0x35); put1Byte(0x03);                 /* false: puls a,cc */
 }
 
 void    hc11MinMax(void)
 {
-    HC11MEM_T m;
-    int isMin;
-    int isMem;
-    int skip;
+    HC11MEM_T   m;
+    int         isMin;
+    int         isMem;
+    int         skip;
 
-    isMin = gOprPtr->opcode & 1;
-    isMem = gOprPtr->opcode & 2;
-    if (!hc11Mem(&m))
+    isMin  = gOprPtr->opcode & 1;
+    isMem  = gOprPtr->opcode & 2;
+    if (!hc11Mem(&m) )
         return;
     if (!m.indexed) {
         error("Indexed addressing is required for this mnemonic.");
         return;
     }
-    put1Byte(0x34); put1Byte(0x04);                    /* pshs b */
-    hc11MemOp(0xd6, 0xe6, 0xf6, &m);                   /* ldb */
-    put1Byte(0x11);                                    /* cba */
-    put1Byte(isMin ? 0x25 : 0x24);                     /* bcs/bcc no change */
-    skip = isMem ? 5 + m.len : 2;
-    put1Byte((uint8_t)skip);
+    put1Byte(0x34); put1Byte(0x04);                 /* pshs b */
+    hc11MemOp(0xd6, 0xe6, 0xf6, &m);                /* ldb */
+    put1Byte(0x11);                                 /* cba */
+    put1Byte(isMin ? 0x25 : 0x24);                  /* bcs/bcc no change */
+    skip   = isMem ? 5 + m.len : 2;
+    put1Byte( (uint8_t) skip );
     if (isMem) {
-        put1Byte(0x34); put1Byte(0x01);                /* pshs cc */
-        hc11MemOp(0x97, 0xa7, 0xb7, &m);               /* sta */
-        put1Byte(0x35); put1Byte(0x01);                /* puls cc */
+        put1Byte(0x34); put1Byte(0x01);             /* pshs cc */
+        hc11MemOp(0x97, 0xa7, 0xb7, &m);            /* sta */
+        put1Byte(0x35); put1Byte(0x01);             /* puls cc */
     } else {
-        put1Byte(0x1f); put1Byte(0x98);                /* tfr b,a */
+        put1Byte(0x1f); put1Byte(0x98);             /* tfr b,a */
     }
-    put1Byte(0x35); put1Byte(0x04);                    /* puls b */
+    put1Byte(0x35); put1Byte(0x04);                 /* puls b */
 }
 
 void    hc11Emuls(void)
@@ -1617,12 +1634,12 @@ void    hc11Emuls(void)
         error("EMULS requires 6309 mode.");
         return;
     }
-    put1Byte(0x10); put1Byte(0x38);                    /* pshs w */
-    put1Byte(0x34); put1Byte(0x20);                    /* pshs y */
-    put1Byte(0x11); put1Byte(0xaf); put1Byte(0xe1);    /* muld ,s++ */
-    put1Byte(0x1f); put1Byte(0x02);                    /* tfr d,y */
-    put1Byte(0x1f); put1Byte(0x60);                    /* tfr w,d */
-    put1Byte(0x10); put1Byte(0x39);                    /* puls w */
+    put1Byte(0x10); put1Byte(0x38);                 /* pshs w */
+    put1Byte(0x34); put1Byte(0x20);                 /* pshs y */
+    put1Byte(0x11); put1Byte(0xaf); put1Byte(0xe1); /* muld ,s++ */
+    put1Byte(0x1f); put1Byte(0x02);                 /* tfr d,y */
+    put1Byte(0x1f); put1Byte(0x60);                 /* tfr w,d */
+    put1Byte(0x10); put1Byte(0x39);                 /* puls w */
 }
 #endif
 
@@ -1633,39 +1650,39 @@ void    mnm6800(void)
         uint8_t len;
         uint8_t code[4];
     } tbl[] = {
-        { 2, { 0x1c, 0xfe } },          /* clc  -> andcc #$fe   */
-        { 2, { 0x1a, 0x01 } },          /* sec  -> orcc #$01    */
-        { 2, { 0x1c, 0xef } },          /* cli  -> andcc #$ef   */
-        { 2, { 0x1a, 0x10 } },          /* sei  -> orcc #$10    */
-        { 2, { 0x1c, 0xfd } },          /* clv  -> andcc #$fd   */
-        { 2, { 0x1a, 0x02 } },          /* sev  -> orcc #$02    */
-        { 2, { 0x1c, 0xbf } },          /* clf  -> andcc #$bf   */
-        { 2, { 0x1a, 0x40 } },          /* sef  -> orcc #$40    */
-        { 2, { 0x1c, 0xfb } },          /* clz  -> andcc #$fb   */
-        { 2, { 0x1a, 0x04 } },          /* sez  -> orcc #$04    */
-        { 2, { 0x34, 0x02 } },          /* psha -> pshs a       */
-        { 2, { 0x34, 0x04 } },          /* pshb -> pshs b       */
-        { 2, { 0x35, 0x02 } },          /* pula -> puls a       */
-        { 2, { 0x35, 0x04 } },          /* pulb -> puls b       */
-        { 2, { 0x34, 0x10 } },          /* pshx -> pshs x       */
-        { 2, { 0x35, 0x10 } },          /* pulx -> puls x       */
-        { 2, { 0x32, 0x7f } },          /* des  -> leas -1,s    */
-        { 2, { 0x30, 0x1f } },          /* dex  -> leax -1,x    */
-        { 2, { 0x32, 0x61 } },          /* ins  -> leas 1,s     */
-        { 2, { 0x30, 0x01 } },          /* inx  -> leax 1,x     */
-        { 2, { 0x3c, 0xff } },          /* wai  -> cwai #$ff    */
-        { 3, { 0x1f, 0x89, 0x4d } },    /* tab  -> tfr a,b;tsta */
-        { 3, { 0x1f, 0x98, 0x4d } },    /* tba  -> tfr b,a;tsta */
-        { 2, { 0x1f, 0x8a } },          /* tap  -> tfr a,cc     */
-        { 2, { 0x1f, 0xa8 } },          /* tpa  -> tfr cc,a     */
-        { 2, { 0x1f, 0x41 } },          /* tsx  -> tfr s,x      */
-        { 2, { 0x1f, 0x14 } },          /* txs  -> tfr x,s      */
-        { 4, { 0x34,0x04,0xab,0xe0 } }, /* aba  -> 6309: addr b,a; 6809: pshs b; adda ,s+ */
-        { 4, { 0x34,0x04,0xa1,0xe0 } }, /* cba  -> 6309: cmpr b,a; 6809: pshs b; cmpa ,s+ */
-        { 4, { 0x34,0x04,0xa0,0xe0 } }, /* sba  -> 6309: subr b,a; 6809: pshs b; suba ,s+ */
+        { 2, { 0x1c, 0xfe } },              /* clc  -> andcc #$fe   */
+        { 2, { 0x1a, 0x01 } },              /* sec  -> orcc #$01    */
+        { 2, { 0x1c, 0xef } },              /* cli  -> andcc #$ef   */
+        { 2, { 0x1a, 0x10 } },              /* sei  -> orcc #$10    */
+        { 2, { 0x1c, 0xfd } },              /* clv  -> andcc #$fd   */
+        { 2, { 0x1a, 0x02 } },              /* sev  -> orcc #$02    */
+        { 2, { 0x1c, 0xbf } },              /* clf  -> andcc #$bf   */
+        { 2, { 0x1a, 0x40 } },              /* sef  -> orcc #$40    */
+        { 2, { 0x1c, 0xfb } },              /* clz  -> andcc #$fb   */
+        { 2, { 0x1a, 0x04 } },              /* sez  -> orcc #$04    */
+        { 2, { 0x34, 0x02 } },              /* psha -> pshs a       */
+        { 2, { 0x34, 0x04 } },              /* pshb -> pshs b       */
+        { 2, { 0x35, 0x02 } },              /* pula -> puls a       */
+        { 2, { 0x35, 0x04 } },              /* pulb -> puls b       */
+        { 2, { 0x34, 0x10 } },              /* pshx -> pshs x       */
+        { 2, { 0x35, 0x10 } },              /* pulx -> puls x       */
+        { 2, { 0x32, 0x7f } },              /* des  -> leas -1,s    */
+        { 2, { 0x30, 0x1f } },              /* dex  -> leax -1,x    */
+        { 2, { 0x32, 0x61 } },              /* ins  -> leas 1,s     */
+        { 2, { 0x30, 0x01 } },              /* inx  -> leax 1,x     */
+        { 2, { 0x3c, 0xff } },              /* wai  -> cwai #$ff    */
+        { 3, { 0x1f, 0x89, 0x4d} },         /* tab  -> tfr a,b;tsta */
+        { 3, { 0x1f, 0x98, 0x4d} },         /* tba  -> tfr b,a;tsta */
+        { 2, { 0x1f, 0x8a } },              /* tap  -> tfr a,cc     */
+        { 2, { 0x1f, 0xa8 } },              /* tpa  -> tfr cc,a     */
+        { 2, { 0x1f, 0x41 } },              /* tsx  -> tfr s,x      */
+        { 2, { 0x1f, 0x14 } },              /* txs  -> tfr x,s      */
+        { 4, { 0x34, 0x04, 0xab, 0xe0} },   /* aba  -> 6309: addr b,a; 6809: pshs b; adda ,s+ */
+        { 4, { 0x34, 0x04, 0xa1, 0xe0} },   /* cba  -> 6309: cmpr b,a; 6809: pshs b; cmpa ,s+ */
+        { 4, { 0x34, 0x04, 0xa0, 0xe0} },   /* sba  -> 6309: subr b,a; 6809: pshs b; suba ,s+ */
     };
-    const uint8_t *p;
-    int j;
+    const uint8_t * p;
+    int             j;
 
     if (!gM6800_f)
         warning("[WARNING] M6800 mnemonic used without -6.");
@@ -1673,7 +1690,7 @@ void    mnm6800(void)
         static const uint8_t opr[] = { 0x30, 0x37, 0x32 };
         put1Byte(0x10);
         put1Byte(opr[gOprPtr->opcode - 27]);
-        put1Byte(0x98);             /* B,A */
+        put1Byte(0x98);                     /* B,A */
         return;
     }
     p = tbl[gOprPtr->opcode].code;
@@ -1689,27 +1706,26 @@ void    setdp(void)
     printByte(gDp = invExpr(), 15);
 }
 
-
 void    transfer(void)
 {
-    int     r1, r2;
+    int r1, r2;
 
     skipSpace();
     putCode(GROUP0, NO_MODE);
-    if ((r1 = regNo(ALLREG | X63REG)) < 0)
+    if (( r1 = regNo(ALLREG | X63REG) ) < 0 )
         goto ERR;
     checkCh_e(',');
-    if ((r2 = regNo(ALLREG | X63REG)) < 0)
+    if (( r2 = regNo(ALLREG | X63REG) ) < 0 )
         goto ERR;
     if (
      #ifdef OPT_UNDOC
         !gUndoc_f &&
      #endif
-        ((r1 ^ r2) & 0x08) && r1 != 0x0c && r2 != 0x0c
-    ) {
+        ( (r1 ^ r2) & 0x08 ) && r1 != 0x0c && r2 != 0x0c
+   ) {
         warning("[WARNING] Registers have different sizes.");
     }
-    putByte((r1 << 4) | r2);
+    putByte( (r1 << 4) | r2 );
   ERR:
     return;
 }
@@ -1717,18 +1733,18 @@ void    transfer(void)
 void    tfm(void)
 {
     int     r1, r2;
-    uint8_t    md;
+    uint8_t md;
 
     md = ' ';
     skipSpace();
-    if ((r1 = regNo(INDEXREG | D)) < 0)
+    if (( r1 = regNo(INDEXREG | D) ) < 0 )
         goto ER;
     if (*gLinPtr == '+')
         md = *gLinPtr++;
     else if (*gLinPtr == '-')
         md = *gLinPtr++;
     checkCh_e(',');
-    if ((r2 = regNo(INDEXREG | D)) < 0)
+    if (( r2 = regNo(INDEXREG | D) ) < 0 )
         goto ER;
     if (*gLinPtr == '+') {
         gLinPtr++;
@@ -1749,8 +1765,9 @@ void    tfm(void)
     } else {
         goto ER;
     }
-    putByte((r1 << 4) | r2);
+    putByte( (r1 << 4) | r2 );
     return;
+
   ER:
     put1Word(0);
     put1Byte(0);
@@ -1759,15 +1776,16 @@ void    tfm(void)
 
 static void pshpul(uint8_t u, uint8_t h)
 {
-    uint16_t    m1, m2;
+    uint16_t m1, m2;
 
     m1 = m2 = 0;
     skipSpace();
+
     do {
      #ifdef OPT_EXT_INST
-        switch (getReg(ALLREG | W))
+        switch ( getReg(ALLREG | W) )
      #else
-        switch (getReg(ALLREG))
+        switch ( getReg(ALLREG) )
      #endif
         {
         case CC:
@@ -1815,17 +1833,17 @@ static void pshpul(uint8_t u, uint8_t h)
         if (m1 & m2)
             error("The same register is specified more than once.");
         m1 |= m2;
-    } while (checkChar(','));
+    } while ( checkChar(',') );
  #ifdef OPT_EXT_INST
-    if (m1 & 0x100) {           /* w */
+    if (m1 & 0x100) {                       /* w */
         if (h)
-            put1Word(u ? 0x103b : 0x1039);      /* puluw pulsw */
+            put1Word(u ? 0x103b : 0x1039);  /* puluw pulsw */
         if (m1 & 0xff) {
             put1Byte(gOprPtr->opcode);
             put1Byte(m1 & 0xff);
         }
-        if (!h)                 /* psh */
-            put1Word(u ? 0x103a : 0x1038);      /* pshuw pshsw */
+        if (!h)                             /* psh */
+            put1Word(u ? 0x103a : 0x1038);  /* pshuw pshsw */
     } else {
         putCode(GROUP0, NO_MODE);
         putByte(m1);
@@ -1856,14 +1874,15 @@ void    pulu(void)
     pshpul(1, 1);
 }
 
+
 /*----------------------------------*/
 
 void    branch(void)
 {
-    val_t   val;
+    val_t val;
 
     skipSpace();
-    if ((val = expression() - gLinLc - 2) < -128 || 127 < val)
+    if ((val = expression() - gLinLc - 2) < -128 || 127 < val )
         error("Short branch target is out of range.");
     putCode(GROUP0, NO_MODE);
     putByte(val);
@@ -1871,11 +1890,11 @@ void    branch(void)
 
 void    lbranch(void)
 {
- #ifdef OPT_OPTIMIZE
+#ifdef OPT_OPTIMIZE
     OPTBL_T shortop;
     val_t   val;
- #endif
-    uint8_t    f;
+#endif
+    uint8_t f;
 
     skipSpace();
     f = checkChar('>');
@@ -1893,6 +1912,7 @@ void    lbranch(void)
         putCode(GROUP0, NO_MODE);
         putWord(0);
         return;
+
  #ifdef OPT_OPTIMIZE
     case -1:
         if (gOpt_f && gOpt_sp < MAXOPTIM) {
@@ -1901,7 +1921,7 @@ void    lbranch(void)
                 putWord(0);
                 return;
             }
-            val = expression() - gOptStk[gOpt_sp] - 2;
+            val                = expression() - gOptStk[gOpt_sp] - 2;
             if (f == 0 && -128 <= val && val <= 127) {
                 gOptChg++;
                 gOptStk[gOpt_sp++] = -1;
@@ -1914,6 +1934,7 @@ void    lbranch(void)
         putWord(0);
         return;
  #endif
+
  #ifdef OPT_OA_FILE
     case -2:
  #endif
@@ -1924,18 +1945,19 @@ void    lbranch(void)
             gOptCount++;
             shortop.prefix = 0;
             shortop.opcode = (gOprPtr->opcode == 0x16 ? 0x20 :
-                       gOprPtr->opcode == 0x17 ? 0x8d : gOprPtr->opcode);
-            gOprPtr = &shortop;
+                              gOprPtr->opcode == 0x17 ? 0x8d : gOprPtr->opcode);
+            gOprPtr        = &shortop;
             putCode(GROUP0, NO_MODE);
             putByte(expression() - gLinLc - 2);
             return;
         }
      #endif
         putCode(GROUP0, NO_MODE);
-        putWord(expression() - gLinLc - (gOprPtr->prefix ? 4 : 3));
+        putWord( expression() - gLinLc - (gOprPtr->prefix ? 4 : 3) );
         return;
     }
 }
+
 
 /*----------------------------------*/
 
@@ -1943,17 +1965,17 @@ void    os9svc(void)
 {
     putCode(GROUP0, NO_MODE);
     skipSpace();
-    printByte(putB(bytExpr()), 15);
+    printByte(putB( bytExpr() ), 15);
 }
 
 void    mod(void)
 {
     uint16_t    os9hdr[4];
-    uint8_t    sum, l;
-    uint8_t    *p;
+    uint8_t     sum, l;
+    uint8_t *   p;
 
-    gOs9_f = 1;
-    gObjLc = gLc = 0;
+    gOs9_f     = 1;
+    gObjLc     = gLc = 0;
     gCrcBuf[0] = gCrcBuf[1] = gCrcBuf[2] = 0xff;
     skipSpace();
     put1Word(os9hdr[0] = 0x87cd);
@@ -1961,7 +1983,7 @@ void    mod(void)
     checkCh_e(',');
     put1Word(os9hdr[2] = expression());
     checkCh_e(',');
-    l = (expression() & 0xff);
+    l          = (expression() & 0xff);
     put1Byte(l);
     checkCh_e(',');
     put1Byte(os9hdr[3] = (expression() & 0xFF));
@@ -1971,16 +1993,16 @@ void    mod(void)
     }
     put1Byte(sum & 0xff);
     if (checkChar(',')) {
-        put1Word(expression());
+        put1Word( expression() );
         checkCh_e(',');
-        put1Word(expression());
+        put1Word( expression() );
     }
     return;
 }
 
 void    emod(void)
 {
- /* if (gOs9_f == 0) error("EMOD without MOD."); */
+    /* if (gOs9_f == 0) error("EMOD without MOD."); */
     gOs9_f = 0;
     put1Byte(~gCrcBuf[0]);
     put1Byte(~gCrcBuf[1]);
@@ -1988,14 +2010,35 @@ void    emod(void)
     gOs9_f = 1;
 }
 
+static void dataValue(val_t value, int size, int listing)
+{
+    if (size == 4) {
+        uint16_t high = (uint16_t)((unsigned int)value >> 16);
+        if (listing)
+            put1Word(high);
+        else
+            put2B(high);
+    }
+    if (size >= 2) {
+        if (listing)
+            put1Word((uint16_t)value);
+        else
+            put2B((uint16_t)value);
+    } else {
+        if (listing)
+            put1Byte(value);
+        else
+            putB(value);
+    }
+}
+
 void    fdb(void)
 {
     skipSpace();
     do {
         if (checkChar('"')) {
-            while (((*gLinPtr != '"') || (*++gLinPtr == '"'))
-                   && (*gLinPtr != '\n')) {
-                if (isKanji(*(uint8_t*)gLinPtr) && gLinPtr[1]) {
+            while (((*gLinPtr != '"') || (*++gLinPtr == '"')) && (*gLinPtr != '\n')) {
+                if (isKanji(*(uint8_t *) gLinPtr) && gLinPtr[1]) {
                     put1Byte(*gLinPtr++);
                     put1Byte(*gLinPtr++);
                 } else {
@@ -2003,9 +2046,9 @@ void    fdb(void)
                 }
             }
         } else {
-            put1Word(expression());
+            dataValue(expression(), 2, 1);
         }
-    } while (checkChar(','));
+    } while ( checkChar(',') );
 }
 
 void    flb(void)
@@ -2015,9 +2058,8 @@ void    flb(void)
     skipSpace();
     do {
         val = expression();
-        put1Word((uint16_t)(val >> 16));
-        put1Word((uint16_t)val);
-    } while (checkChar(','));
+        dataValue(val, 4, 1);
+    } while ( checkChar(',') );
 }
 
 void    fcb(void)
@@ -2025,38 +2067,37 @@ void    fcb(void)
     skipSpace();
     do {
         if (checkChar('"')) {
-            while (((*gLinPtr != '"') || (*++gLinPtr == '"'))
-                   && (*gLinPtr != '\n')) {
+            while (((*gLinPtr != '"') || (*++gLinPtr == '"')) && (*gLinPtr != '\n')) {
                 put1Byte(*gLinPtr++);
             }
         } else if (checkChar('#')) {
             for (;;) {
-                uint8_t    b, c;
-                b = *gLinPtr;
-                if (!isxdigit(b))
+                uint8_t b, c;
+                b  = *gLinPtr;
+                if (!isxdigit(b) )
                     break;
-                c = *++gLinPtr;
+                c  = *++gLinPtr;
                 if (!isxdigit(c)) {
                     error("FCB hexadecimal data after # must have an even number of digits.");
                     break;
                 }
-                put1Byte(toXDigit(b) * 16 + toXDigit(c));
+                put1Byte( toXDigit(b) * 16 + toXDigit(c) );
                 gLinPtr++;
             }
         } else if (checkChar('>')) {
-            put1Word(expression());
+            dataValue(expression(), 2, 1);
         } else {
-            put1Byte(bytExpr());
+            dataValue(bytExpr(), 1, 1);
         }
-    } while (checkChar(','));
+    } while ( checkChar(',') );
 }
 
 static void fccs(uint8_t a)
 {
-    uint8_t    temp[MNEMOSIZE + 1];
-    uint8_t *p;
-    uint8_t    b;
-    uint8_t    c;
+    uint8_t     temp[MNEMOSIZE + 1];
+    uint8_t *   p;
+    uint8_t     b;
+    uint8_t     c;
 
     skipSpace();
     do {
@@ -2065,7 +2106,7 @@ static void fccs(uint8_t a)
             getLabel(temp);
             if (strcasecmp(temp, "modnam") == 0 && gModName) {
                 p = gModName;
-                while ((b = *p++) != '\0') {
+                while ( (b = *p++) != '\0') {
                     if (a && *p == '\0')
                         b |= 0x80;
                     put1Byte(b);
@@ -2075,9 +2116,9 @@ static void fccs(uint8_t a)
             }
         } else if (isSymbl3(c) || c == '%' || c == '(') {
             --gLinPtr;
-            put1Byte(bytExpr());
+            put1Byte( bytExpr() );
         } else {
-            while ((b = *gLinPtr++) != c) {
+            while ( (b = *gLinPtr++) != c) {
                 if (b == '\n') {
                     error("Missing closing delimiter.");
                     return;
@@ -2102,15 +2143,66 @@ void    fcs(void)
     fccs(1);
 }
 
+static int nextComma(void);
+
+static int blockCount(val_t count, int size)
+{
+    if (count < 0 || count > 65535 / size || count > (65536L - gLc) / size) {
+        error("Data block exceeds address space or has a negative count.");
+        return 0;
+    }
+    return 1;
+}
+
+static void fillBlock(val_t count, val_t fill, int size, int mode)
+{
+    if (mode & BLOCK_CHECK) {
+        if (!blockCount(count, size))
+            return;
+        if (size == 1 && (fill < -128 || fill > 255)) {
+            error("Fill value does not fit in one byte.");
+            return;
+        }
+        if (size == 2 && (fill < -32768 || fill > 65535)) {
+            error("Fill value does not fit in one word.");
+            return;
+        }
+    }
+    printWord(gLc, 5);
+    while (count-- > 0)
+        dataValue(fill, size, 0);
+}
+
 void    rzb(void)
 {
-    val_t   b;
-
+    val_t count, fill = 0;
+    int size = gOprPtr->prefix ? gOprPtr->prefix : 1;
+    int mode = gOprPtr->opcode;
     skipSpace();
-    b = invExpr();
-    printWord(gLc, 5);
-    while (b-- > 0)
-        putB(0);
+    count = invExpr();
+    if ((mode & BLOCK_FILL) && nextComma()) {
+        skipSpace();
+        fill = expression();
+    }
+    fillBlock(count, fill, size, mode);
+}
+
+static void labelValue(val_t value)
+{
+    if (gLblPtr) gLblPtr->value = value;
+    clearAddress();
+    printWord(value, 5);
+}
+
+static val_t offsetField(val_t base, val_t count, int checked)
+{
+    long next = (long)base + count;
+    if (checked && (next < 0 || next > 65535)) {
+        error("RS offset is outside 0..65535.");
+        return base;
+    }
+    labelValue(base);
+    return (val_t)next;
 }
 
 /*----------------------------------*/
@@ -2118,91 +2210,74 @@ void    rzb(void)
 void    rmb(void)
 {
     uint16_t    base;
-    val_t   b;
+    val_t       b;
 
     skipSpace();
     if (!gCSectSw) {
-        if (gOrgSFmt_f && (gObjct == OB_SFMT
-          #ifdef OPT_FLEX
-            || gFlex_f
-          #endif
-        )) {
-            base = invExpr();
+        if (gOrgSFmt_f
+            && (gObjct == OB_SFMT
+                 #ifdef OPT_FLEX
+                    || gFlex_f
+                 #endif
+                )
+       ) {
+            base   = invExpr();
             flushObj();
-            gLc += base;
+            gLc   += base;
         } else {
-            if (gRmb_f && gFBasic_f){
+            if (gRmb_f && gFBasic_f) {
                 skipSpace();
-                b = (int)(invExpr());
+                b          = (int) ( invExpr() );
                 printWord(gLc, 5);
-                gRmb_sp += b;
-                gObjCnt += b;
-                gLc += b;
+                gRmb_sp   += b;
+                gObjCnt   += b;
+                gLc       += b;
             } else {
                 rzb();
             }
         }
     } else {
-        base = invExpr();
-        if (gLblPtr)
-            gLblPtr->value = gCSectBase;
-        clearAddress();
-        printWord(gCSectBase, 5);
-        gCSectBase += base;
+        base           = invExpr();
+        gCSectBase = (uint16_t)offsetField(gCSectBase, base, 0);
     }
 }
 
 void    equ(void)
 {
-    val_t   val;
-
+    val_t value;
     skipSpace();
-    val = expression();         /* invExpr() */
-    if (gLblPtr)
-        gLblPtr->value = val;
-    clearAddress();
-    printWord(val, 5);
-}
-
-void    set(void)
-{
-    val_t   val;
-
-    skipSpace();
-    val = invExpr();
-    if (gLblPtr)
-        gLblPtr->value = val;
-    clearAddress();
-    printWord(val, 5);
+    value = (gOprPtr->opcode & EQU_RESOLVED) ? invExpr() : expression();
+    labelValue(value);
 }
 
 void    org(void)
 {
-    uint16_t    origin;
+    uint16_t origin;
 
     skipSpace();
     origin = (uint16_t) invExpr();
     if (gStartAddr == 0xFFFF && gOrg_f == 0)
         gStartAddr = origin;
     if (gOs9_f) {
-        gCSectSw = 1;
+        gCSectSw   = 1;
         gCSectBase = origin;
     } else {
-        if ((gOrgSFmt_f && (gObjct == OB_SFMT
-          #ifdef OPT_FLEX
-            || gFlex_f
-          #endif
-            )) || gOrg_f == 0) {
+        if (gOrg_f == 0
+            || ( gOrgSFmt_f
+                && (gObjct == OB_SFMT
+                  #ifdef OPT_FLEX
+                    || gFlex_f
+                  #endif
+                   )
+               )
+       ) {
             flushObj();
             gObjLc = gLc = origin;
         } else if (gLc > origin) {
             error("Invalid ORG operand.");
             return;
         } else if (gLc < origin) {
-            uint16_t    i;
-            i = origin - gLc;
-            while (i-- > 0)
-                putB(0);
+            fillBlock(origin - gLc, 0, 1, 0);
         }
     }
     printAddress(origin);
@@ -2240,60 +2315,299 @@ void    vsct(void)
     gCSectSw = 3;
 }
 
+
 /*----------------------------------*/
 
-void    library(void)
+static int textOperand(char *dst, int size)
 {
-    uint8_t    fname[FNAMESZ + 1];
-    FILE   *fp;
-    uint8_t    c;
-    int     i;
-    uint8_t *p;
+    uint8_t  c;
+    int      quote = 0;
+    int      n     = 0;
+    char const *prefix = "";
+    skipSpace();
+    if (*gLinPtr == '"' || *gLinPtr == '\'') {
+        quote = *gLinPtr++;
+    } else if (*gLinPtr == '<') {
+        ++gLinPtr;
+        quote = '>';
+    }
+ #ifdef INCLUDIR
+    if (quote == '>') {
+        prefix = gIncDirName;
+    } else if (*gLinPtr == '$') {
+        char name[LBLSIZE + 1];
+        ++gLinPtr;
+        getLabel(name);
+        if (strcmp(name, "INC")) {
+            error("Invalid include file name.");
+            return 0;
+        }
+        prefix = gIncDirName;
+    }
+ #endif
+    if (strlen(prefix) >= (size_t)size) {
+        error("Operand is too long.");
+        return 0;
+    }
+    strcpy(dst, prefix);
+    n = (int)strlen(prefix);
+    while ((c = *(uint8_t const*)gLinPtr) != 0 && c != '\n') {
+        if (quote ? (c == quote) : (isspace(c) || c == ',' || c == ';')) {
+            break;
+        }
+        if (n >= size - 1) {
+            error("Operand is too long.");
+            dst[0] = 0;
+            return 0;
+        }
+        dst[n++] = c;
+        ++gLinPtr;
+    }
+    dst[n] = 0;
+    if (quote && !checkChar(quote)) {
+        error("Missing closing quote.");
+        return 0;
+    }
+    return 1;
+}
 
+static int nextComma(void)
+{
+    char *saved = gLinPtr;
+    skipSpace();
+    if (checkChar(',') )
+        return 1;
+    gLinPtr = saved;
+    return 0;
+}
+
+static FILE *openSearch(char const *name, char const *mode)
+{
+    FILE *  fp = fopen(name, mode);
+    char    path[FNAMESZ + 1];
+    int     i;
+
+    if (fp)
+        return fp;
+    if (name[0] == '/' || name[0] == '\\' || (name[0] && name[1] == ':') )
+        return NULL;
+    for (i = -1; i < extraIncCount; ++i) {
+        char const *dir = i < 0 ? gIncDirName : extraIncDirs[i];
+        if (strlen(dir) + strlen(name) + 2 > sizeof (path) )
+            continue;
+        strcpy(path, dir);
+        if (*path && path[strlen(path) - 1] != '/' && path[strlen(path) - 1] != '\\')
+            strcat(path, "/");
+        strcat(path, name);
+        fp = fopen(path, mode);
+        if (fp)
+            return fp;
+    }
+    return NULL;
+}
+
+void incdir(void)
+{
+    char path[FNAMESZ + 1];
+    clearAddress();
+    if (!textOperand(path, sizeof(path)) )
+        return;
+    if (!*path) {
+        error("Empty include directory.");
+        return;
+    }
+    if (extraIncCount == EXTRA_INCDIRS) {
+        error("Too many include directories.");
+        return;
+    }
+    extraIncDirs[extraIncCount] = mallocE(strlen(path) + 1);
+    strcpy(extraIncDirs[extraIncCount++], path);
+}
+
+void incbin(void)
+{
+    char    name[FNAMESZ + 1];
+    val_t   offset = 0, length = -1;
+    FILE *  fp;
+    long    fileSize, available;
+    int     c;
+
+    if (!textOperand(name, sizeof(name)) )
+        return;
+    if (nextComma()) {
+        skipSpace();
+        offset = invExpr();
+        if (nextComma()) {
+            skipSpace();
+            length = invExpr();
+            if (length < 0) {
+                error("Invalid INCBIN length.");
+                return;
+            }
+        }
+    }
+    if (offset < 0 || length < -1) {
+        error("Invalid INCBIN offset or length.");
+        return;
+    }
+    fp         = openSearch(name, "rb");
+    if (!fp) {
+        error("Cannot open INCBIN file.");
+        return;
+    }
+    if (fseek(fp, 0, SEEK_END)
+      || ( fileSize = ftell(fp) ) < 0
+      || offset > fileSize
+      || fseek(fp, offset, SEEK_SET) )
+    {
+        error("Invalid INCBIN offset or unreadable file.");
+        fclose(fp);
+        return;
+    }
+    available  = fileSize - offset;
+    if (length >= 0 && length < available)
+        available = length;
+    if (available > 65535L || available > 65536L - gLc) {
+        error("INCBIN exceeds address space.");
+        fclose(fp);
+        return;
+    }
+    while (available-- > 0) {
+        c = fgetc(fp);
+        if (c == EOF) {
+            error("Cannot read INCBIN file.");
+            break;
+        }
+        put1Byte(c);
+    }
+    fclose(fp);
+}
+
+void alignData(void)
+{
+    val_t   offset = 0, boundary = 2, bits;
+    long    count;
+    if (gOprPtr->prefix == 1) {
+        skipSpace();
+        bits       = invExpr();
+        if (bits < 0 || bits > 16) {
+            error("ALIGN exponent must be 0..16.");
+            return;
+        }
+        boundary   = 1L << bits;
+    } else if (gOprPtr->prefix == 2) {
+        skipSpace();
+        offset     = invExpr();
+        skipSpace();
+        if (!checkCh_e(',') )
+            return;
+        skipSpace();
+        boundary   = invExpr();
+        if (boundary <= 0 || boundary > 65536 || offset < 0 || offset > 65535){
+            error("Invalid CNOP offset or alignment.");
+            return;
+        }
+    }
+    count = (boundary - gLc % boundary) % boundary + offset;
+    fillBlock(count, 0, 1, BLOCK_CHECK);
+}
+
+void rsOffset(void)
+{
+    val_t   count;
+    clearAddress();
+    if (gOprPtr->opcode == RS_RESET) {
+        rsCounter = 0;
+    } else if (gOprPtr->opcode == RS_SET) {
+        skipSpace();
+        count      = invExpr();
+        if (count < 0 || count > 65535) {
+            error("RS offset is outside 0..65535.");
+            return;
+        }
+        rsCounter  = count;
+    } else {
+        skipSpace();
+        count      = invExpr();
+        if (count < 0 || count > 65535 / gOprPtr->prefix) {
+            error("RS count is outside the supported range.");
+            return;
+        }
+        rsCounter = offsetField(rsCounter, count * gOprPtr->prefix, 1);
+    }
+    rsDefined = 1;
+}
+
+void printText(void)
+{
+    char    text[MAXCHAR + 1];
+    int     more;
+    clearAddress();
+    do {
+        skipSpace();
+        if (*gLinPtr == '"' || *gLinPtr == '\'') {
+            if (!textOperand(text, sizeof(text)) )
+                return;
+        } else {
+            int n = 0;
+            while (*gLinPtr && *gLinPtr != '\n' && *gLinPtr != ';' && *gLinPtr != ',')
+                text[n++] = *gLinPtr++;
+            while ( n && isspace( (uint8_t) text[n - 1] ) )
+                --n;
+            text[n] = 0;
+            if (*gLinPtr == ';')
+                while (*gLinPtr && *gLinPtr != '\n')
+                    ++gLinPtr;
+        }
+        if (gPass == 2)
+            printf("%s\n", text);
+        more = nextComma();
+    } while (more);
+}
+
+void printValue(void)
+{
+    val_t val;
     clearAddress();
     skipSpace();
 
-    switch (c = *gLinPtr) {
-    case '<':
-        c = '>';
-    case '\'':
-    case '"':
-        gLinPtr++;
-        break;
-    default:
-        c = '\0';
-    }
- #ifdef INCLUDIR
-    if (c == '>')
-        p = stpcpy(fname, gIncDirName);
-    else
- #endif
-        p = fname;
- #ifdef INCLUDIR
-    if (*gLinPtr == '$' && c != '>') {
-        ++gLinPtr;
-        getLabel(fname);
-        if (strcmp(fname, "INC") == 0) {
-            p = stpcpy(fname, gIncDirName);
-        } else {
-            error("Invalid include file name.");
+    do {
+        skipSpace();
+        val = expression();
+        if (gPass == 2) {
+            unsigned int    u = (unsigned int) val;
+            char            ascii[5], binary[33];
+            int             i;
+            for (i = 0; i < 4; ++i) {
+                int c = ( u >> ( (3 - i) * 8 ) ) & 255;
+                ascii[i] = c >= 32 && c <= 126 ? c : '.';
+            }
+            ascii[4]   = 0;
+            for (i = 0; i < 32; ++i)
+                binary[i] = '0' + ( ( u >> (31 - i) ) & 1 );
+
+            binary[32] = 0;
+            printf("$%X %d \"%s\" %%%s\n", u, val, ascii, binary);
         }
-    }
- #endif
-    for (i = FNAMESZ - 2; i--; p++, gLinPtr++) {
-        *p = *gLinPtr;
-        if (*p == '\n' || isspace(*p) || *p == '\0' || *p == c)
-            break;
-    }
-    if (i == 0) {
-        error("File name is too long.");
+    } while ( nextComma() );
+}
+
+void    library(void)
+{
+    char fname[FNAMESZ + 1];
+    FILE *fp;
+    clearAddress();
+    if (!textOperand(fname, sizeof(fname)))
         return;
-    }
-    *p = '\0';
     if (gVerbos_f)
         fprintf(STDERR, "[%s]\n", fname);
-    DEBMSGF((STDERR, "include %s  (#%d)\n", fname, gFile_sp + 1));
-    fp = fopenE(fname, "r");
+    DEBMSGF( (STDERR, "include %s  (#%d)\n", fname, gFile_sp + 1) );
+    fp                         = openSearch( (char const *) fname, "r" );
+    if (!fp) {
+        error("Cannot open include file.");
+        return;
+    }
+
     if (gFile_sp >= MAXLIB) {
         error("Include nesting is too deep.");
         exit(1);
@@ -2301,24 +2615,24 @@ void    library(void)
     strcpy(gFilStk2[gFile_sp].srcname, gSrcFName);
     gFilStk2[gFile_sp].srcline = gSrcLine;
     strcpy(gSrcFName, fname);
-    gSrcLine = 0;
-    gFileStk[gFile_sp++] = gSrcFp;
-    gSrcFp = fp;
+    gSrcLine                   = 0;
+    gFileStk[gFile_sp++]       = gSrcFp;
+    gSrcFp                     = fp;
 }
 
 int     popFile(void)
 {
     if (gFile_sp <= 0)
         return 0;
-    gSrcFp = gFileStk[--gFile_sp];
+    gSrcFp     = gFileStk[--gFile_sp];
     strcpy(gSrcFName, gFilStk2[gFile_sp].srcname);
-    gSrcLine = gFilStk2[gFile_sp].srcline;
+    gSrcLine   = gFilStk2[gFile_sp].srcline;
     return 1;
 }
 
 void    endop(void)
 {
-    uint16_t    w;
+    uint16_t w;
 
     clearAddress();
     fclose(gSrcFp);
@@ -2326,18 +2640,24 @@ void    endop(void)
         return;
     gEOF_f = 1;
     skipSpace();
-    w = (*gLinPtr != '\n') ? expression() : 0;
+    w      = (*gLinPtr != '\n') ? expression() : 0;
     if (gEntryAddr == 0xFFFF)
         gEntryAddr = w == 0 ? gStartAddr : w;
     printWord(gEntryAddr, 5);
-    if(gRmb_f && gFBasic_f)
+    if (gRmb_f && gFBasic_f)
         gObjCnt -= gRmb_sp;
 }
+
 
 /*----------------------------------*/
 
 void    opt(void)
 {
+    if (gOprPtr->prefix == LIST_ABSOLUTE) {
+        clearAddress();
+        if (gPass == 2 && gLstFp) gList = gOprPtr->opcode;
+        return;
+    }
     skipSpace();
     if (*gLinPtr == 'l') {
         ++gList;
@@ -2366,42 +2686,41 @@ void    page(void)
 #ifdef OPT_EXT_INST
 void    none_d(void)
 {
-    uint8_t *p;
-    uint8_t i,l;
-    static uint8_t tbl[16][5] = {
-        {4,0x40,0x50,0x82,0x00},    /* negd 0x1040 */
-        {0,0,0,0,0},
-        {0,0,0,0,0},
-        {2,0x53,0x43,0,0},          /* comd 0x1043 */
-        {2,0x44,0x56,0,0},          /* lsrd 0x1044 */
-        {0,0,0,0,0},
-        {2,0x46,0x56,0,0},          /* rord 0x1046 */
-        {2,0x47,0x56,0,0},          /* asrd 0x1047 */
-        {2,0x58,0x49,0,0},          /* lsld 0x1048 */
-        {2,0x59,0x49,0,0},          /* rold 0x1049 */
-        {3,0x83,0x00,0x01,0},       /* decd 0x104a */
-        {0,0,0,0,0},
-        {3,0xc3,0x00,0x01,0},       /* incd 0x104c */
-        {2,0xed,0x7e,0,0},          /* tstd 0x104d */
-        {0,0,0,0,0},
-        {2,0x4f,0x5f,0,0}           /* clrd 0x104f */
+    uint8_t *       p;
+    uint8_t         i, l;
+    static uint8_t  tbl[16][5] = {
+        { 4, 0x40, 0x50, 0x82, 0x00          }, /* negd 0x1040 */
+        { 0, 0,    0,    0,    0             },
+        { 0, 0,    0,    0,    0             },
+        { 2, 0x53, 0x43, 0,    0             }, /* comd 0x1043 */
+        { 2, 0x44, 0x56, 0,    0             }, /* lsrd 0x1044 */
+        { 0, 0,    0,    0,    0             },
+        { 2, 0x46, 0x56, 0,    0             }, /* rord 0x1046 */
+        { 2, 0x47, 0x56, 0,    0             }, /* asrd 0x1047 */
+        { 2, 0x58, 0x49, 0,    0             }, /* lsld 0x1048 */
+        { 2, 0x59, 0x49, 0,    0             }, /* rold 0x1049 */
+        { 3, 0x83, 0x00, 0x01, 0             }, /* decd 0x104a */
+        { 0, 0,    0,    0,    0             },
+        { 3, 0xc3, 0x00, 0x01, 0             }, /* incd 0x104c */
+        { 2, 0xed, 0x7e, 0,    0             }, /* tstd 0x104d */
+        { 0, 0,    0,    0,    0             },
+        { 2, 0x4f, 0x5f, 0,    0             } /* clrd 0x104f */
     };
 
     if (gM6809_f == 0) {
-        putCode(GROUP0, NO_MODE);   /*  none(); */
+        putCode(GROUP0, NO_MODE);               /*  none(); */
         return;
     }
  #ifdef OPT_UNDOC
-    if (gM6809_f && gUndoc_f && gOprPtr->opcode == 0x40)
-    {
-        printByte(putB(0x50), 10);  /* negb */
-        printByte(putB(0x42), 12);  /* ngca */
+    if (gM6809_f && gUndoc_f && gOprPtr->opcode == 0x40) {
+        printByte(putB(0x50), 10);              /* negb */
+        printByte(putB(0x42), 12);              /* ngca */
         return;
     }
  #endif
-    p = (uint8_t *)(tbl[gOprPtr->opcode - 0x40]);
-    for (i = 10,l = *p++; l--; i += 2)
-        printByte(putB(*p++),i);
+    p = (uint8_t *) (tbl[gOprPtr->opcode - 0x40]);
+    for (i = 10, l = *p++; l--; i += 2)
+        printByte(putB(*p++), i);
 }
 
 static void putOped(uint8_t o1, uint8_t d1, uint8_t o2, uint8_t d2)
@@ -2414,14 +2733,13 @@ static void putOped(uint8_t o1, uint8_t d1, uint8_t o2, uint8_t d2)
 
 static void putOpedR(uint8_t d1, uint8_t d2, int reg)
 {
-    putOped(0x40+0x20, index0(d1,reg), 0x20, index0(d2,reg));
+    putOped( 0x40 + 0x20, index0(d1, reg), 0x20, index0(d2, reg) );
 }
 
-void    oped(void)
-    /* andd  ord  eord  adcd  sbcd */
+void    oped(void)  /* andd  ord  eord  adcd  sbcd */
 {
-    int  val;
-    int  reg, i, val2;
+    int val;
+    int reg, i, val2;
 
     if (gM6809_f == 0) {
         load2();
@@ -2429,19 +2747,20 @@ void    oped(void)
     }
     gIndirect = 0;
     skipSpace();
+
     if (checkChar('#')) {
         val = expression();
         putOped(0x40, val & 0xff, 0, val >> 8);
     } else if (checkChar(',')) {
         if (checkChar('-')) {
-            if (checkChar('-'))
-                putOpedR(0x82, 0x82,getReg(INDEXREG));
+            if (checkChar('-') )
+                putOpedR( 0x82, 0x82, getReg(INDEXREG) );
             else
-                putOpedR(0x84, 0x82,getReg(INDEXREG));
+                putOpedR( 0x84, 0x82, getReg(INDEXREG) );
         } else {
             reg = getReg(INDEXREG);
             if (checkChar('+')) {
-                if (checkChar('+'))
+                if (checkChar('+') )
                     putOpedR(1, 0x81, reg);
                 else
                     putOpedR(1, 0x80, reg);
@@ -2452,7 +2771,7 @@ void    oped(void)
     } else {
         val = expression();
         if (checkChar(',')) {
-            switch (reg = getReg(INDEXREG | PC | PCR)) {
+            switch ( reg = getReg(INDEXREG | PC | PCR)) {
             case X:
             case Y:
             case U:
@@ -2461,45 +2780,46 @@ void    oped(void)
                     put1Byte(gOprPtr->opcode + 0x20 + i * 0x40);
                     if (gValid_f && -16 <= val && val <= 15
                             && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
-                        put1Byte(index0((val || gIdxOfs_f) ? (val & 0x1f) : 0x84, reg));
+                        put1Byte( index0( (val || gIdxOfs_f) ? (val & 0x1f) : 0x84, reg ) );
                     } else if (checkByte(val)) {
-                        put1Byte(index0(0x88, reg));
+                        put1Byte( index0(0x88, reg) );
                         put1Byte(val);
                     } else {
-                        put1Byte(index0(0x89, reg));
+                        put1Byte( index0(0x89, reg) );
                         put1Word(val);
                     }
                 }
                 break;
+
             case PC:
                 for (++val, i = 1; i >= 0; --i, --val) {
                     put1Byte(gOprPtr->opcode + 0x20 + i * 0x40);
                     if (checkByte(val)) {
-                        put1Byte(index0(0x8c, 0));
+                        put1Byte( index0(0x8c, 0) );
                         put1Byte(val);
                     } else {
-                        put1Byte(index0(0x8d, 0));
+                        put1Byte( index0(0x8d, 0) );
                         put1Word(val);
                     }
                 }
                 break;
+
             case PCR:
                 val2 = gLinLc + 3;
                 for (++val, i = 1; i >= 0; --i, --val, val2 += 3) {
                     put1Byte(gOprPtr->opcode + 0x20 + i * 0x40);
                     if (checkByte(val - val2)) {
-                        put1Byte(index0(0x8c, 0));
+                        put1Byte( index0(0x8c, 0) );
                         put1Byte(val - val2);
                     } else {
                         val2++;
-                        put1Byte(index0(0x8d, 0));
+                        put1Byte( index0(0x8d, 0) );
                         put1Word(val - val2);
                     }
                 }
             }
-        } else if ((gByte_f ||
-                ((uint16_t)(val - (gDp << 8)) <= 254 && gValid_f && !gWord_f))) {
-            putOped(0x40+0x10, val - (gDp << 8) + 1, 0x10, val - (gDp << 8));
+        } else if (gByte_f || ((uint16_t)(val - (gDp << 8)) <= 254 && gValid_f && !gWord_f)) {
+            putOped(0x40 + 0x10, val - (gDp << 8) + 1, 0x10, val - (gDp << 8));
         } else {
             put1Byte(gOprPtr->opcode + 0x30 + 0x40);
             put1Word(val + 1);
@@ -2513,30 +2833,30 @@ void    oped(void)
 #ifdef OPT_EXT_INST
 void    none_wq(void)
 {
-    static uint8_t tbl[] = {
-        0x10,0xed,0x7c,0,                   /*  tstq  stq -4,s; */
-        0x10,0x4f,0x10,0x5f,                /*  clrq  clrw;clrd */
-        0x10,0x53,0x10,0x43,                /*  comq  comw;comd */
-        0x10,0x44,0x10,0x56,                /*  lsrq  lsrd;rorw */
-        0x10,0x47,0x10,0x56,                /*  asrq  asrd;rorw */
-        0x10,0x46,0x10,0x56,                /*  rorq  rord;rorw */
-        0x10,0x59,0x10,0x49,                /*  rolq  rolw;rold */
-        0x1c,0xfe,0x10,0x59,                /*  lslw  andcc #$fe;rolw */
-        0x10,0x53,0x10,0x5c,                /*  negw  comw;incw */
-        0x10,0x38,0x68,0xe1,0x10,0x56,      /*  asrw  pshw;asl ,s++;rorw */
-        0x1c,0xfe,0x10,0x59,0x10,0x49,      /*  lslq  andcc #$fe;rolw;rold */
-        0x10,0x5c,0x26,0x02,0x10,0x4c,      /*  incq  incw;bne *+4;incd */
-        0x10,0x5d,0x26,0x02,0x10,0x4a,0x10,0x5a,
-                                            /* decq  tstw;bne *+4;decd;decw */
-        0x10,0x43,0x10,0x53,0x10,0x5c,0x26,0x02,0x10,0x4c,
-                                            /*  negq  comd;comw;incw;bne *+4;incd*/
+    static uint8_t  tbl[] = {
+        0x10, 0xed, 0x7c, 0,                /*  tstq  stq -4,s; */
+        0x10, 0x4f, 0x10, 0x5f,             /*  clrq  clrw;clrd */
+        0x10, 0x53, 0x10, 0x43,             /*  comq  comw;comd */
+        0x10, 0x44, 0x10, 0x56,             /*  lsrq  lsrd;rorw */
+        0x10, 0x47, 0x10, 0x56,             /*  asrq  asrd;rorw */
+        0x10, 0x46, 0x10, 0x56,             /*  rorq  rord;rorw */
+        0x10, 0x59, 0x10, 0x49,             /*  rolq  rolw;rold */
+        0x1c, 0xfe, 0x10, 0x59,             /*  lslw  andcc #$fe;rolw */
+        0x10, 0x53, 0x10, 0x5c,             /*  negw  comw;incw */
+        0x10, 0x38, 0x68, 0xe1, 0x10, 0x56, /*  asrw  pshw;asl ,s++;rorw */
+        0x1c, 0xfe, 0x10, 0x59, 0x10, 0x49, /*  lslq  andcc #$fe;rolw;rold */
+        0x10, 0x5c, 0x26, 0x02, 0x10, 0x4c, /*  incq  incw;bne *+4;incd */
+        0x10, 0x5d, 0x26, 0x02, 0x10, 0x4a, 0x10, 0x5a,
+        /* decq  tstw;bne *+4;decd;decw */
+        0x10, 0x43, 0x10, 0x53, 0x10, 0x5c, 0x26, 0x02,0x10, 0x4c,
+        /*  negq  comd;comw;incw;bne *+4;incd*/
         0
     };
-    uint8_t *p;
-    uint8_t l;
+    uint8_t *       p;
+    uint8_t         l;
 
-    p = tbl + gOprPtr->prefix;
-    l = gOprPtr->opcode;
+    p  = tbl + gOprPtr->prefix;
+    l  = gOprPtr->opcode;
     while (l--)
         put1Byt2(*p++);
 }
@@ -2544,21 +2864,23 @@ void    none_wq(void)
 static void putOpeqR(uint16_t *op, uint8_t d1, uint8_t d2, int reg)
 {
     put1Word(op[1] + 0x20);
-    put1Byte(index0(d1,reg));
+    put1Byte( index0(d1, reg) );
     put1Word(*op + 0x20);
-    put1Byte(index0(d2,reg));
+    put1Byte( index0(d2, reg) );
 }
 
 void        opeq(void)  /* addq  subq */
 {
-    int16_t val, val2;
-    int16_t reg, i;
-    uint16_t op[2];
+    int16_t     val;
+    int16_t     val2;
+    int16_t     reg, i;
+    uint16_t    op[2];
 
-    op[0] = gOprPtr->prefix + 0x1000;   /* d */
-    op[1] = gOprPtr->opcode + 0x1000;   /* w */
-    gIndirect = 0;
+    op[0]      = gOprPtr->prefix + 0x1000;  /* d */
+    op[1]      = gOprPtr->opcode + 0x1000;  /* w */
+    gIndirect  = 0;
     skipSpace();
+
     if (checkChar('#')) {
         imm4Expr(&val, &val2);
         put1Word(op[1]);
@@ -2567,95 +2889,99 @@ void        opeq(void)  /* addq  subq */
         put1Word(val);
     } else if (checkChar(',')) {
         if (checkChar('-')) {
-            if (checkChar('-'))
-                if (checkChar('-'))
-                    if (checkChar('-'))
-                        putOpeqR(op,0x83,0x83,getReg(INDEXREG));
+            if (checkChar('-') )
+                if (checkChar('-') )
+                    if (checkChar('-') )
+                        putOpeqR( op, 0x83, 0x83, getReg(INDEXREG) );
                     else
-                        putOpeqR(op,0x82,0x83,getReg(INDEXREG));
+                        putOpeqR( op, 0x82, 0x83, getReg(INDEXREG) );
                 else
-                        putOpeqR(op,0x84,0x83,getReg(INDEXREG));
+                        putOpeqR( op, 0x84, 0x83, getReg(INDEXREG) );
             else
-                        putOpeqR(op,0x01,0x82,getReg(INDEXREG));
+                        putOpeqR( op, 0x01, 0x82, getReg(INDEXREG) );
         } else {
             reg = getReg(INDEXREG);
             if (checkChar('+')) {
-                if (checkChar('+'))
-                    if (checkChar('+'))
+                if (checkChar('+')) {
+                    if (checkChar('+')) {
                         if (checkChar('+')) {
-                            putOpeqR(op,2,0x84,reg);
+                            putOpeqR(op, 2, 0x84, reg);
                             put1Byte((reg == Y) ? 0x31 :
                                      (reg == U) ? 0x32 :
                                      (reg == S) ? 0x33 : 0x30 );
-                            put1Byte(index0(4,reg));
+                            put1Byte(index0(4, reg));
                         } else {
-                            putOpeqR(op,2,0x84,reg);
+                            putOpeqR(op, 2, 0x84, reg);
                             put1Byte((reg == Y) ? 0x31 :
                                      (reg == U) ? 0x32 :
                                      (reg == S) ? 0x33 : 0x30 );
-                            put1Byte(index0(3,reg));
+                            put1Byte(index0(3, reg));
+                        }
                     } else {
-                            putOpeqR(op,2,0x81,reg);
+                        putOpeqR(op, 2, 0x81, reg);
+                    }
                 } else {
-                            putOpeqR(op,2,0x80,reg);
+                    putOpeqR(op, 2, 0x80, reg);
                 }
             } else {
-                    putOpeqR(op,2,0x84,reg);
+                putOpeqR(op, 2, 0x84, reg);
             }
         }
     } else {
         val = expression();
         if (checkChar(',')) {
-            switch (reg = getReg(INDEXREG | PC | PCR)) {
+            switch ( reg = getReg(INDEXREG | PC | PCR)) {
             case X:
             case Y:
             case U:
             case S:
-                for (val+=2, i = 1; i >= 0; --i, val-= 2) {
+                for (val += 2, i = 1; i >= 0; --i, val -= 2) {
                     put1Word(op[i] + 0x20);
-                    if (gValid_f && -16 <= val && val <= 15
-                            && (!gIdxOfs_f || (!gByte_f && !gWord_f))) {
-                        put1Byte(index0((val || gIdxOfs_f) ? (val & 0x1f) : 0x84, reg));
+                    if (gValid_f && -16 <= val && val <= 15 && ( !gIdxOfs_f || (!gByte_f && !gWord_f) )) {
+                        put1Byte( index0( (val || gIdxOfs_f) ? (val & 0x1f) : 0x84, reg ) );
                     } else if (checkByte(val)) {
-                        put1Byte(index0(0x88, reg));
+                        put1Byte( index0(0x88, reg) );
                         put1Byte(val);
                     } else {
-                        put1Byte(index0(0x89, reg));
+                        put1Byte( index0(0x89, reg) );
                         put1Word(val);
                     }
                 }
                 break;
+
             case PC:
-                for (val += 2, i = 1; i >= 0; --i, val-= 2) {
+                for (val += 2, i = 1; i >= 0; --i, val -= 2) {
                     put1Word(op[i] + 0x20);
                     if (checkByte(val)) {
-                        put1Byte(index0(0x8c, 0));
+                        put1Byte( index0(0x8c, 0) );
                         put1Byte(val);
                     } else {
-                        put1Byte(index0(0x8d, 0));
+                        put1Byte( index0(0x8d, 0) );
                         put1Word(val);
                     }
                 }
                 break;
+
             case PCR:
                 val2 = gLinLc + 4;
                 for (val += 2, i = 1; i >= 0; --i, val -= 2, val2 += 4) {
                     put1Word(op[i] + 0x20);
                     if (checkByte(val - val2)) {
-                        put1Byte(index0(0x8c, 0));
+                        put1Byte( index0(0x8c, 0) );
                         put1Byte(val - val2);
                     } else {
                         val2++;
-                        put1Byte(index0(0x8d, 0));
+                        put1Byte( index0(0x8d, 0) );
                         put1Word(val - val2);
                     }
                 }
             }
-        } else if ((gByte_f || ((uint16_t)(val - (gDp << 8)) <= 253 && gValid_f && !gWord_f))) {
+        } else if (gByte_f
+            || ((uint16_t)(val - (gDp << 8)) <= 253 && gValid_f && !gWord_f)) {
             put1Word(op[1] + 0x10);
             put1Byte(val - (gDp << 8) + 2);
             put1Word(op[0] + 0x10);
-            put1Byte(val - (gDp << 8));
+            put1Byte( val - (gDp << 8) );
         } else {
             put1Word(op[1] + 0x30);
             put1Word(val + 2);
@@ -2668,6 +2994,7 @@ void        opeq(void)  /* addq  subq */
 
 
 /*---------------------------------------------------------------------------*/
+
 static OPTBL_T *oOpHash[256];
 
 static int  hash(uint8_t *s)
@@ -2676,7 +3003,7 @@ static int  hash(uint8_t *s)
 
     h = 0;
     while (*s)
-        h = (h<<2) + h + *s++;
+        h = (h << 2) + h + *s++;
     return (h & 0xff);
 }
 
@@ -2693,12 +3020,12 @@ OPTBL_T *srchOpTbl(uint8_t *s)
 
 void    initOpTbl(void)
 {
-    OPTBL_T *p;
-    OPTBL_T *q;
-    int  h;
+    OPTBL_T *   p;
+    OPTBL_T *   q;
+    int         h;
 
     for (p = gOpTab; *p->mnemonic; p++) {
-        q = oOpHash[h = hash(p->mnemonic)];
+        q      = oOpHash[h = hash(p->mnemonic)];
         if (q) {
             while (q->nl != NULL)
                 q = q->nl;
@@ -2706,58 +3033,112 @@ void    initOpTbl(void)
         } else {
             oOpHash[h] = p;
         }
-        p->nl = NULL;
+        p->nl  = NULL;
     }
 }
 
 
-
-
 /*---------------------------------------------------------------------------*/
+
 static void co_if(uint8_t f)
 {
     int val;
 
     val = 0;
-    if (f >= CO_IF) {
+    if ((f >= CO_IF || f == CO_IFP1) && f != CO_ELIF && gCoStk[gCo_sp] < 0) {
+        /* Do not evaluate operands inside an inactive parent branch. */
+        if (gCo_sp >= GCO_MAX) {
+            error("Conditional nesting is too deep.");
+            return;
+        }
+        gCoStk[++gCo_sp] = -2;
+        return;
+    }
+
+    if (f == CO_IFD || f == CO_IFND) {
+        char        name[LBLSIZE + 1];
+        LBLTBL_T *  lp;
+        skipSpace();
+        getLabel(name);
+        lp     = refLabel(name);
+        val    = ( rsDefined && !strcasecmp(name, "__RS") )
+                 || (lp && lp->line < gLineNo);
+        if (f == CO_IFND)
+            val = !val;
+    } else if (f == CO_IFC || f == CO_IFNC) {
+        char a[MAXCHAR + 1], b[MAXCHAR + 1];
+        if (!textOperand(a, sizeof(a)))
+            return;
+        skipSpace();
+        if (!checkCh_e(','))
+            return;
+        if (!textOperand(b, sizeof(b)))
+            return;
+        val = !strcmp(a, b);
+        if (f == CO_IFNC)
+            val = !val;
+    } else if (f >= CO_IF && (f != CO_ELIF || gCoStk[gCo_sp] == -1)) {
         skipSpace();
         val = invExpr();
     }
+    if (f != CO_ELIF && (f >= CO_IF || f == CO_IFP1) && gCo_sp >= GCO_MAX) {
+        error("Conditional nesting is too deep.");
+        return;
+    }
+    if (f == CO_ENDC && gCo_sp == 0) {
+        error("ENDIF without a matching IF.");
+        return;
+    }
+
     switch (f) {
     case CO_IFP1:
-        gCoStk[++gCo_sp] = (gPass == 1) ? 2 : -3;
+        gCoStk[++gCo_sp]   = (gPass == 1) ? 2 : -3;
         break;
+
     case CO_IFN:
-        val = !val;
+        val                = !val;
         goto J1;
+
     case CO_IFGE:
-        val = (val >= 0);
+        val                = (val >= 0);
         goto J1;
+
     case CO_IFGT:
-        val = (val > 0);
+        val                = (val > 0);
         goto J1;
+
     case CO_IFLE:
-        val = (val <= 0);
+        val                = (val <= 0);
         goto J1;
+
     case CO_IFLT:
-        val = (val < 0);
+        val                = (val < 0);
+
+    case CO_IFD:
+    case CO_IFND:
+    case CO_IFC:
+    case CO_IFNC:
     case CO_IF:
- J1:
-        gCoStk[++gCo_sp] = (val) ? 1 : -1;
+      J1:
+        gCoStk[++gCo_sp]   = (val) ? 1 : -1;
         break;
+
     case CO_ELIF:
         if (gCoStk[gCo_sp] == -1) {
             gCoStk[gCo_sp] = (val) ? 1 : -1;
             break;
         }
+        /*[[through]];*/
+
     case CO_ELSE:
         switch (gCoStk[gCo_sp]) {
-        case  0: error("ELSE or ELSIF without a matching IF.");break;
-        case -1: gCoStk[gCo_sp] = 1; break;
-        case  1: gCoStk[gCo_sp] = -2; break;
+        case  0: error("ELSE or ELSIF without a matching IF."); break;
+        case -1: gCoStk[gCo_sp]    = 1 ; break;
+        case  1: gCoStk[gCo_sp]    = -2; break;
         case  2: error("ELSE or ELSIF cannot be paired with IFP1.");
         }
         break;
+
     case CO_ENDC:
         if (gCoStk[gCo_sp] == 2) {
             if (gP1_sp > GP1_MAX)
@@ -2771,56 +3152,66 @@ static void co_if(uint8_t f)
             error("ENDIF without a matching IF.");
  #ifdef DEBUG
         break;
+
     default:
         error("Invalid argument to co_if().");
  #endif
     }
 }
 
-
 static int  getMnemonic(void)
 {
-    static uint8_t temp[MNEMOSIZE + 1];
-    uint8_t    *p;
-    uint8_t    *pp;
-    OPTBL_T *q;
+    static uint8_t  temp[MNEMOSIZE + 1];
+    uint8_t *       p;
+    uint8_t *       pp;
+    OPTBL_T *       q;
 
     skipSpace();
     if (*gLinPtr == '\n' || *gLinPtr == '\0')
         return 0;
+    if (*gLinPtr == '=') {
+        ++gLinPtr;
+        if (gCoStk[gCo_sp] < 0)
+            return 0;
+        gOprPtr = srchOpTbl( (uint8_t *) "=" );
+        return 1;
+    }
     if (!isSymbl2(*gLinPtr)) {
         error("Invalid mnemonic.");
-        DEBMSGF((STDERR, "*gLinPtr : %c\n", *gLinPtr));
+        DEBMSGF( (STDERR, "*gLinPtr : %c\n", *gLinPtr) );
         return 0;
     }
+
     pp = (p = temp) + MNEMOSIZE;
-    while (isSymbl(*p = toupper(*gLinPtr))) {
+    while ( isSymbl( *p = toupper(*gLinPtr) )) {
         if (p++ >= pp)
             goto ERR;
         gLinPtr++;
     }
     *p = '\0';
-    if (p > temp+4 && *(p-2) == '_' && *(p-1) == 'I') {
-        *(gLinPtr-2) = *(gLinPtr-1) = ' ';
-        *(p-2) = '\0';
+
+    if (p > temp + 4 && *(p - 2) == '_' && *(p - 1) == 'I') {
+        *(gLinPtr - 2) = *(gLinPtr - 1) = ' ';
+        *(p - 2)       = '\0';
         skipSpace();
         if (*gLinPtr == '\n')
             goto ERR;
-        *--gLinPtr = '#';
+        *--gLinPtr     = '#';
     }
-    if ((q = srchOpTbl(temp)) != NULL) {
+
+    if (( q = srchOpTbl(temp) ) != NULL) {
      #ifdef OPT_M6800
-        if ((q->option & OPR_M6800) && !gM6800_f)
+        if ((q->option & OPR_M6800) && !gM6800_f )
             warning("[WARNING] M6800 mnemonic used without -6.");
      #endif
-      #ifdef OPT_UNDOC
+     #ifdef OPT_UNDOC
         if (q->option & OPR_UNDOC6809) {
             if (!gM6809_f)
                 error("6809 undocumented instruction requires -8.");
             else if (!gUndoc_f)
                 warning("[WARNING] 6809 undocumented instruction used without -z.");
         } else
-      #endif
+     #endif
         if (gM6809_f && (q->option & 0x01)) {
             error("6309 instruction used in 6809 mode.");
         }
@@ -2832,7 +3223,7 @@ static int  getMnemonic(void)
         gOprPtr = q;
         return 1;
     }
- ERR:
+  ERR:
     error("Unknown mnemonic.");
     return 0;
 }
@@ -2846,29 +3237,31 @@ static uint8_t *getLine(void)
 static uint8_t oneLine(void)
 {
     uint8_t temp[LBLSIZE + 1];
-    uint8_t c,f,gf;
+    uint8_t c, f, gf;
 
     while (getLine() == NULL) {
         fclose(gSrcFp);
         if (popFile() == 0)
             return 2;
     }
+
     initLine();
     c = *gLinPtr;
-    if (c == '*' || c == '#')
+
+    if (c == '*' || c == '#') {
         clearAddress();
-    else {
+    } else {
         gf = temp[0] = '\0';
         if (!isspace(c) && c != '\n')
             gf = getLabel(temp);
      #ifdef OPT_OA_FILE
         if (gObjct == OB_ASM && gf && gPass == 2) {
-            oa_putStr(gLineBuf+LINEHEAD,0);
+            oa_putStr(gLineBuf + LINEHEAD, 0);
         }
      #endif
-        f = getMnemonic();
+        f  = getMnemonic();
         if (temp[0] && gCoStk[gCo_sp] >= 0)
-            defLabel(temp, f && !strcmp(gOprPtr->mnemonic,"SET") ? 2 : 1, gf);
+            defLabel(temp, f && !strcmp(gOprPtr->mnemonic, "SET") ? 2 : 1, gf);
         return f;
     }
     return 0;
@@ -2876,17 +3269,21 @@ static uint8_t oneLine(void)
 
 static void initPass(void)
 {
-    gImVal = 512;
+    while (extraIncCount)
+        free(extraIncDirs[--extraIncCount]);
+
+    rsCounter = rsDefined = 0;
+    gImVal    = 512;
  #ifdef OPT_OA_FILE
-    gOA_sp =
+    gOA_sp    =
  #endif
-    gSrcLine =
+    gSrcLine  =
  #ifdef OPT_OPTIMIZE
-    gOptCount = gOpt_sp = gOptChg =
+    gOptCount = gOpt_sp = gOptChg  =
  #endif
-    gFile_sp = gLineNo = gErrors = gP1_sp = gCo_sp = gObjPos = gRmb_sp =
-    gObjCnt = gLc = gDp = gObjLc =
-    gEOF_f = gGrp = gCSectSw = gPSect_f = gOrg_f = (uint8_t)0;
+    gFile_sp  = gLineNo = gErrors  = gP1_sp   = gCo_sp = gObjPos = gRmb_sp =
+    gObjCnt   = gLc     = gDp      = gObjLc   =
+    gEOF_f    = gGrp    = gCSectSw = gPSect_f = gOrg_f = (uint8_t) 0;
  #ifdef OPT_OPTIMIZE
     if (gVerbos_f)
         fprintf(STDERR, gPass == -1 ? "<pass 1.5>\n" : "<pass %d>\n", gPass);
@@ -2896,9 +3293,9 @@ static void initPass(void)
  #endif
 }
 
-static void assemble(int argc, char **argv)
+static void assemble(int argc, char * *argv)
 {
-    int  i;
+    int     i;
     uint8_t f;
 
     initPass();
@@ -2911,54 +3308,56 @@ static void assemble(int argc, char **argv)
         put2obj(gStartAddr);
     }
  #endif
+
     for (i = 1; i < argc; i++) {
         if (*argv[i] == '-')
             continue;
-        strncpy(gSrcFName,argv[i],FNAMESZ);
+
+        strncpy(gSrcFName, argv[i], FNAMESZ);
         ++gGrp;
-        DEBMSGF((STDERR, "open %s\n", gSrcFName));
+        DEBMSGF( (STDERR, "open %s\n", gSrcFName) );
         gSrcFp = fopenE(gSrcFName, "r");
         if (gVerbos_f)
             fprintf(STDERR, "[%s]\n", gSrcFName);
 
         while (!gEOF_f) {
-            if ((f = oneLine()) == 2)
+            if (( f = oneLine() ) == 2 ) {
                 break;
-            else if (f != 0) {
-                if (gCSectSw > 1 &&
-                    strcmp(gOprPtr->mnemonic,"RMB")
-                    && strcmp(gOprPtr->mnemonic,"ENDSECT")) {
+            } else if (f != 0) {
+                if (gCSectSw > 1
+                   && strcmp(gOprPtr->mnemonic, "RMB")
+                   && strcmp(gOprPtr->mnemonic, "ENDSECT") )
+                {
                     if (gCSectSw == 3) {
-                        if (strcmp(gOprPtr->mnemonic,"FDB")
-                            && strcmp(gOprPtr->mnemonic,"FCB")
-                            && strcmp(gOprPtr->mnemonic,"DC.B")
-                            && strcmp(gOprPtr->mnemonic,"DC.W")
-                            && strcmp(gOprPtr->mnemonic,"DC.L")
-                            && strcmp(gOprPtr->mnemonic,"FCC")
-                            && strcmp(gOprPtr->mnemonic,"FCS")
-                            && strcmp(gOprPtr->mnemonic,"RZB"))
+                        if (strcmp(gOprPtr->mnemonic, "FDB")
+                         && strcmp(gOprPtr->mnemonic, "FCB")
+                         && strcmp(gOprPtr->mnemonic, "DC.B")
+                         && strcmp(gOprPtr->mnemonic, "DC.W")
+                         && strcmp(gOprPtr->mnemonic, "DC.L")
+                         && strcmp(gOprPtr->mnemonic, "FCC")
+                         && strcmp(gOprPtr->mnemonic, "FCS")
+                         && strcmp(gOprPtr->mnemonic, "RZB") ) {
                             error("Instruction is not allowed between VSECT and ENDSECT.");
+                        }
                     } else {
                         error("Only RMB is allowed between CSECT and ENDSECT.");
                     }
                 }
-             #ifdef OPT_OA_FILE
-                if (gObjct == OB_ASM && gPass == 2
-                    && gOAStk[gOA_sp].ll == gLineNo) {
-                    DEBMSGF((STDERR,"OPT_OA_FILE#2:%d line=%d size=%d / gLineNo=%d\n"
-                        ,gOA_sp,gOAStk[gOA_sp].ll,gOAStk[gOA_sp].nn,gLineNo));
-                    oa_putStr(gLineBuf+LINEHEAD,gOAStk[gOA_sp++].nn);
-                } else if (gPass == -2) {
-                    uint16_t  bb;
 
-                    bb = gObjCnt;
-                    gOAchk_f = 0;
+             #ifdef OPT_OA_FILE
+                if (gObjct == OB_ASM && gPass == 2 && gOAStk[gOA_sp].ll == gLineNo) {
+                    DEBMSGF((STDERR,"OPT_OA_FILE#2:%d line=%d size=%d / gLineNo=%d\n", gOA_sp, gOAStk[gOA_sp].ll, gOAStk[gOA_sp].nn, gLineNo) );
+                    oa_putStr(gLineBuf + LINEHEAD, gOAStk[gOA_sp++].nn);
+                } else if (gPass == -2) {
+                    uint16_t bb;
+                    bb         = gObjCnt;
+                    gOAchk_f   = 0;
                     gOprPtr->process();
                     if (gOAchk_f) {
-                        gOAStk[gOA_sp].ll = gLineNo;
-                        gOAStk[gOA_sp].nn = gObjCnt - bb;
-                        DEBMSGF((STDERR,"OPT_OA_FILE#-2:line=%d  size=%d\n",
-                            gOAStk[gOA_sp].ll,gOAStk[gOA_sp].nn));
+                        gOAStk[gOA_sp].ll  = gLineNo;
+                        gOAStk[gOA_sp].nn  = gObjCnt - bb;
+                        DEBMSGF( (STDERR, "OPT_OA_FILE#-2:line=%d  size=%d\n",
+                                  gOAStk[gOA_sp].ll, gOAStk[gOA_sp].nn) );
                         if (++gOA_sp >= OA_MAX)
                             error("Too many unassembled lines for the -a option.");
                     }
@@ -2969,13 +3368,14 @@ static void assemble(int argc, char **argv)
                 }
                 if (*gLinPtr != '\n' && !isspace(*gLinPtr)) {
                     error("Unexpected character.");
-                    DEBMSGF((STDERR, "*gLinPtr : %c(%02x)\t[asemmble()]\n",
-                        *gLinPtr,*gLinPtr));
+                    DEBMSGF((STDERR, "*gLinPtr : %c(%02x)\t[asemmble()]\n"
+                                   , *gLinPtr, *gLinPtr));
                 }
             }
             putLine();
         }
     }
+
  #ifdef OPT_FBAS
     if (gFBasic_f && gPass == 2) {
         putObj(0xff);
@@ -2989,16 +3389,17 @@ static void assemble(int argc, char **argv)
     gObjSiz = gObjCnt;
 }
 
+
 /*---------------------------------------------------------------------------*/
 
-static uint16_t xstrtoui(uint8_t *p,uint8_t **q)
+static uint16_t xstrtoui(uint8_t *p, uint8_t * *q)
 {
     uint16_t w;
 
     for (w = 0; isxdigit(*p); p++)
         w = w * 16 +
-            (isdigit(*p) ? (*p - '0') :
-            (toupper(*p) - 'A' + 10));
+            ( isdigit(*p) ? (*p - '0') :
+             (toupper(*p) - 'A' + 10) );
     if (q)
         *q = p;
     return w;
@@ -3006,34 +3407,37 @@ static uint16_t xstrtoui(uint8_t *p,uint8_t **q)
 
 static void getModNam(char *modnam, char *fnam)
 {
-    char *ep;
-    int  i;
-    char *s;
+    char *  ep;
+    int     i;
+    char *  s;
 
     for (ep = NULL, s = fnam, i = MODNAMSZ; *s != '\0' && i--; ++s) {
-        if (isKanji(*(uint8_t*)s)) {
+        if (isKanji(*(uint8_t *) s)) {
             if (*(++s) == '\0')
                 break;
         } else if (*s == '/'
-         #ifdef MSDOS
-            || *s == ':' || *s == '\\'
+         #if defined(MSDOS) || defined(_WIN32)
+                  || *s == ':' || *s == '\\'
          #endif
-        ){
+       ) {
             fnam = s + 1;
         } else if (*s == '.') {
             ep = s;
         }
     }
+
     if (ep == NULL || ep < fnam)
         ep = s;
-    for (s = modnam; (*s = *fnam) != '\0' && fnam < ep; ++s, ++fnam) {}
+
+    for (s = modnam; (*s = *fnam) != '\0' && fnam < ep; ++s, ++fnam) { ; }
+
     *s = '\0';
 }
 
 
 /*---------------------------------------------------------------------------*/
-static char *oLstFName, *oObjFName;
-static uint8_t oList_f, oSymbol_f;
+static char *   oLstFName, *oObjFName;
+static uint8_t  oList_f, oSymbol_f;
 
 static void printLog(void)
 {
@@ -3042,31 +3446,31 @@ static void printLog(void)
         if (gVerbos_f)
             fprintf(gLstFp, "    Total labels %d\n", gLabels);
     }
-    fprintf(STDERR, "\n    Obj_Size = $%04x(%d)\n",gObjCnt,gObjCnt);
+    fprintf(STDERR, "\n    Obj_Size = $%04x(%d)\n", gObjCnt, gObjCnt);
     fprintf(STDERR, "    Total Errors %d\n", gErrors);
     if (gVerbos_f)
         fprintf(STDERR, "    Total labels %d\n", gLabels);
-  #ifdef OPT_OPTIMIZE
+ #ifdef OPT_OPTIMIZE
     if (gOpt_f)
         fprintf(STDERR, "    Total Optimized Branch %d\n", gOptCount);
-  #endif
+ #endif
 }
 
 static void usage(void)
 {
-    fprintf(STDERR,"usage: %s [-opts] src_file...\n",gCmdName);
+    fprintf(STDERR, "usage: %s [-opts] src_file...\n", gCmdName);
     e_puts(" -?  Show this help\n");
     e_puts(" -9  OS-9 standard ASM mode   -8  6809 mode\n");
-  #ifdef OPT_M6800
+ #ifdef OPT_M6800
     e_puts(" -6  Enable M6800-family mnemonic compatibility\n");
-  #endif
-  #ifdef OPT_UNDOC
+ #endif
+ #ifdef OPT_UNDOC
     e_puts(" -z  Enable undocumented 6809/6309 opcodes/operands\n");
-  #endif
+ #endif
     e_puts(" -p  Selectable 0, 5, 8, or 16-bit offsets.\n");
-  #ifdef OPT_OPTIMIZE
+ #ifdef OPT_OPTIMIZE
     e_puts(" -y  Replace long branches with short branches when possible\n");
-  #endif
+ #endif
     e_puts(" -q  Allow address gaps caused by ORG or RMB\n");
     e_puts(" -u  Case-sensitive labels    -n  Case-insensitive labels\n");
     e_puts(" -s  Show symbol table        -v  Show progress\n");
@@ -3076,202 +3480,222 @@ static void usage(void)
     e_puts(" -l[lst_file]  Write assembly listing to lst_file\n");
     e_puts(" -o[obj_file]  Write binary object to obj_file\n");
     e_puts(" -f[obj_file]  Write S-Record object to obj_file\n");
-  #ifdef OPT_FLEX
+ #ifdef OPT_FLEX
     e_puts(" -x[obj_file]  Write a FLEX binary executable to obj_file\n");
-  #endif
-  #ifdef OPT_OA_FILE
+ #endif
+ #ifdef OPT_OA_FILE
     e_puts(" -a[obj_file]  Write object as FCB data to obj_file\n");
-  #endif
+ #endif
     e_puts(" -e[err_file]  Write source errors to err_file\n");
-  #ifdef INCLUDIR
+ #ifdef INCLUDIR
     e_puts(" -i[lib_file]  Set the directory referenced by $INC\n");
-  #endif
-  #ifdef OPT_FBAS
+ #endif
+ #ifdef OPT_FBAS
     e_puts(" -k[Start[,Enter]]  Write an F-BASIC machine-language file\n");
     e_puts(" -r  In F-BASIC format, omit trailing zeros after RMB\n");
-  #endif
-  #ifdef DEBUG
+ #endif
+ #ifdef DEBUG
     e_puts(" -c  Debug mode\n");
-  #endif
-  #ifdef OPT_EXT_INST
-    DEBMSGF((STDERR,"Extended instructions enabled (D,Q)\n"));
-  #endif
+ #endif
+ #ifdef OPT_EXT_INST
+    DEBMSGF( (STDERR, "Extended instructions enabled (D,Q)\n") );
+ #endif
     exit(0);
 }
 
-static void optsDefLbl(int argc,char **argv)
+static void optsDefLbl(int argc, char * *argv)
 {
-    char temp[LBLSIZE + 1];
-    char *p;
-    int  i;
+    char    temp[LBLSIZE + 1];
+    char *  p;
+    int     i;
 
     for (i = 1; i < argc; ++i) {
-        p = argv[i];
+        p              = argv[i];
         if (*p++ != '-')
             continue;
-        if (*p++ != 'd' && *(p-1) != 'D')
+        if (*p++ != 'd' && *(p - 1) != 'D')
             continue;
         if (*p == '\0') {
             e_puts("No label name specified for -d.\n");
             continue;
         }
-        gLinPtr = strncpy(gLineBuf+LINEHEAD,p,MAXCHAR-LINEHEAD-2);
+        gLinPtr        = strncpy(gLineBuf+LINEHEAD, p, MAXCHAR - LINEHEAD - 2);
         getLabel(temp);
-        defLabel(temp,2,1); /* set,グローバルラベル */
-        gLblPtr->line = 1;
-        gLblPtr->grp = 0;
+        defLabel(temp, 2, 1); /* set,global label */
+        gLblPtr->line  = 1;
+        gLblPtr->grp   = 0;
         if (*gLinPtr++ == '=') {
             if (*gLinPtr == '$') {
                 gLinPtr++;
-                gLblPtr->value = (int)xstrtoui(gLinPtr,NULL);
+                gLblPtr->value = (int) xstrtoui(gLinPtr, NULL);
             } else {
                 gLblPtr->value = atoi(gLinPtr);
             }
         } else {
             gLblPtr->value = 1;
         }
-        DEBMSGF((STDERR,"-d opts : %s  (temp %s) : %s = $%x\n", p, temp, gLblPtr->name, gLblPtr->value));
+        DEBMSGF((STDERR, "-d opts : %s  (temp %s) : %s = $%x\n"
+                       , p, temp, gLblPtr->name, gLblPtr->value));
     }
 }
 
 static void options(uint8_t *p)
 {
-    uint8_t *pp;
-    uint8_t c;
+    uint8_t *   pp;
+    uint8_t     c;
 
-    while ((c = *p) != '\0') {
+    while ( (c = *p) != '\0') {
         if (*++p == '=')
             ++p;
-        switch (toupper(c)) {
-      #ifdef DEBUG
+
+        switch ( toupper(c)) {
+     #ifdef DEBUG
         case 'C':
-            gDebug_f = 1;
+            gDebug_f   = 1;
             break;
-      #endif
+     #endif
         case 'P':
-            gIdxOfs_f = 1;
+            gIdxOfs_f  = 1;
             break;
+
         case '?':
         case 'H':
             usage();
+
         case 'D':
             goto LOOPOUT;
+
         case 'Q':
             gOrgSFmt_f = 1;
             break;
+
         case 'U':
-            gUpLo_f = 0;
+            gUpLo_f    = 0;
             break;
+
         case 'N':
-            gUpLo_f = 1;
+            gUpLo_f    = 1;
             break;
+
         case 'V':
-            gVerbos_f = 1;
+            gVerbos_f  = 1;
             break;
-      #ifdef OPT_UNDOC
+
+     #ifdef OPT_UNDOC
         case 'Z':
-            gUndoc_f  = 1;
+            gUndoc_f   = 1;
             break;
-      #endif
+     #endif
         case '8':
-            gM6809_f = 1;
+            gM6809_f   = 1;
             break;
-      #ifdef OPT_M6800
+
+     #ifdef OPT_M6800
         case '6':
-            gM6800_f = 1;
+            gM6800_f   = 1;
             break;
-      #endif
+     #endif
+
         case '9':
-            gOs9_f = gUpLo_f = 1;
+            gOs9_f     = gUpLo_f = 1;
             break;
         case 'S':
-            oSymbol_f = 1;
+            oSymbol_f  = 1;
             break;
+
         case 'J':
-            gSjis_f = 1;
+            gSjis_f    = 1;
             break;
+
         case 'L':
             if (*p) {
-                oLstFName = p;
-                oList_f = 1;
+                oLstFName  = p;
+                oList_f    = 1;
             } else {
                 oList_f = 0;
             }
-            gList = 1;
+            gList      = 1;
             goto LOOPOUT;
+
         case 'M':
             if (*p) {
                 strncpy(gModName, p, MODNAMSZ);
             }
             goto LOOPOUT;
+
         case 'E':
             if (*p)
                 gErrFName = p;
             else
-                gErrFName = (uint8_t *)(~0);
+                gErrFName = (uint8_t *) (~0);
             goto LOOPOUT;
-      #ifdef OPT_OA_FILE
+
+     #ifdef OPT_OA_FILE
         case 'A':
-            if ((gOAStk = (OATBL_T *) calloc(OA_MAX,sizeof(OATBL_T))) == NULL){
+            if ((gOAStk = (OATBL_T *)calloc(OA_MAX,sizeof(OATBL_T))) == NULL) {
                 e_puts("Not enough memory for the -a option.\n");
                 break;
             }
-          #ifdef OPT_FLEX
-            gFlex_f = 0;
-          #endif
-            gObjBufSz = 16;
-            gObjct = OB_ASM;
+         #ifdef OPT_FLEX
+            gFlex_f        = 0;
+         #endif
+            gObjBufSz      = 16;
+            gObjct         = OB_ASM;
             goto OB;
-      #endif
+     #endif
+
         case 'O':
-          #ifdef OPT_FLEX
-            gFlex_f = 0;
-          #endif
-            gObjct = OB_BIN;
+         #ifdef OPT_FLEX
+            gFlex_f        = 0;
+         #endif
+            gObjct         = OB_BIN;
             goto OB;
+
         case 'F':
-          #ifdef OPT_FLEX
-            gFlex_f = 0;
-          #endif
-            gObjct = OB_SFMT;
+         #ifdef OPT_FLEX
+            gFlex_f        = 0;
+         #endif
+            gObjct         = OB_SFMT;
             goto OB;
-      #ifdef OPT_FLEX
+
+     #ifdef OPT_FLEX
         case 'X':
-            gFlex_f = 1;
-          #ifdef OPT_FBAS
-            gFBasic_f = 0;
-          #endif
-            gObjct = OB_BIN;
+            gFlex_f        = 1;
+         #ifdef OPT_FBAS
+            gFBasic_f      = 0;
+         #endif
+            gObjct         = OB_BIN;
             goto OB;
-      #endif
-         OB:
+     #endif
+          OB:
             if (*p)
-                oObjFName = p;
+                oObjFName  = p;
             goto LOOPOUT;
-      #ifdef OPT_OPTIMIZE
+
+     #ifdef OPT_OPTIMIZE
         case 'Y':
-            if ((gOptStk = (int *)malloc(sizeof(int) * MAXOPTIM))
-                == NULL) {
+            if ((gOptStk   = (int *)malloc(sizeof(int) * MAXOPTIM)) == NULL) {
                 e_puts("Not enough memory for branch optimization.\n");
                 break;
             }
-            gOpt_f = 1;
+            gOpt_f         = 1;
             break;
-      #endif
-      #ifdef OPT_FBAS
+     #endif
+
+     #ifdef OPT_FBAS
         case 'K':
-            gFBasic_f = 1;
-          #ifdef OPT_FLEX
-            gFlex_f = 0;
-          #endif
-            gRmb_sp = 0;
+            gFBasic_f      = 1;
+         #ifdef OPT_FLEX
+            gFlex_f        = 0;
+         #endif
+            gRmb_sp        = 0;
             if (*p) {
-                gStartAddr = xstrtoui(p,&pp);
-                p = pp;
+                gStartAddr = xstrtoui(p, &pp);
+                p          = pp;
                 if (gStartAddr == 0)
                     gStartAddr = 0xFFFF;
                 if (*p == ',') {
-                    gEntryAddr = xstrtoui(p+1,&pp);
+                    gEntryAddr = xstrtoui(p + 1, &pp);
                     /*p = pp;*/
                 }
                 if (gEntryAddr == 0)
@@ -3279,63 +3703,66 @@ static void options(uint8_t *p)
             }
             goto LOOPOUT;
         case 'R':
-            gRmb_f  = 1;
+            gRmb_f         = 1;
             break;
-      #endif
-      #ifdef INCLUDIR
+     #endif
+
+     #ifdef INCLUDIR
         case 'I':
-            gIncDirName = ".";
+            gIncDirName    = ".";
             if (*p)
                 gIncDirName = p;
-            if (strlen(gIncDirName) >= FNAMESZ-10) {
+            if (strlen(gIncDirName) >= FNAMESZ - 10) {
                 e_puts("File name is too long.\n");
                 exit(1);
             }
             goto LOOPOUT;
-      #endif
+     #endif
+
         default:
-            fprintf(STDERR,"%s: Invalid option (-%c).\n", gCmdName,c);
+            fprintf(STDERR, "%s: Invalid option (-%c).\n", gCmdName, c);
             exit(1);
         }
     }
- LOOPOUT:;
+  LOOPOUT:;
 }
 
 int main(int argc, char *argv[])
 {
-    static char *title = "HD6309 cross assembler version 01.43T\n";
-    char *p;
-    int  i;
+    static char *   title = "HD6309 cross assembler version 01.43T\n";
+    char *          p;
+    int             i;
 
-    gCmdName   = argv[0];
-    gObjBufSz  = OBJSIZE;
-    gEntryAddr = gStartAddr = 0xFFFF;
-    gObjFp     = NULL;
-    gLstFp     = stdout;
-  #ifdef INCLUDIR
-    gIncDirName= INCLUDIR;
-  #endif
-    gErrFp     = STDERR;
-    gErrFName  =
-    oLstFName  = oObjFName = NULL;
-    oList_f    = gModName[0] = gSrcFName[0] = gSrcFName[FNAMESZ] = '\0';
-    gUpLo_f    = 1;
+    gCmdName       = argv[0];
+    gObjBufSz      = OBJSIZE;
+    gEntryAddr     = gStartAddr = 0xFFFF;
+    gObjFp         = NULL;
+    gLstFp         = stdout;
+ #ifdef INCLUDIR
+    gIncDirName    = INCLUDIR;
+ #endif
+    gErrFp         = STDERR;
+    gErrFName      =
+        oLstFName  = oObjFName = NULL;
+    oList_f        = gModName[0] = gSrcFName[0] = gSrcFName[FNAMESZ] = '\0';
+    gUpLo_f        = 1;
 
     e_puts(title);
     for (i = 1; i < argc; i++) {
         p = argv[i];
         if (*p != '-') {
             if (gSrcFName[0] == '\0')
-                strncpy(gSrcFName,p,FNAMESZ);
+                strncpy(gSrcFName, p, FNAMESZ);
         } else {
             if (*++p == '\0')
                 usage();
             options(p);
         }
     }
+
     if (*gSrcFName == '\0') {
         fprintf(STDERR, "usage: %s [-opts] src_file...(-? help)\n",
-            gCmdName);
+                gCmdName);
         exit(1);
     }
     if (oObjFName == NULL && gObjct) {
@@ -3350,73 +3777,77 @@ int main(int argc, char *argv[])
       #endif
             "o");
     }
-    if (gErrFName == (char *)(~0)) {
-        gErrFName = mallocE(FNAMESZ+1);
-        FIL_ChgExt(strcpy(gErrFName, gSrcFName),"err");
+    if (gErrFName == (char *) (~0)) {
+        gErrFName = mallocE(FNAMESZ + 1);
+        FIL_ChgExt(strcpy(gErrFName, gSrcFName), "err");
     }
     if (*gModName == '\0') {
-        getModNam(gModName,gSrcFName);
+        getModNam(gModName, gSrcFName);
     }
-    DEBMSGF((STDERR, "gModName = %s\n",gModName));
+
+    DEBMSGF( (STDERR, "gModName = %s\n", gModName) );
     initNode();
     initOpTbl();
-    optsDefLbl(argc,argv);
+    optsDefLbl(argc, argv);
 
-    gPass = 1;
-    DEBMSGF((STDERR, "enter pass 1\n"));
-    assemble(argc,argv);
+    gPass  = 1;
+    DEBMSGF( (STDERR, "enter pass 1\n") );
+    assemble(argc, argv);
 
-  #ifdef OPT_OPTIMIZE
+ #ifdef OPT_OPTIMIZE
     if (gOpt_f) {
         gPass = -1;
-        DEBMSGF((STDERR, "enter pass 1.5\n"));
+        DEBMSGF( (STDERR, "enter pass 1.5\n") );
         do {
             assemble(argc, argv);
         } while (gOptChg);
     }
-  #endif
+ #endif
 
-  #ifdef OPT_OA_FILE
+ #ifdef OPT_OA_FILE
     if (gObjct == OB_ASM) {
         gPass = -2;
-        DEBMSGF((STDERR, "enter pass 1.9\n"));
+        DEBMSGF( (STDERR, "enter pass 1.9\n") );
         assemble(argc, argv);
     }
-  #endif
+ #endif
 
-    gPass = 2;
-    DEBMSGF((STDERR, "enter pass 2\n"));
+    gPass  = 2;
+    DEBMSGF( (STDERR, "enter pass 2\n") );
     if (gList || oSymbol_f) {
         if (oList_f) {
-            DEBMSGF((STDERR, "open %s\n", oLstFName));
+            DEBMSGF( (STDERR, "open %s\n", oLstFName) );
             gLstFp = fopenE(oLstFName, "w");
         } else {
             gLstFp = stdout;
         }
     }
     if (gObjct) {
-        DEBMSGF((STDERR, "open %s\n", oObjFName));
+        DEBMSGF( (STDERR, "open %s\n", oObjFName) );
         gObjFp = fopenE(oObjFName, (gObjct == OB_BIN) ? "wb" : "w");
     }
-    assemble(argc,argv);
+
+    assemble(argc, argv);
+
     if (gObjct) {
         termObj();
-      #if 0 /*def OS9*/
+     #if 0 /*def OS9*/
         if (gObjct == OB_BIN) {
-            chmod(oObjFName,0x07/*S_EXEC|S_IWRITE|S_IREAD*/);
+            chmod(oObjFName, 0x07 /*S_EXEC|S_IWRITE|S_IREAD*/);
         }
-      #endif
+     #endif
     }
     if (oSymbol_f)
         dumpSymbol();
     printLog();
 
-    DEBMSGF((STDERR, "close all files\n"));
+    DEBMSGF( (STDERR, "close all files\n") );
     if (gObjct)
         fclose(gObjFp);
     if (oList_f)
         fclose(gLstFp);
     if (gErrFName == NULL)
         fclose(gErrFp);
+
     return (gErrors ? 1 : 0);
 }
