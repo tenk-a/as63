@@ -2744,7 +2744,7 @@ void    none_d(void)
         { 3, 0xc3, 0x00, 0x01, 0             }, /* incd 0x104c */
         { 2, 0xed, 0x7e, 0,    0             }, /* tstd 0x104d */
         { 0, 0,    0,    0,    0             },
-        { 2, 0x4f, 0x5f, 0,    0             } /* clrd 0x104f */
+        { 2, 0x5f, 0x4f, 0,    0             } /* clrd: clrb;clra */
     };
 
     if (gM6809_f == 0) {
@@ -2875,7 +2875,7 @@ void    none_wq(void)
 {
     static uint8_t  tbl[] = {
         0x10, 0xed, 0x7c, 0,                /*  tstq  stq -4,s; */
-        0x10, 0x4f, 0x10, 0x5f,             /*  clrq  clrw;clrd */
+        0x10, 0x5f, 0x10, 0x4f,             /*  clrq  clrw;clrd */
         0x10, 0x53, 0x10, 0x43,             /*  comq  comw;comd */
         0x10, 0x44, 0x10, 0x56,             /*  lsrq  lsrd;rorw */
         0x10, 0x47, 0x10, 0x56,             /*  asrq  asrd;rorw */
