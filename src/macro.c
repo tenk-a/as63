@@ -13,8 +13,8 @@ typedef struct macro_def {
     int                 noexpand;
 } MAC_DEF;
 
-typedef unsigned long   id_t;
-//typedef intmax_t      id_t;
+typedef unsigned long   serial_t;
+//typedef intmax_t      serial_t;
 
 typedef struct macro_frame {
     struct macro_frame* parent;
@@ -33,8 +33,8 @@ typedef struct macro_frame {
     int                 condDepth;
     int                 scopeDepth;
     int                 sourceLine;
-    id_t                id;
-    id_t                savedScope;
+    serial_t            id;
+    serial_t            savedScope;
     int                 ownsBody;
 } MAC_FRAME;
 
@@ -43,11 +43,11 @@ static MAC_FRAME *      frames;
 static int              frameDepth;
 static int              scopeDepth;
 static int              idDepth;
-static id_t             serial;
-static id_t             scope;
-static id_t             scopes[MAC_SCOPE];
-static id_t             ids[MAC_SCOPE];
-static id_t             expandedLines;
+static serial_t         serial;
+static serial_t         scope;
+static serial_t         scopes[MAC_SCOPE];
+static serial_t         ids[MAC_SCOPE];
+static serial_t         expandedLines;
 
 static char *copyText(char const *s, size_t n)
 {
@@ -321,7 +321,7 @@ static void expandLine(uint8_t *dst, size_t limit, char const *line, size_t leng
     int         index       = 0;
     int         hex         = 0;
     val_t       value       = 0;
-    id_t        id          = 0;
+    serial_t    id          = 0;
     while (s < end && n + 1 < limit) {
         if (f && *s == '{') {
             char const *next = s + 1;

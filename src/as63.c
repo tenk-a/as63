@@ -2895,7 +2895,7 @@ static void fccs(uint8_t a)
         uint8_t c = *gLinPtr++;
         if (c == '$' && toupper(*gLinPtr) == 'M') {
             getLabel(temp);
-            if (strcasecmp(temp, "modnam") == 0 && gModName) {
+            if (strcasecmp(temp, "modnam") == 0 /*&& gModName*/) {
                 uint8_t const* p = (uint8_t const*)gModName;
                 while ( (b = *p++) != '\0') {
                     if (a == 1 && *p == '\0')
