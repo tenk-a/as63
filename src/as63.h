@@ -184,6 +184,7 @@ typedef uintmax_t       uval_t; /* unsigned val_t                            */
 #define LIST_ABSOLUTE   0x01  /* LIST/NOLIST set state; OPT changes its depth */
 #define RS_RESET        0x01
 #define RS_SET          0x02
+#define RS_EVEN         0x03
 
 /* opcode table */
 #define OPR_UNDOC6809  0x02

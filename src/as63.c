@@ -3435,7 +3435,9 @@ void rsOffset(void)
 {
     int   mode = gOprPtr->opcode & 15;
     int   kind = gOprPtr->opcode >> 4;
-    val_t * counter = (kind == 1) ? &soCounter : kind == 2 ? &foCounter : &rsCounter;
+    val_t * counter = (kind == 1 && gCompatMode != COMPAT_VASM) ? &soCounter
+                    :  kind == 2 ? &foCounter
+                    :              &rsCounter;
     val_t count;
     val_t next;
     int size = gOprPtr->prefix;
@@ -3444,6 +3446,12 @@ void rsOffset(void)
     clearAddress();
     if (mode == RS_RESET) {
         *counter = 0;
+    } else if (mode == RS_EVEN) {
+        if (*counter == 65535) {
+            error("RS offset is outside 0..65535.");
+            return;
+        }
+        *counter += *counter & 1;
     } else if (mode == RS_SET) {
         skipSpace();
         count = invExpr();
@@ -3454,7 +3462,7 @@ void rsOffset(void)
         *counter = count;
     } else {
         skipSpace();
-        count = invExpr();
+        count = (!*gLinPtr || *gLinPtr == '\n' || *gLinPtr == ';') ? 0 : invExpr();
         if (count < 0 || count > 65535 / size) {
             error("RS count is outside the supported range.");
             return;
@@ -3464,15 +3472,19 @@ void rsOffset(void)
             error("RS offset is outside 0..65535.");
             return;
         }
-        labelValue(*counter);
+        labelValue(kind == 2 && gCompatMode == COMPAT_VASM ? next : *counter);
         *counter = next;
     }
-    if (kind == 1)
+    if (gCompatMode == COMPAT_VASM && kind != 2) {
+        soCounter = rsCounter;
+        rsDefined = soDefined = 1;
+    } else if (kind == 1) {
         soDefined = 1;
-    else if (kind == 2)
+    } else if (kind == 2) {
         foDefined = 1;
-    else
+    } else {
         rsDefined = 1;
+    }
 }
 
 void ignoreOperand(void)
