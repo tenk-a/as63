@@ -619,7 +619,9 @@ static char *captureBlock(int macro)
 
 int macroControl(char const *label, uint8_t global)
 {
-    uint8_t *   saved   = gLinPtr;
+    uint8_t *   saved         = gLinPtr;
+    uint8_t *   counterStart  = NULL;
+    size_t      counterLength = 0;
     char        word[LBLSIZE + 1];
     char        name[LBLSIZE + 1];
     size_t      n       = 0;
@@ -628,6 +630,7 @@ int macroControl(char const *label, uint8_t global)
     int         noexpand= 0;
     val_t       count   = 0;
     char *      body    = NULL;
+    char *      expandedBody = NULL;
     MAC_DEF *   m       = NULL;
     MAC_FRAME * f       = NULL;
     skipSpace();
@@ -655,8 +658,24 @@ int macroControl(char const *label, uint8_t global)
                 }
                 skipSpace();
                 count = invExpr();
+                if (count < 0 && gCompatMode == COMPAT_VASM)
+                    count = 0;
                 if (count < 0 || count > 65535) {
                     error("Invalid REPT count.");
+                }
+                skipSpace();
+                if (*gLinPtr == ',') {
+                    ++gLinPtr;
+                    skipSpace();
+                    counterStart  = gLinPtr;
+                    getLabel(name);
+                    counterLength = (size_t)(gLinPtr - counterStart);
+                    if (!*name || counterLength > LBLSIZE) {
+                        error("Missing or invalid REPT counter name.");
+                    } else {
+                        memcpy(name, counterStart, counterLength);
+                        name[counterLength] = 0;
+                    }
                 }
             }
         }
@@ -675,12 +694,18 @@ int macroControl(char const *label, uint8_t global)
                 return 1;
             }
             m = mallocE(sizeof(*m));
-            m->name = copyText(name, strlen(name));
-            m->body = body;
+            m->name     = copyText(name, strlen(name));
+            m->body     = body;
             m->noexpand = noexpand;
-            m->next = definitions;
+            m->next     = definitions;
             definitions = m;
         } else if (count > 0 && count <= 65535) {
+            if (*name) {
+                expandedBody = mallocE(strlen(body) + strlen(name) + 16);
+                sprintf(expandedBody, "%s SET REPTN\n%s", name, body);
+                free(body);
+                body = expandedBody;
+            }
             pushFrame(body, count, 1);
         } else {
             free(body);
