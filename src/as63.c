@@ -1422,6 +1422,7 @@ static val_t   expression(void)
     case ',':
     case ')':
     case ']':
+    case ';':
     case '\n':
         break;
     default:
@@ -4856,7 +4857,7 @@ static void assemble(int argc, char * * argv)
                 {
                     gOprPtr->process();
                 }
-                if (*gLinPtr != '\n' && !isspace(*gLinPtr)) {
+                if (*gLinPtr != '\n' && !isspace(*gLinPtr) && !isCommentChar(*gLinPtr)) {
                     error("Unexpected character.");
                     DEBMSGF((STDERR, "*gLinPtr : %c(%02x)\t[asemmble()]\n"
                                    , *gLinPtr, *gLinPtr));
