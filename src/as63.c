@@ -3533,14 +3533,19 @@ void relativeData(void)
 
 void relativeOrg(void)
 {
-    val_t target;
+    val_t target = 0;
+    val_t fill = 0;
     skipSpace();
     target = invExpr();
+    if (nextComma()) {
+        skipSpace();
+        fill = expression();
+    }
     if (target < 0 || target > 65535L - rorgBase || target + rorgBase < gLc) {
         error("Invalid RORG operand.");
         return;
     }
-    fillBlock(target + rorgBase - gLc, 0, 1, BLOCK_CHECK);
+    fillBlock(target + rorgBase - gLc, fill, 1, BLOCK_CHECK);
 }
 
 void offsetSection(void)
