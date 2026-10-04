@@ -521,91 +521,168 @@ LBLTBL_T *getNode(void)
 void    initNode(void)
 {
     oLabel             = getNode();
-    oLabel->name[0]    = '\0';
-    oLabel->right      = oLabel->left = NULL;
+    memset(oLabel, 0, sizeof(*oLabel));
 }
 
-void    defLabel(char const * temp, uint8_t f, uint8_t gf)
-{
-    LBLTBL_T *  lp = oLabel;
-    int         i;
+typedef struct symbol_declaration {
+    struct symbol_declaration *next;
+    int group;
+    int kind;
+    char name[LBLSIZE + 1];
+} SYMBOL_DECLARATION;
 
-    for (;;) {
-        if (( i = strcmp(temp, lp->name) ) == 0) {
-            if (lp->grp == 0 || lp->grp == gGrp) {
-                if (lp->line != gLineNo && (f == 1 || lp->flg == 1) )
-                    errLbl("Duplicate label definition", temp);
-                (gLblPtr = lp)->value = gLinLc;
-                if (f) {
-                    lp->hidden = pragmaNoList || pragmaNoListCode;
-                    lp->region = addressRegion;
-                }
-                if (lp->flg == 0) {
-                    lp->flg    = f;
-                    lp->line   = gLineNo;
-                    if (gf)
-                        lp->grp = 0;
-                    else
-                        lp->grp = gGrp;
-                }
-                return;
-            } else {
-                i = (gGrp > lp->grp) ? 1 : -1;
-            }
+static SYMBOL_DECLARATION *symbolDeclarations;
+static char declarationLabel[LBLSIZE + 1];
+
+static LBLTBL_T *findLabel(char const *name, int group)
+{
+    LBLTBL_T *label = oLabel;
+    while (label) {
+        int order = strcmp(name, label->name);
+        if (!order)
+            order = group - label->grp;
+        if (!order)
+            return label;
+        label = order < 0 ? label->right : label->left;
+    }
+    return NULL;
+}
+
+static int symbolDeclared(char const *name, int group, int kind)
+{
+    SYMBOL_DECLARATION const *declaration = symbolDeclarations;
+    for (; declaration; declaration = declaration->next)
+        if (declaration->group == group && declaration->kind == kind
+            && !strcmp(name, declaration->name))
+            return 1;
+    return 0;
+}
+
+static LBLTBL_T *publishedLabel(char const *name)
+{
+    SYMBOL_DECLARATION const *declaration = symbolDeclarations;
+    LBLTBL_T *label = findLabel(name, 0);
+    if (label && label->flg)
+        return label;
+    for (; declaration; declaration = declaration->next) {
+        if (declaration->kind == 1 && !strcmp(name, declaration->name)) {
+            LBLTBL_T *published = findLabel(name, declaration->group);
+            if (published && published->flg)
+                return published;
         }
-        if (i < 0) {
-            if (lp->right != NULL) {
-                lp = lp->right;
+    }
+    return label;
+}
+
+void    defLabel(char const *temp, uint8_t f, uint8_t gf)
+{
+    LBLTBL_T *label = oLabel;
+    int group = gf ? 0 : gGrp;
+    int order = 0;
+    if (gf && gGrp) {
+        LBLTBL_T *local = findLabel(temp, gGrp);
+        if (local && local->flg && local->line != gLineNo)
+            errLbl("Duplicate label definition", temp);
+    }
+    if (group && findLabel(temp, 0))
+        group = 0;
+    for (;;) {
+        order = strcmp(temp, label->name);
+        if (!order)
+            order = group - label->grp;
+        if (!order) {
+            if (label->line != gLineNo && (f == 1 || label->flg == 1))
+                errLbl("Duplicate label definition", temp);
+            gLblPtr = label;
+            if (f) {
+                label->value = gLinLc;
+                label->hidden = pragmaNoList || pragmaNoListCode;
+                label->region = addressRegion;
+            }
+            if (!label->flg && f) {
+                label->flg = f;
+                label->line = gLineNo;
+            }
+            return;
+        }
+        if (order < 0) {
+            if (label->right) {
+                label = label->right;
             } else {
-                lp->right  = getNode();
-                lp         = lp->right;
+                label->right = getNode();
+                label = label->right;
                 break;
             }
         } else {
-            if (lp->left != NULL) {
-                lp = lp->left;
+            if (label->left) {
+                label = label->left;
             } else {
-                lp->left   = getNode();
-                lp         = lp->left;
+                label->left = getNode();
+                label = label->left;
                 break;
             }
         }
     }
-    if (lp == NULL)
-        errPrg("defLabel()");
-    gLabels++;
-    gLblPtr    = lp;
-    lp->value  = gLinLc;
-    if (gf)
-        lp->grp = 0;
-    else
-        lp->grp = gGrp;
-    lp->hidden = f && (pragmaNoList || pragmaNoListCode);
-    lp->region = addressRegion;
-    lp->flg    = f;
-    if (f)
-        lp->line = gLineNo;
-    else
-        lp->line = 0x7fff;
-    strcpy(lp->name, temp);
-    lp->right  = lp->left = NULL;
-    return;
+    ++gLabels;
+    gLblPtr = label;
+    label->value = gLinLc;
+    label->grp = (uint8_t)group;
+    label->hidden = f && (pragmaNoList || pragmaNoListCode);
+    label->region = addressRegion;
+    label->flg = f;
+    label->line = f ? gLineNo : 0x7fff;
+    strcpy(label->name, temp);
+    label->right = label->left = NULL;
 }
 
-static LBLTBL_T *refLbl0(char const * lbl)
+static LBLTBL_T *refLbl0(char const *name)
 {
-    LBLTBL_T *  lp = oLabel;
-    int         i;
+    LBLTBL_T *local = findLabel(name, gGrp);
+    LBLTBL_T *published = publishedLabel(name);
+    if (symbolDeclared(name, gGrp, 2))
+        return published ? published : (local && !local->flg ? local : NULL);
+    if (local && local->flg)
+        return local;
+    if (published && published->flg)
+        return published;
+    return local ? local : published;
+}
 
-    while (lp != NULL) {
-        if (( i = strcmp(lbl, lp->name) ) == 0) {
-            if (lp->grp == 0 || lp->grp == gGrp)
-                break;
-            i = (gGrp > lp->grp) ? 1 : -1;
-        }
-        lp = (i < 0) ? (lp->right) : (lp->left);
+static void declareSymbol(char const *name, int kind)
+{
+    SYMBOL_DECLARATION *declaration;
+    if (symbolDeclared(name, gGrp, kind))
+        return;
+    declaration = mallocE(sizeof(*declaration));
+    declaration->group = gGrp;
+    declaration->kind = kind;
+    strcpy(declaration->name, name);
+    declaration->next = symbolDeclarations;
+    symbolDeclarations = declaration;
+    if (!findLabel(name, gGrp) && !findLabel(name, 0)) {
+        LBLTBL_T *saved = gLblPtr;
+        defLabel(name, 0, 0);
+        gLblPtr = saved;
     }
-    return lp;
+}
+
+static void checkSymbolDeclarations(void)
+{
+    SYMBOL_DECLARATION const *declaration = symbolDeclarations;
+    if (gPass != 2)
+        return;
+    for (; declaration; declaration = declaration->next) {
+        LBLTBL_T *label = findLabel(declaration->name, declaration->group);
+        if (declaration->kind != 1)
+            continue;
+        if (!label || !label->flg) {
+            label = findLabel(declaration->name, 0);
+            if ((!label || !label->flg) && gObjct != OB_ASM)
+                errLbl("Exported label is undefined", declaration->name);
+        } else if (publishedLabel(declaration->name) != label) {
+            errLbl("Duplicate exported label", declaration->name);
+        }
+    }
 }
 
 static LBLTBL_T *refLabel(char const * lbl)
@@ -656,7 +733,7 @@ uint8_t    getLabel(char * buf)
         gLinPtr++;
     if (*gLinPtr == ':') {
         gLinPtr++;
-        gf = 1;
+        gf = gCompatMode == COMPAT_AS63;
     }
     *p = '\0';
     return gf;
@@ -826,7 +903,7 @@ static val_t   term(void)
             checkCh_e(')');
             return (lp != NULL);
         } else if (gPass == 1 && refLbl0(temp) == NULL) {
-            defLabel(temp, 0, 1);
+            defLabel(temp, 0, 0);
         } else if (( lp = refLabel(temp) ) != NULL) {
             if (gLineNo < lp->line) {
                 ++expressionForward;
@@ -2789,6 +2866,32 @@ static int nextComma(void)
     return 0;
 }
 
+void symbolDirective(void)
+{
+    char name[LBLSIZE + 1];
+    int kind = gOprPtr->prefix;
+    clearAddress();
+    if (*declarationLabel) {
+        declareSymbol(declarationLabel, kind);
+        while (*gLinPtr && *gLinPtr != '\n')
+            ++gLinPtr;
+    } else {
+        do {
+            skipSpace();
+            if (!isSymbl2(*gLinPtr)) {
+                error("Expected a symbol name.");
+                return;
+            }
+            getLabel(name);
+            declareSymbol(name, kind);
+        } while (nextComma());
+    }
+ #ifdef OPT_OA_FILE
+    if (gObjct == OB_ASM && gPass == 2)
+        oa_putStr(gLineBuf + LINEHEAD, 0);
+ #endif
+}
+
 static FILE *openSearch(char const * name, char const * mode)
 {
     FILE *  fp = fopen(name, mode);
@@ -3947,13 +4050,27 @@ static uint8_t oneLine(void)
         gf = temp[0] = '\0';
         if (!isspace(c) && c != '\n')
             gf = getLabel(temp);
-     #ifdef OPT_OA_FILE
-        if (gObjct == OB_ASM && gf && gPass == 2)
-            oa_putStr(gLineBuf + LINEHEAD, 0);
-     #endif
-        f  = getMnemonic();
-        if (temp[0] && gCoStk[gCo_sp] >= 0)
-            defLabel(temp, f && !strcmp(gOprPtr->mnemonic, "SET") ? 2 : 1, gf);
+        declarationLabel[0] = 0;
+        f = getMnemonic();
+        if (temp[0] && gCoStk[gCo_sp] >= 0) {
+            if (f && gOprPtr->process == symbolDirective) {
+                strcpy(declarationLabel, temp);
+            } else {
+                defLabel(temp, f && !strcmp(gOprPtr->mnemonic, "SET") ? 2 : 1, gf);
+             #ifdef OPT_OA_FILE
+                if (gObjct == OB_ASM && gPass == 2
+                    && (gf || symbolDeclared(temp, gGrp, 1))
+                    && gOAStk[gOA_sp].ll != gLineNo) {
+                    if (f && gOprPtr->process == equ) {
+                        oa_putStr(gLineBuf + LINEHEAD, 0);
+                    } else {
+                        oa_putStr(temp, 0);
+                        oa_putStr(":\n", 0);
+                    }
+                }
+             #endif
+            }
+        }
         return f;
     }
     return 0;
@@ -4092,6 +4209,7 @@ static void assemble(int argc, char * * argv)
         putObj(0x1a);
     }
  #endif
+    checkSymbolDeclarations();
     if (remBlock)
         error("REM without EREM.");
     if (offsetActive) {

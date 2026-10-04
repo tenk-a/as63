@@ -551,6 +551,19 @@ OPTBL_T const gOpTab[] = {
     { "IFPRAGMA", CO_IFPRAGMA,0,       0,              NULL        },
     { "IIF",      0,          0,       0,              ignoreOperand },
 
+    /* global label */
+    { "XDEF",     1,          0,       0,              symbolDirective },
+    { "EXPORT",   1,          0,       0,              symbolDirective },
+    { ".GLOBAL",  1,          0,       0,              symbolDirective },
+    { ".GLOBL",   1,          0,       0,              symbolDirective },
+    { "GLOBAL",   1,          0,       0,              symbolDirective },
+    { "PUBLIC",   1,          0,       0,              symbolDirective },
+    { "WEAK",     1,          0,       0,              symbolDirective },
+    { "XREF",     2,          0,       0,              symbolDirective },
+    { "EXTERN",   2,          0,       0,              symbolDirective },
+    { "EXTERNAL", 2,          0,       0,              symbolDirective },
+    { "IMPORT",   2,          0,       0,              symbolDirective },
+
     /* etc */
     { "PRAGMA",   0,          0,       0,              pragmaDirective },
     { "OPT",      0x00,       0x00,    0x00,           opt         },
