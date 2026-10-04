@@ -1,1 +1,1 @@
-cc -DNDEBUG -O2 -oas63 ../src/as63.c ../src/optab.c
+cc -DNDEBUG -O2 -o~/bin/as63 ../src/as63.c ../src/optab.c ../src/macro.c

@@ -549,6 +549,10 @@ OPTBL_T const gOpTab[] = {
     { ".ELSIF",   CO_ELIF,    0x00,    0x00,           NULL        },
     { ".ENDIF",   CO_ENDC,    0x00,    0x00,           NULL        },
     { "IFPRAGMA", CO_IFPRAGMA,0,       0,              NULL        },
+    { "IFB",      CO_IFB,     0,       0,              NULL        },
+    { "IFNB",     CO_IFNB,    0,       0,              NULL        },
+    { "IFMACROD", CO_IFMACROD,0,       0,              NULL        },
+    { "IFMACROND",CO_IFMACROND,0,      0,              NULL        },
     { "IIF",      0,          0,       0,              ignoreOperand },
 
     /* global label */

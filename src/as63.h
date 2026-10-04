@@ -9,22 +9,29 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef EXT
- #define EXTERN
-#else
- #define EXTERN extern
-#endif
-
-#if __STDC_VERSION__ >= 199901L || _MSC_VER >= 1600
+#if __STDC_VERSION__ >= 199901L || _MSC_VER >= 1600 || __WATCOMC__ >= 1200
 #include <stdint.h>
 #else
 typedef signed char     int8_t;     /* 1-byte signed integer type */
 typedef unsigned char   uint8_t;    /* 1-byte unsigned integer type */
 typedef short           int16_t;    /* 2-byte signed integer type */
 typedef unsigned short  uint16_t;   /* 2-byte unsigned integer type */
+#ifdef _WIN32
+typedef __int64          intmax_t;
+typedef unsigned __int64 uintmax_t;
+#else
+typedef long            intmax_t;
+typedef unsigned long   uintmax_t;
+#endif
 #endif
 
-#define __(x)           x
+#ifdef _MSC_VER
+#define strcasecmp      _stricmp
+#define strncasecmp     _strnicmp
+#elif defined _WIN32 || defined __DOS__
+#define strcasecmp      stricmp
+#define strncasecmp     strnicmp
+#endif
 
 #define STDERR          stderr
 #define toXDigit(c)     (isdigit((uint8_t)(c)) ? (c - '0') : (toupper((uint8_t)(c)) - 'A' + 10))
@@ -46,7 +53,8 @@ typedef unsigned short  uint16_t;   /* 2-byte unsigned integer type */
 #define MNEMOSIZE       10    /* maximum number of mnemonic characters       */
 #define MODNAMSZ        29    /* maximum number of characters in module name */
 
-typedef int  val_t;           /* int<->long: use int/long for constant arithmetic */
+typedef intmax_t        val_t;  /* use int/long for constant arithmetic      */
+typedef uintmax_t       uval_t; /* unsigned val_t                            */
 
 #define OPT_OA_FILE           /* enable -a option support                    */
 #define OPT_FBAS              /* enable -k (FBASIC machine-code file output) */
@@ -58,13 +66,14 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 
 #ifdef SMALL_HOST
 #define MAXCHAR         1024  /* maximum number of characters per input line */
-#define MAXLABEL        256   /* memory allocation block size for name table (nodes) */
+#define MAXLABEL        128   /* memory allocation block size for name table (nodes) */
 #define FNAMESZ         127   /* maximum file name (path list) length        */
 #define MAXLIB          16    /* maximum include nesting depth               */
 #define LBLSIZE         21    /* maximum label name length                   */
 #define GCO_MAX         40    /* maximum if nesting depth                    */
 #define GP1_MAX         100   /* maximum number of ifp1 uses                 */
 #define EXTRA_INCDIRS   8
+#define MACRO_BUF_SIZE  (0x8000)
 #else
 #define MAXCHAR         16384 /* maximum number of characters per input line */
 #define MAXLABEL        1024  /* memory allocation block size for name table (nodes) */
@@ -74,6 +83,7 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define GCO_MAX         256   /* maximum if nesting depth                    */
 #define GP1_MAX         1024  /* maximum number of ifp1 uses                 */
 #define EXTRA_INCDIRS   64
+#define MACRO_BUF_SIZE  (16UL * 1024 * 1024)
 #endif
 
 /* register notation */
@@ -123,7 +133,6 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define INDEX_MODE      2
 #define EXTEND_MODE     3
 
-
 /* conditional assembler */
 #define CO_ELSE         1
 #define CO_ENDC         2
@@ -140,6 +149,10 @@ typedef int  val_t;           /* int<->long: use int/long for constant arithmeti
 #define CO_IFC          13
 #define CO_IFNC         14
 #define CO_IFPRAGMA     15
+#define CO_IFB          16
+#define CO_IFNB         17
+#define CO_IFMACROD     18
+#define CO_IFMACROND    19
 
 /* none_wq */
 #define WQ_TSTQ         0
@@ -184,157 +197,24 @@ typedef struct optbl_t {
         void  (*process)(void);
 } OPTBL_T;
 
-/* label table */
-typedef struct lbltbl_t {
-        int     line;
-        val_t   value;
-        struct lbltbl_t *left;
-        struct lbltbl_t *right;
-        char    flg;           /* 0:used  1:EQU  2:SET */
-        uint8_t grp;
-        uint8_t hidden;
-        int     region;
-        char    name[LBLSIZE + 1];
-} LBLTBL_T;
-
-
-/*-------------------------------- var -------------------------------------*/
-#ifdef DEBUG
- EXTERN uint8_t gDebug_f;
-#endif
-
-/* assembly */
-EXTERN FILE    *gSrcFp;
-EXTERN OPTBL_T const* gOprPtr;
-EXTERN int      gErrors;
-EXTERN int      gPass;
-EXTERN int      gImVal;
-EXTERN int      gIndirect;
-EXTERN int      remBlock;
-EXTERN int      failSeen;
-EXTERN int      offsetActive;
-EXTERN uint16_t gDp;
-EXTERN uint16_t gLc;
-EXTERN uint16_t gLinLc;
-EXTERN uint16_t gObjLc;
-EXTERN uint8_t  gValid_f;
-EXTERN uint8_t  gEOF_f;
-EXTERN uint8_t  gOs9_f;
-EXTERN uint8_t  gOrg_f;
-EXTERN uint8_t  gOrgSFmt_f;
-EXTERN uint8_t  gByte_f;
-EXTERN uint8_t  gWord_f;
-EXTERN uint8_t  gIdxOfs_f;
-EXTERN char     gModName[MODNAMSZ+1];
 #define COMPAT_AS63     0
 #define COMPAT_LWASM    1
 #define COMPAT_VASM     2
-EXTERN uint8_t gCompatMode;
-EXTERN uint8_t  gM6809_f;
-EXTERN uint8_t  gM6800_f;
-EXTERN uint8_t  gUndoc_f;
 
-/* object output */
-EXTERN FILE    *gObjFp;
-EXTERN uint16_t gObjSiz;
-EXTERN uint16_t gObjCnt;
-EXTERN uint16_t gStartAddr;
-EXTERN uint16_t gEntryAddr;
-EXTERN uint8_t  gObjct;
-EXTERN int      gObjPos;
-EXTERN int      gObjBufSz;
-EXTERN uint8_t  gObjBuf[OBJSIZE];
-EXTERN uint8_t  gCrcBuf[3];
-EXTERN uint8_t  gRmb_f;
-EXTERN int      gRmb_sp;
-EXTERN int      rsCounter;
-EXTERN int      soCounter;
-EXTERN int      foCounter;
-EXTERN uint8_t  rsDefined;
-EXTERN uint8_t  soDefined;
-EXTERN uint8_t  foDefined;
-EXTERN uint16_t savedCodeLc;
-EXTERN uint16_t lastOffset;
-EXTERN uint16_t rorgBase;
-EXTERN uint16_t previousOrg;
-EXTERN uint8_t reorgValid;
-EXTERN uint8_t  gFlex_f;
-#ifdef OPT_FBAS
- EXTERN uint8_t gFBasic_f;
-#endif
-
-/* labels */
-EXTERN LBLTBL_T *gLblPtr;
-EXTERN int      gLabels;
-EXTERN int      gLineNo;
-EXTERN uint16_t gCSectBase;
-EXTERN uint8_t  gGrp;
-EXTERN uint8_t  gCSectSw;
-EXTERN uint8_t  gUpLo_f;
-EXTERN uint8_t  gPSect_f;
-
-EXTERN uint8_t  gSjis_f;
-
-
-/* listing and message display */
-EXTERN char const *gCmdName;
-EXTERN int     gList;
-EXTERN FILE   *gLstFp;
-EXTERN uint8_t *gLinPtr;
-EXTERN uint8_t gVerbos_f;
-EXTERN char    gLineBuf[MAXCHAR+2];
-EXTERN FILE   *gErrFp;
-EXTERN char const *gErrFName;
-
-/* manage 'if' (conditional assembly) */
-EXTERN int   gCo_sp;
-EXTERN int   gCoStk[GCO_MAX+1];
-EXTERN int   gP1_sp;
-EXTERN int   gP1Stk[GP1_MAX+1];
-
-/* use for library inclusion */
-EXTERN FILE *gFileStk[MAXLIB];
-EXTERN int   gFile_sp;
-EXTERN char  gSrcFName[FNAMESZ+1];
-EXTERN int   gSrcLine;
-EXTERN struct FILSTK2_tag {
-            int  srcline;
-            char srcname[FNAMESZ+1];
-        } gFilStk2[MAXLIB];
-#ifdef INCLUDIR
-EXTERN char const* gIncDirName;
-#endif
-EXTERN char* extraIncDirs[EXTRA_INCDIRS];
-EXTERN int   extraIncCount;
-
-#ifdef OPT_OA_FILE  /* -a option */
- typedef struct {
-     int     ll;
-     uint8_t nn;
- } OATBL_T;
- EXTERN OATBL_T *gOAStk;
- EXTERN uint8_t  gOAchk_f;
- EXTERN int      gOA_sp;
- void oa_putStr(char const *, int);
-#endif
+/* Shared state for macro input expansion. */
+extern FILE *          gSrcFp;
+extern uint8_t         gCompatMode;
+extern uint8_t         gUpLo_f;
+extern uint8_t *       gLinPtr;
+extern uint8_t         gAllMacroParams;
+extern char            gLineBuf[MAXCHAR + 2];
+extern int             gCo_sp;
+extern int             gCoStk[GCO_MAX + 1];
+extern int             gFile_sp;
+extern int             gSrcLine;
 
 extern OPTBL_T const gOpTab[];
 
-#define PRAGMA_KINDS    10
-#define PRAGMA_DEPTH    64
-EXTERN uint8_t pragmaEscapes;
-EXTERN uint8_t pragmaPcAsPcr;
-EXTERN uint8_t pragmaIndex0;
-EXTERN uint8_t pragmaForwardMax;
-EXTERN uint8_t pragmaAutoBranch;
-EXTERN uint8_t pragmaNoList;
-EXTERN uint8_t pragmaNoListCode;
-EXTERN uint8_t pragmaDefaults[PRAGMA_KINDS];
-EXTERN uint8_t pragmaStacks[MAXLIB + 1][PRAGMA_KINDS][PRAGMA_DEPTH];
-EXTERN uint8_t pragmaDepth[ MAXLIB + 1][PRAGMA_KINDS];
-
-
-/*-- Function --*/
 void
     none(void), load(void), load2(void),    store(void),
     ccr(void),  bitTransfer(void), lea(void),  memory(void),   transfer(void),
@@ -357,5 +237,32 @@ void
     mnm6800(void),       mnm68hc11(void),  hc11BitOp(void),
     hc11BitBranch(void), hc11MinMax(void), hc11Emuls(void),
     endop(void);
+
+void*   mallocE(size_t);
+void    error(char const *);
+void    errPrg(char const *);
+void    skipSpace(void);
+void    initLine(void);
+void    putLine(void);
+void    clearAddress(void);
+void    defLabel(char const *, uint8_t, uint8_t);
+uint8_t getLabel(char *);
+uint8_t *getLine(void);
+int     isSymbl(int);
+int     isCommentChar(int);
+int     popFile(void);
+val_t   invExpr(void);
+uint8_t *macroReadLine(uint8_t *, size_t);
+void    macroReset(void);
+void    macroFinish(void);
+void    macroLocalLabel(char *);
+int     macroControl(char const *, uint8_t);
+int     macroInvoke(char const *);
+int     macroDefined(char const *);
+int     macroValue(char const *, val_t *);
+int     macroSetValue(char const *, val_t);
+int     macroNumericLocal(uint8_t const *);
+int     macroConditionalFloor(void);
+char const *macroListingSource(void);
 
 #endif
