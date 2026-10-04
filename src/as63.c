@@ -4628,8 +4628,6 @@ static int structureControl(char const *label, uint8_t global)
         gLinPtr = saved;
         return 0;
     }
-    if (!active)
-        return 1;
     if (activeStructure) {
         if (!*word) {
             clearAddress();
@@ -4643,6 +4641,8 @@ static int structureControl(char const *label, uint8_t global)
             gLinPtr = saved;
             return 0;
         }
+        if (!active)
+            return 1;
         if (definition == activeStructure) {
             error("Recursive structure field.");
             return 1;
@@ -4679,6 +4679,8 @@ static int structureControl(char const *label, uint8_t global)
         return 1;
     }
     base = gCSectSw ? gCSectBase : gLc;
+    if (!active)
+        return 1;
     if (*label) {
         structureSymbol(label, base, definition->size, global);
         for (field = definition->fields; field; field = field->next) {
