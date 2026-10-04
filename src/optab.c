@@ -597,6 +597,7 @@ OPTBL_T const gOpTab[] = {
     { "PRINTT",   0,          0,       0,              printText     },
     { "PRINTV",   0,          0,       0,              printValue    },
 
+    { "ASSERT",   0,          0,       0,              assertDirective },
     { "FAIL",     0,          0,       0,              failDirective },
     { "ERROR",    1,          0,       0,              failDirective },
     { "WARNING",  2,          0,       0,              failDirective },

@@ -3520,6 +3520,21 @@ void failDirective(void)
     }
 }
 
+void assertDirective(void)
+{
+    char message[MAXCHAR + 1] = "Assertion failed.";
+    val_t result = 0;
+    clearAddress();
+    skipSpace();
+    result = expression();
+    if (nextComma() && !textOperand(message, sizeof(message)))
+        return;
+    if (gPass == 2 && gValid_f && !result) {
+        error(message);
+        failSeen = 1;
+    }
+}
+
 void relativeData(void)
 {
     val_t value;

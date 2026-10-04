@@ -228,7 +228,7 @@ void
     vsct(void), psct(void), csct(void),     endsct(void),
     opt(void), pragmaDirective(void),
     alignData(void), rsOffset(void),        argumentOffsets(void),
-    ignoreOperand(void), commentBlock(void), failDirective(void), symbolDirective(void),
+    ignoreOperand(void), commentBlock(void), failDirective(void), assertDirective(void), symbolDirective(void),
     relativeData(void), relativeOrg(void), offsetSection(void),
     printText(void), printValue(void),
     library(void), incbin(void), incdir(void),
