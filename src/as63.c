@@ -3525,12 +3525,13 @@ void assertDirective(void)
 {
     char message[MAXCHAR + 1] = "Assertion failed.";
     val_t result = 0;
+    int errors = gErrors;
     clearAddress();
     skipSpace();
     result = expression();
     if (nextComma() && !textOperand(message, sizeof(message)))
         return;
-    if (gPass == 2 && gValid_f && !result) {
+    if (gPass == 2 && gErrors == errors && !result) {
         error(message);
         failSeen = 1;
     }
