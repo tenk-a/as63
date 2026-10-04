@@ -4399,7 +4399,7 @@ static int  getMnemonic(void)
   NEXT_MNEMONIC:
     p = temp;
     skipSpace();
-    if (*gLinPtr == '\n' || *gLinPtr == '\0')
+    if (*gLinPtr == '\n' || *gLinPtr == '\0' || isCommentChar(*gLinPtr))
         return 0;
     if (*gLinPtr == '=') {
         ++gLinPtr;
