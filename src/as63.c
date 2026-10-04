@@ -12,7 +12,7 @@
 #include    <stdlib.h>
 #include    "as63.h"
 
-#define AS63_TITLE      "HD6309 cross assembler version v1.47T\n"
+#define AS63_TITLE      "HD6309 cross assembler version v1.50T\n"
 
 #ifdef _MSC_VER
  #define ITOA10(i,a)    _itoa( (i), (a), 10 )
@@ -4991,21 +4991,21 @@ static void printLog(void)
 static void usage(void)
 {
     fprintf(STDERR, "usage: %s [-opts] src_file...\n", gCmdName);
-    e_puts(" -?  Show this help\n");
-    e_puts(" -3  6309 mode (default)\n");
-    e_puts(" -8  6809 mode\n");
-    e_puts(" -9  OS-9 standard ASM mode\n");
-    e_puts(" -6  Enable M6800-family mnemonic compatibility\n");
-    e_puts(" -z  Enable undocumented 6809/6309 opcodes/operands\n");
-    e_puts(" -p  Selectable 0, 5, 8, or 16-bit offsets.\n");
-    e_puts(" -y  Enable automatic branch sizing\n");
-    e_puts(" --allmp  Allow 35 macro arguments (default: 9)\n");
-    e_puts(" -q  Allow address gaps caused by ORG or RMB\n");
-    e_puts(" -u  Case-sensitive labels    -n  Case-insensitive labels\n");
-    e_puts(" -s  Show symbol table        -v  Show progress\n");
-    e_puts(" -j  use SJIS character.\n");
+    e_puts(" -?     Show this help\n");
+    e_puts(" -3     6309 mode (default)\n");
+    e_puts(" -8     6809 mode\n");
+    e_puts(" -9     OS-9 standard ASM mode\n");
+    e_puts(" -6     Enable M6800-family mnemonic compatibility\n");
+    e_puts(" -z     Enable undocumented 6809/6309 opcodes/operands\n");
+    e_puts(" -p     Selectable 0, 5, 8, or 16-bit offsets.\n");
+    e_puts(" -y     Enable automatic branch sizing\n");
+    e_puts(" -q     Allow address gaps caused by ORG or RMB\n");
+    e_puts(" -u     Case-sensitive labels    -n  Case-insensitive labels\n");
+    e_puts(" -s     Show symbol table        -v  Show progress\n");
+    e_puts(" -j     use SJIS character.\n");
+    e_puts(" --allmp       Allow 35 macro arguments (default: 9)\n");
     e_puts(" -m<mod_name>  Set the $modnam string variable\n");
-    e_puts(" -d<LBL>[=Val] Define LBL as Val (default: 1)\n");
+    e_puts(" -d<L>[=Val]   Define L as Val (default: 1)\n");
     e_puts(" -t=<ASM>      Assembler compatibility mode: as63 lwasm vasm\n");
     e_puts(" -o[=FILE]     Write binary object to FILE\n");
     e_puts(" -f[=FILE]     Write S-Record object to FILE\n");
@@ -5013,14 +5013,14 @@ static void usage(void)
  #ifdef OPT_OA_FILE
     e_puts(" -a[=FILE]     Write object as FCB data to FILE\n");
  #endif
-    e_puts(" -e[=ERR_FILE] Write source errors to ERR_FILE\n");
+    e_puts(" -e[=FILE]     Write source errors to FILE\n");
  #ifdef INCLUDIR
     e_puts(" -i[=INC_DIR]  Set the directory referenced by $INC\n");
  #endif
     e_puts(" -l[=LST_FILE] Write assembly listing to LIST_FILE\n");
  #ifdef OPT_FBAS
     e_puts(" -k[Start[,Enter]]  Write an F-BASIC machine-language file\n");
-    e_puts(" -r  In F-BASIC format, omit trailing zeros after RMB\n");
+    e_puts(" -r            In F-BASIC format, omit trailing zeros after RMB\n");
  #endif
  #ifdef DEBUG
     e_puts(" -c  Debug mode\n");
