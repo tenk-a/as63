@@ -36,7 +36,7 @@ typedef unsigned long   uintmax_t;
 #define STDERR          stderr
 #define toXDigit(c)     (isdigit((uint8_t)(c)) ? (c - '0') : (toupper((uint8_t)(c)) - 'A' + 10))
 #define e_puts(s)       fprintf(STDERR,"%s", s)
-#ifndef OS9
+#if !defined(stpcpy) && !defined(OS9)
 #define stpcpy(d,s)     (strcpy((d),(s)),(d)+strlen(d))
 #endif
 
