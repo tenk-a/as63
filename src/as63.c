@@ -33,6 +33,8 @@ typedef struct lbltbl_t {
     char    flg;           /* 0:used  1:EQU  2:SET */
     uint8_t grp;
     uint8_t hidden;
+    uint8_t nocase;
+    val_t   structureSize;
     int     region;
     char    name[LBLSIZE + 1];
 } LBLTBL_T;
@@ -48,6 +50,24 @@ typedef struct {
     uint8_t nn;
 } OATBL_T;
 #endif
+
+typedef struct structure_field {
+    struct structure_field* next;
+    char                    name[LBLSIZE + 1];
+    val_t                   offset;
+    val_t                   size;
+} STRUCT_FIELD;
+
+typedef struct structure_definition {
+    struct structure_definition* next;
+    char                         name[LBLSIZE + 1];
+    STRUCT_FIELD *               fields;
+    val_t size;
+} STRUCT_DEF;
+
+static STRUCT_DEF *     structures;
+static STRUCT_DEF *     activeStructure;
+static int              skippedStructure;
 
 FILE *                  gSrcFp;
 uint8_t                 gCompatMode;
@@ -159,7 +179,7 @@ static int              gOA_sp;
 #endif
 
 /* Assembly settings. */
-#define PRAGMA_KINDS    11
+#define PRAGMA_KINDS    22
 #define PRAGMA_DEPTH    64
 static uint8_t          pragmaEscapes;
 static uint8_t          pragmaPcAsPcr;
@@ -169,6 +189,21 @@ static uint8_t          pragmaAutoBranch;
 static uint8_t          pragmaNoList;
 static uint8_t          pragmaNoListCode;
 static uint8_t          pragmaShadow;
+static uint8_t          pragmaDollarLocal;
+static uint8_t          pragmaAsm09;
+static uint8_t          pragmaM80Ext;
+static uint8_t          pragmaCondUndefZero;
+static uint8_t          pragmaSymbolNoCase;
+static uint8_t          pragmaExport;
+static uint8_t          pragmaOperandSizeWarning;
+static uint8_t          pragmaQrts;
+static uint8_t          pragmaEmuExt;
+static uint8_t          pragma6809Conv;
+static uint8_t          pragma6309Conv;
+static int              conditionalExpression;
+static int              wordCharacter;
+static int              lastRtsAddress = -1;
+
 static uint8_t          pragmaDefaults[PRAGMA_KINDS];
 static uint8_t          pragmaStacks[MAXLIB + 1][PRAGMA_KINDS][PRAGMA_DEPTH];
 static uint8_t          pragmaDepth[ MAXLIB + 1][PRAGMA_KINDS];
@@ -685,6 +720,17 @@ typedef struct symbol_declaration {
 static SYMBOL_DECLARATION *symbolDeclarations;
 static char declarationLabel[LBLSIZE + 1];
 
+static LBLTBL_T *findCaseLabel(LBLTBL_T *label, char const *name, int group)
+{
+    LBLTBL_T *found = NULL;
+    if (!label)
+        return NULL;
+    if (label->flg && label->nocase && label->grp == group
+        && !strcasecmp(label->name, name)) return label;
+    found = findCaseLabel(label->left, name, group);
+    return found ? found : findCaseLabel(label->right, name, group);
+}
+
 static LBLTBL_T *findLabel(char const *name, int group)
 {
     LBLTBL_T *label = oLabel;
@@ -692,11 +738,16 @@ static LBLTBL_T *findLabel(char const *name, int group)
         int order = strcmp(name, label->name);
         if (!order)
             order = group - label->grp;
-        if (!order)
-            return label;
+        if (!order) {
+            LBLTBL_T *insensitive = NULL;
+            if (label->flg)
+                return label;
+            insensitive = gUpLo_f ? NULL : findCaseLabel(oLabel, name, group);
+            return insensitive ? insensitive : label;
+        }
         label = order < 0 ? label->right : label->left;
     }
-    return NULL;
+    return gUpLo_f ? NULL : findCaseLabel(oLabel, name, group);
 }
 
 static int symbolDeclared(char const *name, int group, int kind)
@@ -704,7 +755,10 @@ static int symbolDeclared(char const *name, int group, int kind)
     SYMBOL_DECLARATION const *declaration = symbolDeclarations;
     for (; declaration; declaration = declaration->next)
         if (declaration->group == group && declaration->kind == kind
-            && !strcmp(name, declaration->name))
+            && (!strcmp(name, declaration->name)
+                || (findLabel(declaration->name, group)
+                    && findLabel(declaration->name, group)->nocase
+                    && !strcasecmp(name, declaration->name))))
             return 1;
     return 0;
 }
@@ -716,20 +770,29 @@ static LBLTBL_T *publishedLabel(char const *name)
     if (label && label->flg)
         return label;
     for (; declaration; declaration = declaration->next) {
-        if (declaration->kind == 1 && !strcmp(name, declaration->name)) {
-            LBLTBL_T *published = findLabel(name, declaration->group);
-            if (published && published->flg)
-                return published;
+        LBLTBL_T *published = findLabel(declaration->name, declaration->group);
+        if (declaration->kind == 1 && published && published->flg
+            && (!strcmp(name, declaration->name)
+                || (published->nocase && !strcasecmp(name, declaration->name)))) {
+            return published;
         }
     }
     return label;
 }
+
+static void declareSymbol(char const *name, int kind);
 
 void    defLabel(char const *temp, uint8_t f, uint8_t gf)
 {
     LBLTBL_T *label = oLabel;
     int group = gf ? 0 : gGrp;
     int order = 0;
+    LBLTBL_T *same = NULL;
+    if (f && pragmaExport)
+        declareSymbol(temp, 1);
+    same = findLabel(temp, group);
+    if (same && same->nocase)
+        temp = same->name;
     if (gf && gGrp) {
         LBLTBL_T *local = findLabel(temp, gGrp);
         if (local && local->flg && local->line != gLineNo)
@@ -746,9 +809,11 @@ void    defLabel(char const *temp, uint8_t f, uint8_t gf)
                 errLbl("Duplicate label definition", temp);
             gLblPtr = label;
             if (f) {
-                label->value = gLinLc;
+                label->value  = gLinLc;
                 label->hidden = pragmaNoList || pragmaNoListCode;
                 label->region = addressRegion;
+                label->nocase = gUpLo_f || pragmaSymbolNoCase;
+                label->structureSize = -1;
             }
             if (!label->flg && f) {
                 label->flg = f;
@@ -779,6 +844,8 @@ void    defLabel(char const *temp, uint8_t f, uint8_t gf)
     label->value    = gLinLc;
     label->grp      = (uint8_t)group;
     label->hidden   = f && (pragmaNoList || pragmaNoListCode);
+    label->nocase   = f && (gUpLo_f || pragmaSymbolNoCase);
+    label->structureSize = -1;
     label->region   = addressRegion;
     label->flg      = f;
     label->line     = f ? gLineNo : 0x7fff;
@@ -1011,7 +1078,7 @@ static val_t   term(void)
             return gCSectBase;
         break;
     case '\'':
-        if (isKanji(*gLinPtr) )
+        if (isKanji(*gLinPtr) || (wordCharacter && pragmaM80Ext))
             goto DC;
         return *gLinPtr++;
     case '"':
@@ -1037,8 +1104,30 @@ static val_t   term(void)
     --gLinPtr;
     if (isSymbl2(c) || macroNumericLocal(gLinPtr)) {
         getLabel(temp);
+        if (!strcasecmp(temp, "sizeof") && *gLinPtr == '{') {
+            ++gLinPtr;
+            getLabel(temp);
+            checkCh_e('}');
+            lp = refLabel(temp);
+            if (lp && lp->structureSize >= 0) {
+                if (gLineNo < lp->line)
+                    ++expressionForward;
+                return lp->structureSize;
+            }
+            if (gPass == 1 && !refLbl0(temp))
+                defLabel(temp, 0, 0);
+            if (gPass == 2)
+                errLbl("Unknown structure size", temp);
+            gValid_f = 0;
+            return 0;
+        }
         if (macroValue(temp, &tv))
             return tv;
+        if (conditionalExpression && pragmaCondUndefZero) {
+            lp = refLabel(temp);
+            if (!lp || lp->line > gLineNo)
+                return 0;
+        }
         if (rsDefined && !strcasecmp(temp, "__RS") )
             return rsCounter;
         if (soDefined && !strcasecmp(temp, "__SO"))
@@ -1492,6 +1581,9 @@ static int     regNo(int r)
 
 static int     checkByte(int b)
 {
+    if (pragmaOperandSizeWarning && gPass == 2 && (gValid_f || expressionForward) && gWord_f
+        && b >= -128 && b <= 127)
+        warning("An 8-bit indexed offset can be used.");
     return ( gByte_f || (-128 <= b && b <= 127 && gValid_f && !gWord_f) );
 }
 
@@ -1567,10 +1659,13 @@ static void operand(int grp, int mode)
     skipSpace();
     if (( mode & (IMMEDIATE | IMMEDIATE2) ) && checkChar('#')) {
         putCode(grp, IMMEDIATE_MODE);
-        if (mode & IMMEDIATE)
-            putByte( bytExpr() );
-        else
-            putWord( expression() );
+        if (mode & IMMEDIATE) {
+            putByte(bytExpr());
+        } else {
+            wordCharacter = 1;
+            putWord(expression());
+            wordCharacter = 0;
+        }
         return;
     }
     gIndirect = checkChar('[');
@@ -1841,6 +1936,8 @@ void    immemory(void)
 void    none(void)
 {
     putCode(GROUP0, NO_MODE);
+    if (!gOprPtr->prefix && gOprPtr->opcode == 0x39)
+        lastRtsAddress = (uint16_t)(gLc - 1);
 }
 
 void    mnm68hc11(void)
@@ -2347,10 +2444,71 @@ static void automaticBranch(int originallyLong)
     gOprPtr = original;
 }
 
+static int qrtsBranch(int originallyLong)
+{
+    uint8_t *target = gLinPtr;
+    int forced = 0;
+    int opcode = gOprPtr->opcode;
+    int distance = 0;
+    int longBranch = originallyLong && !pragmaAutoBranch;
+    if (!pragmaQrts)
+        return 0;
+    while (isspace(*target) && *target != '\n')
+        ++target;
+    if (*target == '<' || *target == '>') {
+        forced = *target++;
+        longBranch = forced == '>';
+    }
+    if (strncasecmp((char const *)target, "?RTS", 4) || isSymbl3(target[4]))
+        return 0;
+    gLinPtr = target + 4;
+    if (opcode == 0x16)
+        opcode = 0x20;
+    if (opcode < 0x20 || opcode > 0x2f) {
+        error("?RTS requires a conditional branch or BRA/BRN.");
+        return 1;
+    }
+    distance = lastRtsAddress - gLinLc - 2;
+    if (lastRtsAddress >= 0 && distance >= -128 && distance <= 127) {
+        if (longBranch) {
+            if (opcode == 0x20) {
+                put1Byte(0x16);
+                put1Word(lastRtsAddress - gLinLc - 3);
+            } else {
+                put1Byte(0x10);
+                put1Byte(opcode);
+                put1Word(lastRtsAddress - gLinLc - 4);
+            }
+        } else {
+            put1Byte(opcode);
+            put1Byte(distance);
+        }
+    } else {
+        if (longBranch) {
+            if (opcode == 0x20 || opcode == 0x21) {
+                put1Byte(opcode == 0x20 ? 0x21 : 0x20);
+                put1Byte(1);
+            } else {
+                put1Byte(0x10);
+                put1Byte(opcode ^ 1);
+                put1Word(1);
+            }
+        } else {
+            put1Byte(opcode ^ 1);
+            put1Byte(1);
+        }
+        put1Byte(0x39);
+        lastRtsAddress = (uint16_t)(gLc - 1);
+    }
+    return 1;
+}
+
 void    branch(void)
 {
     val_t val;
 
+    if (qrtsBranch(0))
+        return;
     if (pragmaAutoBranch) {
         automaticBranch(0);
         return;
@@ -2365,12 +2523,17 @@ void    branch(void)
 void    lbranch(void)
 {
     val_t target = 0;
+    if (qrtsBranch(1))
+        return;
     if (pragmaAutoBranch) {
         automaticBranch(1);
         return;
     }
     skipSpace();
     target = expression();
+    if (pragmaOperandSizeWarning && gPass == 2 && (gValid_f || expressionForward)
+        && target - gLinLc - 2 >= -128 && target - gLinLc - 2 <= 127)
+        warning("A short branch can be used.");
     putCode(GROUP0, NO_MODE);
     putWord(target - gLinLc - (gOprPtr->prefix ? 4 : 3));
 }
@@ -2522,10 +2685,24 @@ static int pragmaName(char const *name, int *enabled)
 {
     static char const * const names[] = {
         "6809", "6309", "6800compat", "cescapes", "pcaspcr",
-        "index0tonone", "forwardrefmax", "autobranchlength", "nolist", "nolistcode", "shadow"
+        "index0tonone", "forwardrefmax", "autobranchlength", "nolist", "nolistcode", "shadow",
+        "dollarlocal", "asm09", "m80ext", "condundefzero", "symbolnocase",
+        "export", "operandsizewarning", "qrts", "emuext", "6809conv", "6309conv"
     };
     int     i;
     *enabled = 1;
+    if (!strcmp(name, "nosymbolcase"))
+        return 15;
+    if (!strcmp(name, "symbolcase") || !strcmp(name, "nonosymbolcase")) {
+        *enabled = 0;
+        return 15;
+    }
+    if (!strcmp(name, "dollarnotlocal")) {
+        *enabled = 0;
+        return 11;
+    }
+    if (!strcmp(name, "nodollarnotlocal"))
+        return 11;
     for (i = 0; i < PRAGMA_KINDS; ++i)
         if (!strcmp(name, names[i]))
             return i;
@@ -2538,7 +2715,8 @@ static int pragmaName(char const *name, int *enabled)
         *enabled = 0;
     }
     for (i = 0; i < PRAGMA_KINDS; ++i)
-        if (!strcmp(name, names[i])) return i;
+        if (!strcmp(name, names[i]))
+            return i;
     return -1;
 }
 
@@ -2556,6 +2734,17 @@ static int pragmaValue(int kind)
     case 8: return pragmaNoList     != 0;
     case 9: return pragmaNoListCode != 0;
     case 10:return pragmaShadow     != 0;
+    case 11:return pragmaDollarLocal != 0;
+    case 12:return pragmaAsm09 != 0;
+    case 13:return pragmaM80Ext != 0;
+    case 14:return pragmaCondUndefZero != 0;
+    case 15:return pragmaSymbolNoCase != 0;
+    case 16:return pragmaExport != 0;
+    case 17:return pragmaOperandSizeWarning != 0;
+    case 18:return pragmaQrts != 0;
+    case 19:return pragmaEmuExt != 0;
+    case 20:return pragma6809Conv != 0;
+    case 21:return pragma6309Conv != 0;
     }
     return 0;
 }
@@ -2584,7 +2773,25 @@ static void pragmaSet(int kind, int enabled)
     case 8: pragmaNoList     = enabled; break;
     case 9: pragmaNoListCode = enabled; break;
     case 10:pragmaShadow     = enabled; break;
+    case 11:pragmaDollarLocal = enabled; break;
+    case 12:pragmaAsm09 = enabled; break;
+    case 13:pragmaM80Ext = enabled; break;
+    case 14:pragmaCondUndefZero = enabled; break;
+    case 15:pragmaSymbolNoCase = enabled; break;
+    case 16:pragmaExport = enabled; break;
+    case 17:pragmaOperandSizeWarning = enabled; break;
+    case 18:pragmaQrts = enabled; break;
+    case 19:pragmaEmuExt = enabled; break;
+    case 20:pragma6809Conv = enabled; break;
+    case 21:pragma6309Conv = enabled; break;
     }
+}
+
+int pragmaEnabled(char const *name)
+{
+    int enabled = 0;
+    int kind = pragmaName(name, &enabled);
+    return kind >= 0 && pragmaValue(kind) == enabled;
 }
 
 static int readPragma(int *enabled)
@@ -2593,7 +2800,8 @@ static int readPragma(int *enabled)
     int n = 0;
     skipSpace();
     while (isSymbl(*gLinPtr)) {
-        if (n < LBLSIZE) name[n++] = tolower(*gLinPtr);
+        if (n < LBLSIZE)
+            name[n++] = tolower(*gLinPtr);
         ++gLinPtr;
     }
     name[n] = 0;
@@ -2816,22 +3024,13 @@ static val_t offsetField(val_t base, val_t count, int checked)
 
 /*----------------------------------*/
 
-void    rmb(void)
+static void reserveBytes(val_t count, int checked)
 {
-    val_t count;
-    int   size     = gOprPtr->prefix ? gOprPtr->prefix : 1;
-    int   checked  = gOprPtr->opcode & BLOCK_CHECK;
     val_t position = gCSectSw ? gCSectBase : gLc;
-
-    skipSpace();
-    count = invExpr();
-    if (checked && (count < 0 || count > 65535 / size
-        || count > (65536L - position) / size))
-    {
+    if (checked && (count < 0 || count > 65536L - position)) {
         error("Reservation exceeds address space or has a negative count.");
         return;
     }
-    count *= size;
     if (offsetActive) {
         if (count < 0 || count > 65535L - gLc)
             error("OFFSET exceeds address space.");
@@ -2850,6 +3049,20 @@ void    rmb(void)
     } else {
         fillBlock(count, 0, 1, 0);
     }
+}
+
+void rmb(void)
+{
+    int size = gOprPtr->prefix ? gOprPtr->prefix : 1;
+    int checked = gOprPtr->opcode & BLOCK_CHECK;
+    val_t count = 0;
+    skipSpace();
+    count = invExpr();
+    if (checked && (count < 0 || count > 65535 / size)) {
+        error("Reservation exceeds address space or has a negative count.");
+        return;
+    }
+    reserveBytes(count * size, checked);
 }
 
 void    equ(void)
@@ -3491,7 +3704,8 @@ void    opt(void)
 {
     if (gOprPtr->prefix == LIST_ABSOLUTE) {
         clearAddress();
-        if (gPass == 2 && gLstFp) gList = gOprPtr->opcode;
+        if (gPass == 2 && gLstFp)
+            gList = gOprPtr->opcode;
         return;
     }
     skipSpace();
@@ -3903,7 +4117,7 @@ static CONDITIONAL_RESULT *nextConditional(int kind)
     return result;
 }
 
-static void co_ifEvaluate(uint8_t f)
+static void co_ifBody(uint8_t f)
 {
     int val = 0;
 
@@ -4053,6 +4267,22 @@ static void co_ifEvaluate(uint8_t f)
     }
 }
 
+static void co_ifEvaluate(uint8_t f)
+{
+    ++conditionalExpression;
+    co_ifBody(f);
+    --conditionalExpression;
+}
+
+static val_t conditionalValue(void)
+{
+    val_t value = 0;
+    ++conditionalExpression;
+    value = invExpr();
+    --conditionalExpression;
+    return value;
+}
+
 static void co_if(uint8_t f)
 {
     CONDITIONAL_RESULT *result;
@@ -4086,12 +4316,12 @@ static val_t inlineCondition(void)
     uint8_t *start = gLinPtr;
     int errors = gErrors;
     if (gCompatMode == COMPAT_AS63)
-        return invExpr();
+        return conditionalValue();
     result = nextConditional(0);
     if (!result)
         return 0;
     if (gPass == 1) {
-        result->value = invExpr() != 0;
+        result->value = conditionalValue() != 0;
         result->consumed = (int)(gLinPtr - start);
         result->errors = gErrors - errors;
     } else {
@@ -4199,6 +4429,211 @@ static int  getMnemonic(void)
     return 0;
 }
 
+static void resetStructures(void)
+{
+    while (structures) {
+        STRUCT_DEF *definition = structures;
+        STRUCT_FIELD *field = definition->fields;
+        structures = definition->next;
+        while (field) {
+            STRUCT_FIELD *next = field->next;
+            free(field);
+            field = next;
+        }
+        free(definition);
+    }
+    activeStructure = NULL;
+    skippedStructure = 0;
+}
+
+static STRUCT_DEF *findStructure(char const *name)
+{
+    STRUCT_DEF *definition = structures;
+    for (; definition; definition = definition->next) {
+        if (!strcmp(definition->name, name)
+            || ((gUpLo_f || (refLabel(definition->name) && refLabel(definition->name)->nocase))
+                && !strcasecmp(definition->name, name)))
+            return definition;
+    }
+    return NULL;
+}
+
+static int qualifiedName(char *name, char const *prefix, char const *field)
+{
+    size_t prefixSize = strlen(prefix);
+    size_t fieldSize = strlen(field);
+    if (prefixSize + fieldSize + 1 > LBLSIZE) {
+        error("Structure field name is too long.");
+        return 0;
+    }
+    strcpy(name, prefix);
+    name[prefixSize] = '.';
+    strcpy(name + prefixSize + 1, field);
+    return 1;
+}
+
+static void structureSymbol(char const *name, val_t value, val_t size, uint8_t global)
+{
+    defLabel(name, 1, global);
+    gLblPtr->value = value;
+    gLblPtr->structureSize = size;
+ #ifdef OPT_OA_FILE
+    if (gObjct == OB_ASM && gPass == 2 && !activeStructure
+        && (global || symbolDeclared(name, gGrp, 1))) {
+        oa_putStr(name, 0);
+        oa_putStr(":\n", 0);
+    }
+ #endif
+}
+
+static void structureField(char const *name, val_t offset, val_t size)
+{
+    STRUCT_FIELD *field = activeStructure->fields;
+    STRUCT_FIELD *added = NULL;
+    char qualified[LBLSIZE + 1];
+    if (!*name)
+        return;
+    for (; field; field = field->next) {
+        if (!strcmp(field->name, name)) {
+            error("Duplicate structure field.");
+            return;
+        }
+    }
+    if (!qualifiedName(qualified, activeStructure->name, name))
+        return;
+    added = mallocE(sizeof(*added));
+    strcpy(added->name, name);
+    added->offset = offset;
+    added->size = size;
+    added->next = activeStructure->fields;
+    activeStructure->fields = added;
+    structureSymbol(qualified, offset, size, 0);
+}
+
+static int structureControl(char const *label, uint8_t global)
+{
+    uint8_t *saved = gLinPtr;
+    char word[LBLSIZE + 1];
+    char nested[LBLSIZE + 1];
+    size_t n = 0;
+    int active = gCoStk[gCo_sp] >= 0;
+    int closing = 0;
+    val_t size = 0;
+    val_t base = 0;
+    STRUCT_DEF *definition = NULL;
+    STRUCT_FIELD *field = NULL;
+    OPTBL_T const *op = NULL;
+    skipSpace();
+    while (isSymbl(*gLinPtr) && n < LBLSIZE) {
+        word[n++] = gUpLo_f ? (char)toupper(*gLinPtr++) : (char)*gLinPtr++;
+    }
+    word[n] = 0;
+    closing = !strcasecmp(word, "ENDSTRUCT") || !strcasecmp(word, "ENDS");
+    if (skippedStructure) {
+        if (!strcasecmp(word, "STRUCT"))
+            ++skippedStructure;
+        if (closing)
+            --skippedStructure;
+        clearAddress();
+        return 1;
+    }
+    if (!strcasecmp(word, "STRUCT")) {
+        if (!active) {
+            skippedStructure = 1;
+            return 1;
+        }
+        if (activeStructure || !*label || findStructure(label)) {
+            error("Missing, duplicate or nested structure name.");
+            return 1;
+        }
+        definition = mallocE(sizeof(*definition));
+        memset(definition, 0, sizeof(*definition));
+        strcpy(definition->name, label);
+        definition->next = structures;
+        structures = activeStructure = definition;
+        structureSymbol(label, 0, 0, global);
+        clearAddress();
+        return 1;
+    }
+    if (closing) {
+        if (active && !activeStructure)
+            error("ENDSTRUCT without STRUCT.");
+        if (active && activeStructure) {
+            LBLTBL_T *symbol = refLabel(activeStructure->name);
+            if (symbol)
+                symbol->structureSize = activeStructure->size;
+            activeStructure = NULL;
+        }
+        clearAddress();
+        return 1;
+    }
+    definition = findStructure(word);
+    if (!activeStructure && !definition) {
+        gLinPtr = saved;
+        return 0;
+    }
+    if (!active)
+        return 1;
+    if (activeStructure) {
+        if (!*word) {
+            clearAddress();
+            return 1;
+        }
+        strcpy(nested, word);
+        for (n = 0; nested[n]; ++n)
+            nested[n] = (char)toupper(*(uint8_t const *)(nested + n));
+        op = srchOpTbl(nested);
+        if (op && !op->process) {
+            gLinPtr = saved;
+            return 0;
+        }
+        if (definition == activeStructure) {
+            error("Recursive structure field.");
+            return 1;
+        }
+        if (definition) {
+            size = definition->size;
+        } else if (op && op->process == rmb) {
+            skipSpace();
+            size = invExpr();
+            n = op->prefix ? op->prefix : 1;
+            if (size < 0 || size > 65535 / (val_t)n) {
+                error("Invalid structure field size.");
+                return 1;
+            }
+            size *= (val_t)n;
+        } else {
+            error("Only reservations and structure fields are allowed in STRUCT.");
+            return 1;
+        }
+        base = activeStructure->size;
+        if (size > 65535 - base) {
+            error("Structure exceeds address space.");
+            return 1;
+        }
+        structureField(label, base, size);
+        if (definition && *label) {
+            for (field = definition->fields; field; field = field->next) {
+                if (qualifiedName(nested, label, field->name))
+                    structureField(nested, base + field->offset, field->size);
+            }
+        }
+        activeStructure->size += size;
+        clearAddress();
+        return 1;
+    }
+    base = gCSectSw ? gCSectBase : gLc;
+    if (*label) {
+        structureSymbol(label, base, definition->size, global);
+        for (field = definition->fields; field; field = field->next) {
+            if (qualifiedName(nested, label, field->name))
+                structureSymbol(nested, base + field->offset, field->size, global);
+        }
+    }
+    reserveBytes(definition->size, 1);
+    return 1;
+}
+
 uint8_t *getLine(void)
 {
     gLinPtr = (uint8_t*)gLineBuf + LINEHEAD;
@@ -4237,6 +4672,8 @@ static uint8_t oneLine(void)
     start = gLinPtr;
     skipSpace();
     c = *gLinPtr;
+    if (!c || c == '\n')
+        macroScopeBoundary();
     if (isCommentChar(c)) {
         if (c == '*') {
             char     word[MNEMOSIZE + 1];
@@ -4251,7 +4688,8 @@ static uint8_t oneLine(void)
             else if (!strcmp(word, "PRAGMAPOP"))  mode = 3;
 
             if (mode >= 0 && (!*gLinPtr || isspace(*gLinPtr))) {
-                if (gCoStk[gCo_sp] >= 0) handlePragma(mode);
+                if (gCoStk[gCo_sp] >= 0)
+                    handlePragma(mode);
             } else {
                 gLinPtr = pragmaStart;
             }
@@ -4263,6 +4701,8 @@ static uint8_t oneLine(void)
         gf = temp[0] = '\0';
         if (!isspace(c) && c != '\n')
             gf = getLabel(temp);
+        if (structureControl(temp, gf))
+            return 0;
         if (macroControl(temp, gf))
             return 0;
         declarationLabel[0] = 0;
@@ -4300,6 +4740,7 @@ static void initPass(void)
         pragmaIndex0 = gCompatMode == COMPAT_LWASM;
         pragmaForwardMax = gCompatMode == COMPAT_LWASM;
         pragmaShadow = gCompatMode != COMPAT_LWASM;
+        pragmaDollarLocal = !gOs9_f;
         for (kind = 0; kind < PRAGMA_KINDS; ++kind)
             pragmaDefaults[kind] = pragmaValue(kind);
     }
@@ -4311,6 +4752,8 @@ static void initPass(void)
     addressRegion = 0;
     memset(pragmaDepth, 0, sizeof(pragmaDepth));
     macroReset();
+    resetStructures();
+    lastRtsAddress = -1;
     while (extraIncCount)
         free(extraIncDirs[--extraIncCount]);
 
@@ -4353,6 +4796,7 @@ static void assemble(int argc, char * * argv)
 
         strncpy(gSrcFName, argv[i], FNAMESZ);
         ++gGrp;
+        macroScopeBoundary();
         DEBMSGF( (STDERR, "open %s\n", gSrcFName) );
         gSrcFp = fopenE(gSrcFName, "r");
         if (gVerbos_f)
@@ -4428,6 +4872,8 @@ static void assemble(int argc, char * * argv)
  #endif
     checkSymbolDeclarations();
     macroFinish();
+    if (activeStructure || skippedStructure)
+        error("STRUCT without ENDSTRUCT.");
     if (remBlock)
         error("REM without EREM.");
     if (offsetActive) {

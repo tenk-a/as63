@@ -122,9 +122,13 @@ void macroLocalLabel(char *name)
     if (!scope || !n) {
         return;
     }
-    if (name[0] != '.' && name[n - 1] != '$' &&
-        (gCompatMode != COMPAT_LWASM ||
-         (!strchr(name, '@') && !strchr(name, '?') && !strchr(name, '$')))) {
+    if (gCompatMode == COMPAT_LWASM) {
+        if (!strchr(name, '@') && !strchr(name, '?')
+            && !(pragmaEnabled("dollarlocal") && strchr(name, '$'))
+            && !(scopeDepth && name[0] == '.')) {
+            return;
+        }
+    } else if (name[0] != '.' && name[n - 1] != '$') {
         return;
     }
     sprintf(prefix, "__M%lu_", (long)scope);
@@ -135,6 +139,13 @@ void macroLocalLabel(char *name)
     }
     memmove(name + p, name, n + 1);
     memcpy(name, prefix, p);
+}
+
+void macroScopeBoundary(void)
+{
+    if (gCompatMode == COMPAT_LWASM) {
+        scope = ++serial;
+    }
 }
 
 int macroNumericLocal(uint8_t const *p)
@@ -729,6 +740,7 @@ int macroInvoke(char const *token)
     int         level   = 0;
     int         bracket = 0;
     int         angle   = 0;
+    int         strictArgs = gCompatMode == COMPAT_LWASM && !pragmaEnabled("asm09");
     int         maxArgs = gCompatMode == COMPAT_LWASM ? 65535 : (gAllMacroParams ? MAC_ARGS : 9);
     uint8_t *   allStart= NULL;
     uint8_t *   allEnd  = NULL;
@@ -752,7 +764,7 @@ int macroInvoke(char const *token)
     skipSpace();
     allStart    = gLinPtr;
     allEnd      = allStart;
-    if (gCompatMode == COMPAT_LWASM) {
+    if (strictArgs) {
         while (*allEnd && !isspace(*allEnd) && *allEnd != ';') {
             ++allEnd;
         }
@@ -772,7 +784,7 @@ int macroInvoke(char const *token)
     }
     f->args[0] = copyText(suffix ? suffix + 1 : "", suffix ? strlen(suffix + 1) : 0);
     while (*gLinPtr && *gLinPtr != '\n' && *gLinPtr != ';' &&
-           (gCompatMode != COMPAT_LWASM || gLinPtr < allEnd)) {
+           (!strictArgs || gLinPtr < allEnd)) {
         if (f->nargs == maxArgs) {
             error("Too many macro arguments (use --allmp for 35).");
             break;
@@ -788,10 +800,10 @@ int macroInvoke(char const *token)
         }
         quote = level = bracket = 0;
         while (*p && *p != '\n') {
-            if (gCompatMode == COMPAT_LWASM && (isspace(*p) || *p == ',' || *p == ';')) {
+            if (strictArgs && (isspace(*p) || *p == ',' || *p == ';')) {
                 break;
             }
-            if (gCompatMode == COMPAT_LWASM) {
+            if (strictArgs) {
                 ++p;
                 continue;
             }
@@ -828,6 +840,11 @@ int macroInvoke(char const *token)
         n = (size_t)((char const *)p - start);
         while (n && isspace(*(uint8_t const *)(start + n - 1))) {
             --n;
+        }
+        if (gCompatMode == COMPAT_LWASM && pragmaEnabled("asm09")
+            && n >= 2 && start[0] == '(' && start[n - 1] == ')') {
+            ++start;
+            n -= 2;
         }
         addArgument(f, start, n);
         if (angle) {
@@ -869,7 +886,7 @@ int macroInvoke(char const *token)
             break;
         }
     }
-    if (gCompatMode != COMPAT_LWASM) {
+    if (!strictArgs) {
         allEnd = gLinPtr;
     }
     f->allArgs = copyText((char const *)allStart, (size_t)(allEnd - allStart));

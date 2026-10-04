@@ -263,6 +263,8 @@ int     macroValue(char const *, val_t *);
 int     macroSetValue(char const *, val_t);
 int     macroNumericLocal(uint8_t const *);
 int     macroConditionalFloor(void);
+void    macroScopeBoundary(void);
+int     pragmaEnabled(char const *);
 char const *macroListingSource(void);
 
 #endif
