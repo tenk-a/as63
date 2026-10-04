@@ -3720,6 +3720,13 @@ void    opt(void)
 
 /*---------------------------------------------------------------------------*/
 
+void registerConvenience(void)
+{
+    int reg = gOprPtr->mnemonic[strlen(gOprPtr->mnemonic) - 1] == 'E' ? 14 : 15;
+    put1Word(0x1000 + gOprPtr->opcode);
+    put1Byte((gOprPtr->opcode == 0x30 ? reg : 12) * 16 + reg);
+}
+
 void    none_d(void)
 {
     uint8_t const* p;

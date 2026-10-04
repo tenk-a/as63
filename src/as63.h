@@ -241,6 +241,7 @@ void
 void*   mallocE(size_t);
 void    error(char const *);
 void    errPrg(char const *);
+void    registerConvenience(void);
 void    skipSpace(void);
 void    initLine(void);
 void    putLine(void);

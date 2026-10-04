@@ -318,6 +318,8 @@ OPTBL_T const gOpTab[] = {
     { "STE",      0x11,       0x87,    0x01,           store       },
     { "SUBE",     0x11,       0x80,    0x01,           load        },
     { "TSTE",     0x11,       0x4d,    0x01,           none        },
+    { "LSLE",     0x10,       0x30,    0x01,           registerConvenience },   /* lwasm: addr e,e */
+    { "NEGE",     0x10,       0x32,    0x01,           registerConvenience },   /* lwasm: subr 0,e */
     /* F */
     { "ADDF",     0x11,       0xcb,    0x01,           load        },
     { "CLRF",     0x11,       0x5f,    0x01,           none        },
@@ -329,6 +331,8 @@ OPTBL_T const gOpTab[] = {
     { "STF",      0x11,       0xc7,    0x01,           store       },
     { "SUBF",     0x11,       0xc0,    0x01,           load        },
     { "TSTF",     0x11,       0x5d,    0x01,           none        },
+    { "LSLF",     0x10,       0x30,    0x01,           registerConvenience },   /* lwasm: addr f,f */
+    { "NEGF",     0x10,       0x32,    0x01,           registerConvenience },   /* lwasm: subr 0,e */
     /*Q*/
     { "DIVQ",     0x11,       0x8e,    0x01,           load2       },
     { "LDQ",      0x10,       0xcc,    0x01,           load4       },
@@ -350,6 +354,9 @@ OPTBL_T const gOpTab[] = {
     /* md */
     { "BITMD",    0x11,       0x3c,    0x01,           ccr         },
     { "LDMD",     0x11,       0x3d,    0x01,           ccr         },
+    /* for emulator (lwasm) */
+    { "LOG",      0x10,       0x3e,    0x00,           none        },  /* lwasm: for emulator */
+    { "BREAK",    0x11,       0x3e,    0x00,           none        },  /* lwasm: for emulator */
 
     /* M6800 aliases with an identical 6809 encoding. */
     { "CPX",      0x00,       0x8c,    OPR_M6800,      load2       },  /* cmpx */
@@ -416,7 +423,7 @@ OPTBL_T const gOpTab[] = {
     { "TSY",      0,          1,       OPR_M6800,      mnm68hc11   },  /* pshs cc; leay 2,s; puls cc */
     { "TYS",      0x32,       0x3f,    OPR_M6800,      none        },  /* leas -1,y */
 
-    /* 疑似命令 */
+    /* */
     { "OS9",      0x10,       0x3f,    0x00,           os9svc      },
     { "MOD",      0x00,       0x00,    0x00,           mod         },
     { "EMOD",     0x00,       0x00,    0x00,           emod        },
