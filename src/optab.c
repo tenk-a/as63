@@ -593,7 +593,8 @@ OPTBL_T const gOpTab[] = {
     { "NOLIST",LIST_ABSOLUTE, 0,       0,              opt           },
     { "REM",      1,          0,       0,              commentBlock  },
     { "EREM",     0,          0,       0,              commentBlock  },
-    { "ECHO",     0,          0,       0,              printText     },
+    { "ECHO",     1,          0,       0,              printText     },
+    { "SHOWOFFSET",2,         0,       0,              printText     },
     { "PRINTT",   0,          0,       0,              printText     },
     { "PRINTV",   0,          0,       0,              printValue    },
 

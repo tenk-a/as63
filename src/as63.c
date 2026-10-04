@@ -2704,9 +2704,10 @@ static int pragmaName(char const *name, int *enabled)
     }
     if (!strcmp(name, "nodollarnotlocal"))
         return 11;
-    for (i = 0; i < PRAGMA_KINDS; ++i)
+    for (i = 0; i < PRAGMA_KINDS; ++i) {
         if (!strcmp(name, names[i]))
             return i;
+    }
     if (!strcmp(name, "list") || !strcmp(name, "listcode")) {
         *enabled = 0;
         return !strcmp(name, "list") ? 8 : 9;
@@ -2724,28 +2725,28 @@ static int pragmaName(char const *name, int *enabled)
 static int pragmaValue(int kind)
 {
     switch (kind) {
-    case 0: return gM6809_f         != 0;
-    case 1: return gM6809_f         == 0;
-    case 2: return gM6800_f         != 0;
-    case 3: return pragmaEscapes    != 0;
-    case 4: return pragmaPcAsPcr    != 0;
-    case 5: return pragmaIndex0     != 0;
-    case 6: return pragmaForwardMax != 0;
-    case 7: return pragmaAutoBranch != 0;
-    case 8: return pragmaNoList     != 0;
-    case 9: return pragmaNoListCode != 0;
-    case 10:return pragmaShadow     != 0;
-    case 11:return pragmaDollarLocal != 0;
-    case 12:return pragmaAsm09 != 0;
-    case 13:return pragmaM80Ext != 0;
-    case 14:return pragmaCondUndefZero != 0;
-    case 15:return pragmaSymbolNoCase != 0;
-    case 16:return pragmaExport != 0;
+    case 0: return gM6809_f                 != 0;
+    case 1: return gM6809_f                 == 0;
+    case 2: return gM6800_f                 != 0;
+    case 3: return pragmaEscapes            != 0;
+    case 4: return pragmaPcAsPcr            != 0;
+    case 5: return pragmaIndex0             != 0;
+    case 6: return pragmaForwardMax         != 0;
+    case 7: return pragmaAutoBranch         != 0;
+    case 8: return pragmaNoList             != 0;
+    case 9: return pragmaNoListCode         != 0;
+    case 10:return pragmaShadow             != 0;
+    case 11:return pragmaDollarLocal        != 0;
+    case 12:return pragmaAsm09              != 0;
+    case 13:return pragmaM80Ext             != 0;
+    case 14:return pragmaCondUndefZero      != 0;
+    case 15:return pragmaSymbolNoCase       != 0;
+    case 16:return pragmaExport             != 0;
     case 17:return pragmaOperandSizeWarning != 0;
-    case 18:return pragmaQrts != 0;
-    case 19:return pragmaEmuExt != 0;
-    case 20:return pragma6809Conv != 0;
-    case 21:return pragma6309Conv != 0;
+    case 18:return pragmaQrts               != 0;
+    case 19:return pragmaEmuExt             != 0;
+    case 20:return pragma6809Conv           != 0;
+    case 21:return pragma6309Conv           != 0;
     }
     return 0;
 }
@@ -2753,38 +2754,38 @@ static int pragmaValue(int kind)
 static void pragmaSet(int kind, int enabled)
 {
     if (!restoringPragmas)
-        pragmaConfigured[kind] = 1;
+        pragmaConfigured[kind]        = 1;
     switch (kind) {
-    case 0: gM6809_f         = enabled; break;
-    case 1: gM6809_f         = !enabled;break;
-    case 2: gM6800_f         = enabled; break;
-    case 3: pragmaEscapes    = enabled; break;
-    case 4: pragmaPcAsPcr    = enabled; break;
-    case 5: pragmaIndex0     = enabled; break;
+    case 0: gM6809_f                  = enabled; break;
+    case 1: gM6809_f                  = !enabled;break;
+    case 2: gM6800_f                  = enabled; break;
+    case 3: pragmaEscapes             = enabled; break;
+    case 4: pragmaPcAsPcr             = enabled; break;
+    case 5: pragmaIndex0              = enabled; break;
     case 6:
-        pragmaForwardMax     = enabled;
+        pragmaForwardMax              = enabled;
         if (!enabled && !restoringPragmas)
-            relaxRequested   = 1;
+            relaxRequested            = 1;
         break;
     case 7:
-        pragmaAutoBranch     = enabled;
+        pragmaAutoBranch              = enabled;
         if (enabled)
-            relaxRequested   = 1;
+            relaxRequested            = 1;
         break;
-    case 8: pragmaNoList     = enabled; break;
-    case 9: pragmaNoListCode = enabled; break;
-    case 10:pragmaShadow     = enabled; break;
-    case 11:pragmaDollarLocal = enabled; break;
-    case 12:pragmaAsm09 = enabled; break;
-    case 13:pragmaM80Ext = enabled; break;
-    case 14:pragmaCondUndefZero = enabled; break;
-    case 15:pragmaSymbolNoCase = enabled; break;
-    case 16:pragmaExport = enabled; break;
-    case 17:pragmaOperandSizeWarning = enabled; break;
-    case 18:pragmaQrts = enabled; break;
-    case 19:pragmaEmuExt = enabled; break;
-    case 20:pragma6809Conv = enabled; break;
-    case 21:pragma6309Conv = enabled; break;
+    case 8: pragmaNoList              = enabled; break;
+    case 9: pragmaNoListCode          = enabled; break;
+    case 10:pragmaShadow              = enabled; break;
+    case 11:pragmaDollarLocal         = enabled; break;
+    case 12:pragmaAsm09               = enabled; break;
+    case 13:pragmaM80Ext              = enabled; break;
+    case 14:pragmaCondUndefZero       = enabled; break;
+    case 15:pragmaSymbolNoCase        = enabled; break;
+    case 16:pragmaExport              = enabled; break;
+    case 17:pragmaOperandSizeWarning  = enabled; break;
+    case 18:pragmaQrts                = enabled; break;
+    case 19:pragmaEmuExt              = enabled; break;
+    case 20:pragma6809Conv            = enabled; break;
+    case 21:pragma6309Conv            = enabled; break;
     }
 }
 
@@ -2826,7 +2827,7 @@ static void handlePragma(int mode)
             if (mode == 2) {
                 if (*depth < PRAGMA_DEPTH) {
                     pragmaConfigStacks[gFile_sp][kind][*depth] = pragmaConfigured[kind];
-                    pragmaStacks[gFile_sp][kind][(*depth)++] = pragmaValue(kind);
+                    pragmaStacks[gFile_sp][kind][(*depth)++]   = pragmaValue(kind);
                 }
             } else if (*depth) {
                 pragmaSet(kind, pragmaStacks[gFile_sp][kind][--*depth]);
@@ -3620,29 +3621,43 @@ void argumentOffsets(void)
 void printText(void)
 {
     char    text[MAXCHAR + 1];
-    int     more;
+    int     more = 0;
+    int     mode = gOprPtr->prefix;
+    val_t   value = 0;
     clearAddress();
     do {
         skipSpace();
-        if (*gLinPtr == '"' || *gLinPtr == '\'') {
-            if (!textOperand(text, sizeof(text)) )
-                return;
+        if (mode == 1 && *gLinPtr != '"' && *gLinPtr != '\'') {
+            value = expression();
+            if (gPass == 2)
+                printf("%ld", (long)value);
         } else {
-            int n = 0;
-            while (*gLinPtr && *gLinPtr != '\n' && *gLinPtr != ';' && *gLinPtr != ',')
-                text[n++] = *gLinPtr++;
-            while ( n && isspace( *(uint8_t const*)(text + n - 1) ) )
-                --n;
-            text[n] = 0;
-            if (*gLinPtr == ';') {
-                while (*gLinPtr && *gLinPtr != '\n')
-                    ++gLinPtr;
+            if (*gLinPtr == '"' || *gLinPtr == '\'') {
+                if (!textOperand(text, sizeof(text)) )
+                    return;
+            } else {
+                int n = 0;
+                while (*gLinPtr && *gLinPtr != '\n' && *gLinPtr != ';' && *gLinPtr != ',')
+                    text[n++] = *gLinPtr++;
+                while ( n && isspace( *(uint8_t const*)(text + n - 1) ) )
+                    --n;
+                text[n] = 0;
+                if (*gLinPtr == ';') {
+                    while (*gLinPtr && *gLinPtr != '\n')
+                        ++gLinPtr;
+                }
             }
+            if (gPass == 2)
+                printf("%s%s", text, mode ? "" : "\n");
         }
-        if (gPass == 2)
-            printf("%s\n", text);
-        more = nextComma();
+        more = mode == 2 ? 0 : nextComma();
     } while (more);
+    if (gPass == 2) {
+        if (mode == 1)
+            putchar('\n');
+        else if (mode == 2)
+            printf(" %lX\n", (unsigned long)gLc);
+    }
 }
 
 void printValue(void)
