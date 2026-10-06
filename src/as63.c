@@ -12,7 +12,7 @@
 #include    <stdlib.h>
 #include    "as63.h"
 
-#define AS63_TITLE      "HD6309 cross assembler version v1.50T\n"
+#define AS63_TITLE      "HD6309 cross assembler version v1.51T\n"
 
 #ifdef _MSC_VER
  #define ITOA10(i,a)    _itoa( (i), (a), 10 )
@@ -5051,7 +5051,7 @@ static void optsDefLbl(int argc, char * * argv)
         gLinPtr        = (uint8_t*)strncpy(gLineBuf+LINEHEAD, p, MAXCHAR - LINEHEAD - 2);
         getLabel(temp);
         defLabel(temp, 2, 1); /* set,global label */
-        gLblPtr->line  = 1;
+        gLblPtr->line  = 0;
         gLblPtr->grp   = 0;
         if (*gLinPtr++ == '=') {
             if (*gLinPtr == '$') {
