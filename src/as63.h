@@ -62,7 +62,6 @@ typedef uintmax_t       uval_t; /* unsigned val_t                            */
 #ifdef OPT_OA_FILE
 # define OA_MAX         500
 #endif
-#define INCLUDIR        "."
 
 #ifdef SMALL_HOST
 #define MAXCHAR         1024  /* maximum number of characters per input line */

@@ -166,11 +166,9 @@ static int              gP1Stk[GP1_MAX + 1];
 static FILE *           gFileStk[MAXLIB];
 static char             gSrcFName[FNAMESZ + 1];
 static FILSTK2_T        gFilStk2[MAXLIB];
-#ifdef INCLUDIR
-static char const *     gIncDirName;
-#endif
-static char *           extraIncDirs[EXTRA_INCDIRS];
-static int              extraIncCount;
+static char const *     gIncDirs[EXTRA_INCDIRS * 2 + 1];
+static int              gIncDirCount;
+static int              gIncDirExtraTop;
 
 #ifdef OPT_OA_FILE  /* -a option */
 static OATBL_T *        gOAStk;
@@ -242,6 +240,16 @@ void   *mallocE(size_t siz)
     return p;
 }
 
+char   *strdupAddE(char const* s, size_t add)
+{
+    size_t l = strlen(s) + 1;
+    char*  m = mallocE(l + add);
+    memcpy(m, s, l);
+    if (add)
+        memset(m+l, 0, add);
+    return m;
+}
+
 void    errPrg(char const * s)
 {
     fprintf(STDERR, "%s:BUG(%s)\n", gCmdName, s);
@@ -308,15 +316,14 @@ static char const *FIL_BaseName(char const *adr)
     return adr;
 }
 
-static char    *FIL_ChgExt(char * filename, char const * ext)
+static char    *FIL_AddChgExt(char * filename, char const * ext, uint8_t chg)
 {
     char *p = strrchr((char*)FIL_BaseName(filename), '.');
 
     if (p == NULL) {
-        strcat(filename, ".");
         strcat( filename, ext);
-    } else {
-        strcpy(p + 1, ext);
+    } else if (chg) {
+        strcpy(p, ext);
     }
     return filename;
 }
@@ -3191,7 +3198,6 @@ static int textOperand(char * dst, int size)
     uint8_t     c;
     int         quote = 0;
     int         n     = 0;
-    char const* prefix= "";
     skipSpace();
     if (*gLinPtr == '"' || *gLinPtr == '\'') {
         quote = *gLinPtr++;
@@ -3199,26 +3205,6 @@ static int textOperand(char * dst, int size)
         ++gLinPtr;
         quote = '>';
     }
- #ifdef INCLUDIR
-    if (quote == '>') {
-        prefix = gIncDirName;
-    } else if (*gLinPtr == '$') {
-        char name[LBLSIZE + 1];
-        ++gLinPtr;
-        getLabel(name);
-        if (strcmp(name, "INC")) {
-            error("Invalid include file name.");
-            return 0;
-        }
-        prefix = gIncDirName;
-    }
- #endif
-    if (strlen(prefix) >= (size_t)size) {
-        error("Operand is too long.");
-        return 0;
-    }
-    strcpy(dst, prefix);
-    n = (int)strlen(prefix);
     while ((c = *gLinPtr) != 0 && c != '\n') {
         if (quote ? (c == quote) : (isspace(c) || c == ',' || c == ';')) {
             break;
@@ -3275,19 +3261,36 @@ void symbolDirective(void)
  #endif
 }
 
-static FILE *openSearch(char const * name, char const * mode)
+/* INCLUDE aliases and INCBIN share file-name syntax and directory search. */
+static int fileOperand(char *name, int size, int *searchOnly)
 {
-    FILE *  fp = fopen(name, mode);
-    char    path[FNAMESZ + 1];
-    int     i;
+    skipSpace();
+    *searchOnly = *gLinPtr == '<';
+    if (!textOperand(name, size))
+        return 0;
+    if (!strncmp(name, "$INC/", 5)) {
+        memmove(name, name + 5, strlen(name + 5) + 1);
+        *searchOnly = 1;
+    }
+    return 1;
+}
 
-    if (fp)
-        return fp;
-    if (name[0] == '/' || name[0] == '\\' || (name[0] && name[1] == ':') )
+static FILE *openSearch(char const *name, char const *mode, int searchOnly)
+{
+    FILE *fp = NULL;
+    char path[FNAMESZ + 1];
+    int i = 0;
+
+    if (!searchOnly) {
+        fp = fopen(name, mode);
+        if (fp)
+            return fp;
+    }
+    if (name[0] == '/' || name[0] == '\\' || (name[0] && name[1] == ':'))
         return NULL;
-    for (i = -1; i < extraIncCount; ++i) {
-        char const * dir = i < 0 ? gIncDirName : extraIncDirs[i];
-        if (strlen(dir) + strlen(name) + 2 > sizeof (path) )
+    for (i = 0; i < gIncDirCount; ++i) {
+        char const *dir = gIncDirs[i];
+        if (strlen(dir) + strlen(name) + 2 > sizeof(path))
             continue;
         strcpy(path, dir);
         if (*path && path[strlen(path) - 1] != '/' && path[strlen(path) - 1] != '\\')
@@ -3310,24 +3313,24 @@ void incdir(void)
         error("Empty include directory.");
         return;
     }
-    if (extraIncCount == EXTRA_INCDIRS) {
+    if (gIncDirCount - gIncDirExtraTop == EXTRA_INCDIRS) {
         error("Too many include directories.");
         return;
     }
-    extraIncDirs[extraIncCount] = mallocE(strlen(path) + 1);
-    strcpy(extraIncDirs[extraIncCount++], path);
+    gIncDirs[gIncDirCount++] = strdupAddE(path, 0);
 }
 
 void incbin(void)
 {
-    FILE*   fp;
+    FILE*   fp = NULL;
     char    name[FNAMESZ + 1];
     val_t   offset    = 0;
     val_t   length    = -1;
     long    fileSize  = 0;
     long    available = 0;
+    int     searchOnly = 0;
 
-    if (!textOperand(name, sizeof(name)) )
+    if (!fileOperand(name, sizeof(name), &searchOnly))
         return;
     if (nextComma()) {
         skipSpace();
@@ -3341,7 +3344,7 @@ void incbin(void)
             }
         }
     }
-    fp = openSearch(name, "rb");
+    fp = openSearch(name, "rb", searchOnly);
     if (!fp) {
         error("Cannot open INCBIN file.");
         return;
@@ -3691,15 +3694,16 @@ void printValue(void)
 
 void    library(void)
 {
-    FILE *fp;
+    FILE *fp = NULL;
     char fname[FNAMESZ + 1];
+    int searchOnly = 0;
     clearAddress();
-    if (!textOperand(fname, sizeof(fname)))
+    if (!fileOperand(fname, sizeof(fname), &searchOnly))
         return;
     if (gVerbos_f)
         fprintf(STDERR, "[%s]\n", fname);
     DEBMSGF( (STDERR, "include %s  (#%d)\n", fname, gFile_sp + 1) );
-    fp = openSearch(fname, "r");
+    fp = openSearch(fname, "r", searchOnly);
     if (!fp) {
         error("Cannot open include file.");
         return;
@@ -4812,8 +4816,8 @@ static void initPass(void)
     macroReset();
     resetStructures();
     lastRtsAddress = -1;
-    while (extraIncCount)
-        free(extraIncDirs[--extraIncCount]);
+    while (gIncDirCount > gIncDirExtraTop)
+        free((void *)gIncDirs[--gIncDirCount]);
 
     rsCounter = rsDefined = 0;
     soCounter = foCounter = soDefined    = foDefined  = 0;
@@ -4974,7 +4978,7 @@ static void getModNam(char *modnam, char const *fnam)
 
 /*---------------------------------------------------------------------------*/
 static char const *oLstFName, *oObjFName;
-static uint8_t  oList_f, oSymbol_f;
+static uint8_t     oList_f  ,  oSymbol_f;
 
 static void printLog(void)
 {
@@ -5017,9 +5021,7 @@ static void usage(void)
     e_puts(" -a[=FILE]     Write object as FCB data to FILE\n");
  #endif
     e_puts(" -e[=FILE]     Write source errors to FILE\n");
- #ifdef INCLUDIR
-    e_puts(" -i[=INC_DIR]  Set the directory referenced by $INC\n");
- #endif
+    e_puts(" -i[=INC_DIR]  Add an include directory (repeatable; searched in order)\n");
     e_puts(" -l[=LST_FILE] Write assembly listing to LIST_FILE\n");
  #ifdef OPT_FBAS
     e_puts(" -k[Start[,Enter]]  Write an F-BASIC machine-language file\n");
@@ -5070,7 +5072,7 @@ static void optsDefLbl(int argc, char * * argv)
 
 static void options(char const *p)
 {
-    uint8_t const *pp;
+    uint8_t const* pp;
     uint8_t     c;
 
     while ( (c = *(uint8_t const*)p) != '\0') {
@@ -5203,9 +5205,9 @@ static void options(char const *p)
          #endif
             gObjct         = OB_BIN;
             goto OB;
-          OB:
+       OB:
             if (*p)
-                oObjFName  = p;
+                oObjFName  = strdupAddE(p, 4);
             goto LOOPOUT;
 
         case 'Y':
@@ -5235,17 +5237,19 @@ static void options(char const *p)
             break;
      #endif
 
-     #ifdef INCLUDIR
         case 'I':
-            gIncDirName    = ".";
-            if (*p)
-                gIncDirName = p;
-            if (strlen(gIncDirName) >= FNAMESZ - 10) {
+            if (!*p)
+                p = ".";
+            if (strlen(p) >= FNAMESZ - 10) {
                 e_puts("File name is too long.\n");
                 exit(1);
             }
+            if (gIncDirCount == EXTRA_INCDIRS) {
+                e_puts("Too many include directories for -i.\n");
+                exit(1);
+            }
+            gIncDirs[gIncDirCount++] = p;
             goto LOOPOUT;
-     #endif
 
         default:
             fprintf(STDERR, "%s: Invalid option (-%c).\n", gCmdName, c);
@@ -5267,12 +5271,8 @@ int main(int argc, char *argv[])
     gEntryAddr     = gStartAddr = 0xFFFF;
     gObjFp         = NULL;
     gLstFp         = stdout;
- #ifdef INCLUDIR
-    gIncDirName    = INCLUDIR;
- #endif
     gErrFp         = STDERR;
-    gErrFName      =
-        oLstFName  = oObjFName = NULL;
+    gErrFName      = oLstFName = oObjFName = NULL;
     oList_f        = gModName[0] = gSrcFName[0] = gSrcFName[FNAMESZ] = '\0';
     gUpLo_f        = 1;
 
@@ -5293,29 +5293,33 @@ int main(int argc, char *argv[])
     }
 
     if (*gSrcFName == '\0') {
-        fprintf(STDERR, "usage: %s [-opts] src_file...(-? help)\n",
-                gCmdName);
-        exit(1);
+        fprintf(STDERR, "usage: %s [-opts] src_file...(-? help)\n", gCmdName);
+        return 1;
     }
-    if (oObjFName == NULL && gObjct) {
-        char * filename = mallocE(FNAMESZ + 1);
-        oObjFName = filename;
-        FIL_ChgExt(strcpy(filename, gSrcFName),
-      #ifdef OPT_OA_FILE
-            (gObjct == OB_ASM) ? "oa" :
-      #endif
-            (gObjct == OB_SFMT) ? "s" :
-            gFlex_f ? "cmd" :
-            "o");
+    if (!oObjFName && gObjct) {
+        char const* ext = (gObjct == OB_SFMT) ? ".s19"
+                      #ifdef OPT_OA_FILE
+                        : (gObjct == OB_ASM) ? ".oa"
+                      #endif
+                        : gFlex_f ? ".cmd"
+                        : ".bin";
+        oObjFName = strdupAddE(gSrcFName, 4);
+        FIL_AddChgExt(oObjFName, ext, 1);
     }
     if (gErrFName == (char *) (~0)) {
-        char * filename = mallocE(FNAMESZ + 1);
-        gErrFName = filename;
-        FIL_ChgExt(strcpy(filename, gSrcFName), "err");
+        gErrFName = FIL_AddChgExt(strdupAddE(gSrcFName, 4), ".err", 1);
     }
     if (*gModName == '\0') {
         getModNam(gModName, gSrcFName);
     }
+
+    for (i = 0; i < gIncDirCount; ++i) {
+        if (!strcmp(gIncDirs[i], "."))
+            break;
+    }
+    if (i == gIncDirCount)
+        gIncDirs[gIncDirCount++] = ".";
+    gIncDirExtraTop = gIncDirCount;
 
     DEBMSGF( (STDERR, "gModName = %s\n", gModName) );
     initNode();
