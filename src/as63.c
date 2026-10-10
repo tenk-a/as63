@@ -31,7 +31,7 @@ typedef struct lbltbl_t {
     struct lbltbl_t *left;
     struct lbltbl_t *right;
     char    flg;           /* 0:used  1:EQU  2:SET */
-    uint8_t grp;
+    int     grp;
     uint8_t hidden;
     uint8_t nocase;
     val_t   structureSize;
@@ -118,7 +118,7 @@ static uint8_t          foDefined;
 static LBLTBL_T *       gLblPtr;
 static int              gLabels;
 static int              gLineNo;
-static uint8_t          gGrp;
+static int              gGrp;
 static uint8_t          gSjis_f;
 
 /* Listing and diagnostics. */
@@ -547,8 +547,6 @@ void    defLabel(char const *temp, uint8_t f, uint8_t gf)
         if (local && local->flg && local->line != gLineNo)
             errLbl("Duplicate label definition", temp);
     }
-    if (group && findLabel(temp, 0))
-        group = 0;
     for (;;) {
         order = strcmp(temp, label->name);
         if (!order)
@@ -591,7 +589,7 @@ void    defLabel(char const *temp, uint8_t f, uint8_t gf)
     ++gLabels;
     gLblPtr         = label;
     label->value    = gLinLc;
-    label->grp      = (uint8_t)group;
+    label->grp      = group;
     label->hidden   = f && (pragmaNoList || pragmaNoListCode);
     label->nocase   = f && (gUpLo_f || pragmaSymbolNoCase);
     label->structureSize = -1;
@@ -2595,12 +2593,9 @@ static void assemble(int argc, char * * argv)
             continue;
 
         strncpy(gSrcFName, argv[i], FNAMESZ);
-     #if 1 /* All command-line sources share the global label namespace. */
+        ++gGrp;
         gSrcLine = 0;
         gEOF_f   = 0;
-     #else
-        ++gGrp;
-     #endif
         macroScopeBoundary();
         DEBMSGF( (STDERR, "open %s\n", gSrcFName) );
         gSrcFp = fopenE(gSrcFName, "r");
@@ -2742,13 +2737,13 @@ static void usage(void)
     e_puts(" -r            Omit trailing reserved bytes in all output formats\n");
     e_puts(" -u            Case-sensitive labels    -n  Case-insensitive labels\n");
     e_puts(" -j            Handle Shift_JIS characters\n");
-    e_puts(" --allmp       Allow 35 macro arguments (default: 9)\n");
-    e_puts(" -m<mod_name>  Set the $modnam string variable\n");
+    e_puts(" -m[=MOD_NAME] Set the $modnam string variable\n");
     e_puts(" -d<L>[=Val]   Define L as Val (default: 1)\n");
+    e_puts(" --allmp       Allow 35 macro arguments (default: 9)\n");
     e_puts(" -t=<ASM>      Assembler compatibility mode: as63 lwasm vasm\n");
-    e_puts(" -i[=INC_DIR]  Add an include directory (repeatable; searched in order)\n");
     e_puts(" -x[=FORMAT]   Select binary format: raw, flex, os9, fbasic. (default: flex)\n");
     e_puts(" -k[S[:E]]     Override start/entry (hex). No -x, select fbasic\n");
+    e_puts(" -i[=INC_DIR]  Add an include directory (repeatable; searched in order)\n");
     e_puts(" -o[=FILE]     Write binary output using the selected binary format\n");
     e_puts(" -f[=FILE]     Write Motorola S-record output (.s19)\n");
     e_puts(" -a[=FILE]     Write FCB source output (.oa)\n");
