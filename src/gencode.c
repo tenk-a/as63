@@ -16,9 +16,7 @@ static uint8_t          gCrcBuf[3];
 uint8_t                 gRmb_f;
 int                     gRmb_sp;
 uint8_t                 gFlex_f;
-#ifdef OPT_FBAS
 uint8_t                 gFBasic_f;
-#endif
 static int              gImVal;
 static int              gIndirect;
 static int              lastRtsAddress = -1;
@@ -114,14 +112,12 @@ static void    flushObj(void)
             putc(gObjPos, gObjFp);
             fwrite(gObjBuf, gObjPos, 1, gObjFp);
         }
-     #ifdef OPT_OA_FILE
         else if (gObjct == OB_ASM && gObjPos) {
             fprintf(gObjFp, "\tfcb $%02x", gObjBuf[0]);
             for (i = 1; i < gObjPos; i++)
                 fprintf(gObjFp, ",$%02x", gObjBuf[i]);
             putc('\n', gObjFp);
         }
-     #endif
         else {
             fwrite(gObjBuf, gObjPos, 1, gObjFp);
         }
@@ -220,7 +216,6 @@ static int     put2B(uint16_t w)
     return w;
 }
 
-#ifdef OPT_OA_FILE
 void    oa_putStr(char const * s, int n)
 {
     if (gPass != 2)
@@ -232,7 +227,6 @@ void    oa_putStr(char const * s, int n)
     gObjCnt   += n;
     gLc       += n;
 }
-#endif
 
 /* Emission with listing continuation. */
 static void flushLine(void)
@@ -2305,30 +2299,23 @@ void offsetSection(void)
 /* Output framing invoked by the assembly driver. */
 void beginCodeOutput(uint16_t size)
 {
- #ifdef OPT_FBAS
     if (gPass == 2 && gFBasic_f) {
         putObj(0);
         put2obj(size);
         put2obj(gStartAddr);
     }
- #endif
-#ifndef OPT_FBAS
-    (void)size;
-#endif
 }
 
 void endCodeOutput(void)
 {
     gObjCnt -= (uint16_t)gRmb_sp;
     gRmb_sp = 0;
- #ifdef OPT_FBAS
     if (gFBasic_f && gPass == 2) {
         putObj(0xff);
         put2obj(0x0000);
         put2obj(gEntryAddr);
         putObj(0x1a);
     }
- #endif
 }
 
 void endCodeSection(void)

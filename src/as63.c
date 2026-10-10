@@ -44,12 +44,10 @@ typedef struct FILSTK2_tag {
     char    srcname[FNAMESZ + 1];
 } FILSTK2_T;
 
-#ifdef OPT_OA_FILE
 typedef struct {
     int     ll;
     uint8_t nn;
 } OATBL_T;
-#endif
 
 typedef struct structure_field {
     struct structure_field* next;
@@ -135,11 +133,9 @@ static char const *     gErrFName;
 static int              gP1_sp;
 static int              gP1Stk[GP1_MAX + 1];
 
-#ifdef OPT_OA_FILE  /* -a option */
 static OATBL_T *        gOAStk;
 static uint8_t          gOAchk_f;
 static int              gOA_sp;
-#endif
 
 /* Assembly settings. */
 #define PRAGMA_KINDS    22
@@ -919,12 +915,10 @@ static val_t   term(void)
             }
             return (lp->value);
         }
-     #ifdef OPT_OA_FILE
         if (gObjct == OB_ASM && refLbl0(temp) )
             gOAchk_f = 1;
         else
-     #endif
-        errLbl("Undefined label", temp);
+            errLbl("Undefined label", temp);
         /* DEBMSGF((STDERR,"LABEL:%s\n",temp)); */
         return (gValid_f = 0);
     } else if (isdigit(c)) {
@@ -1480,10 +1474,8 @@ void symbolDirective(void)
             declareSymbol(name, kind);
         } while (nextComma());
     }
- #ifdef OPT_OA_FILE
     if (gObjct == OB_ASM && gPass == 2)
         oa_putStr(gLineBuf + LINEHEAD, 0);
- #endif
 }
 
 void rsOffset(void)
@@ -2296,13 +2288,11 @@ static void structureSymbol(char const *name, val_t value, val_t size, uint8_t g
     defLabel(name, 1, global);
     gLblPtr->value = value;
     gLblPtr->structureSize = size;
- #ifdef OPT_OA_FILE
     if (gObjct == OB_ASM && gPass == 2 && !activeStructure
         && (global || symbolDeclared(name, gGrp, 1))) {
         oa_putStr(name, 0);
         oa_putStr(":\n", 0);
     }
- #endif
 }
 
 static void structureField(char const *name, val_t offset, val_t size)
@@ -2533,7 +2523,6 @@ static uint8_t oneLine(void)
                 strcpy(declarationLabel, temp);
             } else {
                 defLabel(temp, f && !strcmp(gOprPtr->mnemonic, "SET") ? 2 : 1, gf);
-             #ifdef OPT_OA_FILE
                 if (gObjct == OB_ASM && gPass == 2
                     && (gf || symbolDeclared(temp, gGrp, 1))
                     && gOAStk[gOA_sp].ll != gLineNo) {
@@ -2544,7 +2533,6 @@ static uint8_t oneLine(void)
                         oa_putStr(":\n", 0);
                     }
                 }
-             #endif
             }
         }
         return f;
@@ -2581,9 +2569,7 @@ static void initPass(void)
     rsCounter = rsDefined = 0;
     soCounter = foCounter = soDefined    = foDefined  = 0;
     remBlock = failSeen = 0;
- #ifdef OPT_OA_FILE
     gOA_sp    =
- #endif
     gSrcLine  =
     branchChanges = relaxChanges =
     gFile_sp  = gLineNo = gErrors  = gP1_sp   = gCo_sp =
@@ -2646,7 +2632,6 @@ static void assemble(int argc, char * * argv)
                     }
                 }
 
-             #ifdef OPT_OA_FILE
                 if (gObjct == OB_ASM && gPass == 2 && gOAStk[gOA_sp].ll == gLineNo) {
                     DEBMSGF((STDERR,"OPT_OA_FILE#2:%d line=%d size=%d / gLineNo=%d\n", gOA_sp, gOAStk[gOA_sp].ll, gOAStk[gOA_sp].nn, gLineNo) );
                     oa_putStr(gLineBuf + LINEHEAD, gOAStk[gOA_sp++].nn);
@@ -2663,9 +2648,7 @@ static void assemble(int argc, char * * argv)
                         if (++gOA_sp >= OA_MAX)
                             error("Too many unassembled lines for the -a option.");
                     }
-                } else
-             #endif
-                {
+                } else {
                     gOprPtr->process();
                 }
                 if (*gLinPtr != '\n' && !isspace(*gLinPtr) && !isCommentChar(*gLinPtr)) {
@@ -2764,15 +2747,11 @@ static void usage(void)
     e_puts(" -o[=FILE]     Write binary object to FILE\n");
     e_puts(" -f[=FILE]     Write S-Record object to FILE\n");
     e_puts(" -x            Write a FLEX binary executable\n");
- #ifdef OPT_OA_FILE
     e_puts(" -a[=FILE]     Write object as FCB data to FILE\n");
- #endif
     e_puts(" -e[=FILE]     Write source errors to FILE\n");
     e_puts(" -i[=INC_DIR]  Add an include directory (repeatable; searched in order)\n");
     e_puts(" -l[=LST_FILE] Write assembly listing to LIST_FILE\n");
- #ifdef OPT_FBAS
     e_puts(" -k[S[,E]]     Wrie F-BASIC file. S:Start/E:Entry addresses\n");
- #endif
     e_puts(" -r            Omit trailing reserved bytes\n");
  #ifdef DEBUG
     e_puts(" -c  Debug mode\n");
@@ -2923,7 +2902,6 @@ static void options(char const *p)
                 gErrFName = (char const *) (~0);
             goto LOOPOUT;
 
-     #ifdef OPT_OA_FILE
         case 'A':
             gFBasic_f      = 0;
             if ((gOAStk = (OATBL_T *)calloc(OA_MAX,sizeof(OATBL_T))) == NULL) {
@@ -2934,7 +2912,6 @@ static void options(char const *p)
             gObjBufSz      = 16;
             gObjct         = OB_ASM;
             goto OB;
-     #endif
 
         case 'O':
             gObjct         = OB_BIN;
@@ -2957,19 +2934,15 @@ static void options(char const *p)
 
         case 'X':
             gFlex_f        = 1;
-         #ifdef OPT_FBAS
             gFBasic_f      = 0;
-         #endif
             gObjct         = OB_BIN;
             break;
 
         case 'K':
             oKSpecified = 1;
             if (!gObjct || !*p) {
-             #ifdef OPT_FBAS
                 gFBasic_f = 1;
                 gFlex_f   = 0;
-             #endif
                 gObjct = OB_BIN;
             }
 
@@ -3069,13 +3042,9 @@ int main(int argc, char *argv[])
     }
     if (!oObjFName && gObjct) {
         char const* ext = (gObjct == OB_SFMT) ? ".s19"
-                      #ifdef OPT_OA_FILE
                         : (gObjct == OB_ASM) ? ".oa"
-                      #endif
                         : gFlex_f ? ".cmd"
-                      #ifdef OPT_FBAS
                         : gFBasic_f ? ".fm"
-                      #endif
                         : ".bin";
         oObjFName = strdupAddE(gSrcFName, 4);
         FIL_AddChgExt(oObjFName, ext, 1);
@@ -3116,13 +3085,11 @@ int main(int argc, char *argv[])
         } while (relaxChanges);
     }
 
- #ifdef OPT_OA_FILE
     if (gObjct == OB_ASM) {
         gPass = -2;
         DEBMSGF( (STDERR, "enter pass 1.9\n") );
         assemble(argc, argv);
     }
- #endif
 
     gPass  = 2;
     DEBMSGF( (STDERR, "enter pass 2\n") );

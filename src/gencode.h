@@ -50,9 +50,7 @@ extern int              gObjBufSz;
 extern uint8_t          gRmb_f;
 extern int              gRmb_sp;
 extern uint8_t          gFlex_f;
-#ifdef OPT_FBAS
 extern uint8_t          gFBasic_f;
-#endif
 
 /* Per-line relaxation state owned by as63.c. */
 typedef struct line_state {
@@ -88,8 +86,6 @@ void endCodeOutput(void);
 void endCodeSection(void);
 void reserveBytes(val_t count, int checked);
 void termObj(void);
-#ifdef OPT_OA_FILE
 void oa_putStr(char const *s, int n);
-#endif
 
 #endif

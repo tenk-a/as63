@@ -55,13 +55,7 @@ typedef unsigned long   uintmax_t;
 
 typedef intmax_t        val_t;  /* use int/long for constant arithmetic      */
 typedef uintmax_t       uval_t; /* unsigned val_t                            */
-
-#define OPT_OA_FILE           /* enable -a option support                    */
-#define OPT_FBAS              /* enable -k (FBASIC machine-code file output) */
-
-#ifdef OPT_OA_FILE
-# define OA_MAX         500
-#endif
+#define OA_MAX          500
 
 #ifdef SMALL_HOST
 #define MAXCHAR         1024  /* maximum number of characters per input line */
