@@ -91,6 +91,7 @@ static int              gErrors;
 int                     gPass;
 static int              remBlock;
 static int              failSeen;
+static int              endAddressSeen;
 uint16_t                gDp;
 uint16_t                gLc;
 uint16_t                gLinLc;
@@ -1705,12 +1706,15 @@ void    endop(void)
         return;
     gEOF_f = 1;
     skipSpace();
-    w      = (*gLinPtr != '\n') ? expression() : 0;
-    if (gEntryAddr == 0xFFFF)
-        gEntryAddr = w == 0 ? gStartAddr : w;
+    if (*gLinPtr && *gLinPtr != '\n' && !isCommentChar(*gLinPtr)) {
+        w = (uint16_t)expression();
+        if (endAddressSeen++)
+            warning("[WARNING] Multiple END addresses; using the last address.");
+        if (gAddressOverride && w != gOptionEntryAddr)
+            warning("[WARNING] Source END differs from -k entry address; using -k.");
+        gEntryAddr = gAddressOverride ? gOptionEntryAddr : w;
+    }
     printWord(gEntryAddr, 5);
-    if (gRmb_f && gFBasic_f)
-        gObjCnt -= gRmb_sp;
 }
 
 
@@ -2585,6 +2589,9 @@ static void initPass(void)
     gFile_sp  = gLineNo = gErrors  = gP1_sp   = gCo_sp =
     gLc       = gDp     =
     gEOF_f    = gGrp    = (uint8_t) 0;
+    endAddressSeen = 0;
+    if (gAddressOverride)
+        gLc = gOptionStartAddr;
     if (gVerbos_f)
         fprintf(STDERR, (gPass == -1) ? "<pass 1.5>\n" : "<pass %d>\n", gPass);
 }
@@ -2667,6 +2674,8 @@ static void assemble(int argc, char * * argv)
         }
     }
 
+    if (!endAddressSeen)
+        gEntryAddr = gAddressOverride ? gOptionEntryAddr : gStartAddr;
     endCodeOutput();
     checkSymbolDeclarations();
     macroFinish();
@@ -2711,6 +2720,7 @@ static void getModNam(char *modnam, char const *fnam)
 /*---------------------------------------------------------------------------*/
 static char const *oLstFName, *oObjFName;
 static uint8_t     oList_f  ,  oSymbol_f;
+static uint8_t     oKSpecified;
 
 static void printLog(void)
 {
@@ -2756,9 +2766,9 @@ static void usage(void)
     e_puts(" -i[=INC_DIR]  Add an include directory (repeatable; searched in order)\n");
     e_puts(" -l[=LST_FILE] Write assembly listing to LIST_FILE\n");
  #ifdef OPT_FBAS
-    e_puts(" -k[Start[,Enter]]  Write an F-BASIC machine-language file\n");
-    e_puts(" -r            In F-BASIC format, omit trailing zeros after RMB\n");
+    e_puts(" -k[S[,E]]     Wrie F-BASIC file. S:Start/E:Entry addresses\n");
  #endif
+    e_puts(" -r            Omit trailing reserved bytes\n");
  #ifdef DEBUG
     e_puts(" -c  Debug mode\n");
  #endif
@@ -2910,6 +2920,7 @@ static void options(char const *p)
 
      #ifdef OPT_OA_FILE
         case 'A':
+            gFBasic_f      = 0;
             if ((gOAStk = (OATBL_T *)calloc(OA_MAX,sizeof(OATBL_T))) == NULL) {
                 e_puts("Not enough memory for the -a option.\n");
                 break;
@@ -2921,11 +2932,13 @@ static void options(char const *p)
      #endif
 
         case 'O':
+            gFBasic_f      = 0;
             gFlex_f        = 0;
             gObjct         = OB_BIN;
             goto OB;
 
         case 'F':
+            gFBasic_f      = 0;
             gFlex_f        = 0;
             gObjct         = OB_SFMT;
             goto OB;
@@ -2946,28 +2959,46 @@ static void options(char const *p)
             pragmaAutoBranch = 1;
             break;
 
-     #ifdef OPT_FBAS
         case 'K':
-            gFBasic_f      = 1;
-            gFlex_f        = 0;
-            gRmb_sp        = 0;
+            oKSpecified = 1;
+            if (!gObjct || !*p) {
+             #ifdef OPT_FBAS
+                gFBasic_f = 1;
+                gFlex_f   = 0;
+             #endif
+                gObjct = OB_BIN;
+            }
+
             if (*p) {
-                gStartAddr = xstrtoui((uint8_t const*)p, &pp);
-                p          = (char const*)pp;
-                if (gStartAddr == 0)
-                    gStartAddr = 0xFFFF;
-                if (*p == ',') {
-                    gEntryAddr = xstrtoui((uint8_t const*)p + 1, &pp);
-                    /*p = pp;*/
+                gOptionStartAddr = xstrtoui((uint8_t const*)p, &pp);
+                if (pp == (uint8_t const *)p) {
+                    e_puts("Invalid -k start address.\n");
+                    exit(1);
                 }
-                if (gEntryAddr == 0)
-                    gEntryAddr = 0xFFFF;
+                p          = (char const*)pp;
+                gOptionEntryAddr = gOptionStartAddr;
+                if (*p == ',') {
+                    ++p;
+                    gOptionEntryAddr = xstrtoui((uint8_t const*)p, &pp);
+                    if (pp == (uint8_t const *)p) {
+                        e_puts("Invalid -k entry address.\n");
+                        exit(1);
+                    }
+                    p = (char const *)pp;
+                }
+                if (*p) {
+                    e_puts("Invalid -k address specification.\n");
+                    exit(1);
+                }
+                gAddressOverride = 1;
+                gStartAddr = gOptionStartAddr;
+                gEntryAddr = gOptionEntryAddr;
             }
             goto LOOPOUT;
+
         case 'R':
             gRmb_f         = 1;
             break;
-     #endif
 
         case 'I':
             if (!*p)
@@ -3000,7 +3031,7 @@ int main(int argc, char *argv[])
 
     gCmdName       = argv[0];
     gObjBufSz      = OBJSIZE;
-    gEntryAddr     = gStartAddr = 0xFFFF;
+    gEntryAddr     = gStartAddr = 0;
     gObjFp         = NULL;
     gLstFp         = stdout;
     gErrFp         = STDERR;
@@ -3024,6 +3055,10 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (gOs9_f && oKSpecified) {
+        e_puts("The -k option cannot be used in OS-9 mode (-9).\n");
+        return 1;
+    }
     if (*gSrcFName == '\0') {
         fprintf(STDERR, "usage: %s [-opts] src_file...(-? help)\n", gCmdName);
         return 1;

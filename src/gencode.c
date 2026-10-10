@@ -7,6 +7,9 @@ FILE *                  gObjFp;
 uint16_t                gObjCnt;
 static uint16_t         gObjLc;
 uint16_t                gEntryAddr;
+uint8_t                 gAddressOverride;
+uint16_t                gOptionStartAddr;
+uint16_t                gOptionEntryAddr;
 uint8_t                 gObjct;
 int                     gObjBufSz;
 static uint8_t          gCrcBuf[3];
@@ -42,6 +45,10 @@ void initCodePass(void)
     lastRtsAddress = -1;
     gObjPos = 0;
     gObjLc = 0;
+    if (gAddressOverride) {
+        gLc = gObjLc = gStartAddr = gOptionStartAddr;
+    }
+    gEntryAddr = gAddressOverride ? gOptionEntryAddr : gStartAddr;
     gObjCnt = 0;
     gRmb_sp = 0;
     offsetActive = 0;
@@ -176,6 +183,18 @@ static void    put2obj(int w)
     putObj(w);
 }
 
+static uint8_t putB(int b);
+
+static void emitReservedBytes(void)
+{
+    int count = gRmb_sp;
+    gRmb_sp = 0;
+    gLc -= (uint16_t)count;
+    gObjCnt -= (uint16_t)count;
+    while (count-- > 0)
+        putB(0);
+}
+
 static uint8_t    putB(int b)
 {
     lineCode = 1;
@@ -183,11 +202,8 @@ static uint8_t    putB(int b)
         ++gLc;
         return (uint8_t)b;
     }
-    if (gRmb_f && gFBasic_f && gObjct == OB_BIN && gRmb_sp) {
-        while (gRmb_sp-- > 0)
-            putObj(0);
-        gRmb_sp++;
-    }
+    if (gRmb_sp)
+        emitReservedBytes();
     b = (uint8_t) b;
     putObj(b);
     ++gObjCnt;
@@ -209,6 +225,8 @@ void    oa_putStr(char const * s, int n)
 {
     if (gPass != 2)
         return;
+    if (n && gRmb_sp)
+        emitReservedBytes();
     flushObj();
     fputs(s, gObjFp);
     gObjCnt   += n;
@@ -2003,7 +2021,7 @@ void reserveBytes(val_t count, int checked)
     } else if (gOrgSFmt_f && (gObjct == OB_SFMT || gFlex_f)) {
         flushObj();
         gLc += (uint16_t)count;
-    } else if (gRmb_f && gFBasic_f) {
+    } else if (gRmb_f) {
         printWord(gLc, 5);
         gRmb_sp += count;
         gObjCnt += count;
@@ -2031,6 +2049,9 @@ void    org(void)
 {
     uint16_t origin = 0;
 
+    if (gRmb_sp)
+        emitReservedBytes();
+
     ++addressRegion;
     if (offsetActive) {
         lastOffset   = gLc;
@@ -2051,8 +2072,14 @@ void    org(void)
         previousOrg = gOs9_f ? gCSectBase : gLc;
         reorgValid = 1;
     }
-    if (gStartAddr == 0xFFFF && gOrg_f == 0)
+    if (!gOrg_f) {
+        if (gAddressOverride) {
+            if (origin != gOptionStartAddr)
+                warning("[WARNING] Source ORG differs from -k start address; using -k.");
+            origin = gOptionStartAddr;
+        }
         gStartAddr = origin;
+    }
     if (gOs9_f) {
         gCSectSw   = 1;
         gCSectBase = origin;
@@ -2265,6 +2292,8 @@ void offsetSection(void)
         return;
     }
     if (!offsetActive) {
+        if (gRmb_sp)
+            emitReservedBytes();
         flushObj();
         savedCodeLc = gLc;
     }
@@ -2280,8 +2309,6 @@ void beginCodeOutput(uint16_t size)
     if (gPass == 2 && gFBasic_f) {
         putObj(0);
         put2obj(size);
-        if (gStartAddr == 0xFFFF)
-            gStartAddr = 0;
         put2obj(gStartAddr);
     }
  #endif
@@ -2292,12 +2319,12 @@ void beginCodeOutput(uint16_t size)
 
 void endCodeOutput(void)
 {
+    gObjCnt -= (uint16_t)gRmb_sp;
+    gRmb_sp = 0;
  #ifdef OPT_FBAS
     if (gFBasic_f && gPass == 2) {
         putObj(0xff);
         put2obj(0x0000);
-        if (gEntryAddr == 0xFFFF)
-            gEntryAddr = gStartAddr;
         put2obj(gEntryAddr);
         putObj(0x1a);
     }
