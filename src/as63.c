@@ -678,7 +678,7 @@ int     isSymbl3(int c)
 {
     c = (uint8_t) c;
     return (isalnum(c) || c == '_' || c == '.' || c == '@' || c == '$'
-        || (c == '?' && gCompatMode == COMPAT_LWASM));
+        || (c == '?' && gCompatMode != COMPAT_VASM));
 }
 
 int isCommentChar(int c)
@@ -751,7 +751,7 @@ static int compatibleNumber(val_t *result)
     int         digit   = 0;
     int         prefix  = 0;
     if (*start == '@' || *start == '&') {
-        if (gCompatMode != COMPAT_LWASM)
+        if (gCompatMode == COMPAT_VASM)
             return 0;
         base = *start == '@' ? 8 : 10;
         prefix = 1;
@@ -2544,9 +2544,9 @@ static void initPass(void)
     conditionalCursor = 0;
     if (gPass == 1) {
         conditionalCount = 0;
-        pragmaIndex0 = gCompatMode == COMPAT_LWASM;
+        pragmaIndex0 = gCompatMode != COMPAT_VASM;
         pragmaForwardMax = gCompatMode == COMPAT_LWASM;
-        pragmaShadow = gCompatMode != COMPAT_LWASM;
+        pragmaShadow = gCompatMode == COMPAT_VASM;
         pragmaDollarLocal = !gOs9_f;
         for (kind = 0; kind < PRAGMA_KINDS; ++kind)
             pragmaDefaults[kind] = pragmaValue(kind);

@@ -38,6 +38,10 @@ call :ase -j -q -ftst_org.s19 tst_org.s
 echo:
 
 :: multi file test. 
+call :ase -t=as63 -otst_lwasm_compat.o tst_lwasm_compat.s
+call :ase -t=lwasm -otst_lwasm_compat-lw.o tst_lwasm_compat.s
+call :ase -t=vasm -otst_vasm_macro-vasm.o tst_vasm_macro.s
+call :ase -t=as63 -otst_as63_extensions.o tst_as63_extensions.s
 call :asm -ltst_mf_1.lst tst_mf.s
 call :ase -a -ltst_mf_2.lst tst_mf2.s
 call :ase -ltst_mf.lst tst_mf.s tst_mf2.oa

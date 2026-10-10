@@ -467,7 +467,7 @@ static void indexM(int frame, int reg)
 
 static int indexSmallAllowed(void)
 {
-    return (!gIdxOfs_f && gCompatMode != COMPAT_LWASM && !pragmaIndexConfigured())
+    return (!gIdxOfs_f && gCompatMode == COMPAT_VASM && !pragmaIndexConfigured())
         || (!gByte_f && !gWord_f);
 }
 
@@ -475,7 +475,7 @@ static int indexZeroAllowed(val_t value, int reg)
 {
     if (!gValid_f || value != 0)
         return 0;
-    if (gCompatMode == COMPAT_LWASM || pragmaIndexConfigured()) {
+    if (gCompatMode != COMPAT_VASM || pragmaIndexConfigured()) {
         return !gByte_f && !gWord_f
             && (reg == W || (!gIdxOfs_f && pragmaIndex0 && !expressionLiteralZero));
     }

@@ -122,7 +122,7 @@ void macroLocalLabel(char *name)
     if (!scope || !n) {
         return;
     }
-    if (gCompatMode == COMPAT_LWASM) {
+    if (gCompatMode != COMPAT_VASM) {
         if (!strchr(name, '@') && !strchr(name, '?')
             && !(pragmaEnabled("dollarlocal") && strchr(name, '$'))
             && !(scopeDepth && name[0] == '.')) {
@@ -143,7 +143,7 @@ void macroLocalLabel(char *name)
 
 void macroScopeBoundary(void)
 {
-    if (gCompatMode == COMPAT_LWASM) {
+    if (gCompatMode != COMPAT_VASM) {
         scope = ++serial;
     }
 }
@@ -390,7 +390,8 @@ static void expandLine(uint8_t *dst, size_t limit, char const *line, size_t leng
                 c = *(uint8_t const *)s++;
                 if (isdigit(c)) {
                     index = c - '0';
-                } else if (gAllMacroParams && tolower(c) >= 'a' && tolower(c) <= 'z') {
+                } else if (gAllMacroParams && gCompatMode != COMPAT_LWASM
+                           && tolower(c) >= 'a' && tolower(c) <= 'z') {
                     index = tolower(c) - 'a' + 10;
                 } else {
                     error("Invalid macro argument length reference.");
@@ -765,8 +766,8 @@ int macroInvoke(char const *token)
     int         level   = 0;
     int         bracket = 0;
     int         angle   = 0;
-    int         strictArgs = gCompatMode == COMPAT_LWASM && !pragmaEnabled("asm09");
-    int         maxArgs = gCompatMode == COMPAT_LWASM ? 65535 : (gAllMacroParams ? MAC_ARGS : 9);
+    int         strictArgs = gCompatMode != COMPAT_VASM && !pragmaEnabled("asm09");
+    int         maxArgs = gCompatMode != COMPAT_VASM ? 65535 : (gAllMacroParams ? MAC_ARGS : 9);
     uint8_t *   allStart= NULL;
     uint8_t *   allEnd  = NULL;
     size_t      n       = 0;
@@ -801,7 +802,7 @@ int macroInvoke(char const *token)
         }
         return 1;
     }
-    if (gCompatMode == COMPAT_LWASM) {
+    if (gCompatMode != COMPAT_VASM) {
         scope = f->id;
     }
     if (m->noexpand) {
@@ -817,7 +818,7 @@ int macroInvoke(char const *token)
         skipSpace();
         start = (char const *)gLinPtr;
         p = gLinPtr;
-        angle = gCompatMode != COMPAT_LWASM && *p == '<' && p[1] && p[1] != '\n' &&
+        angle = gCompatMode == COMPAT_VASM && *p == '<' && p[1] && p[1] != '\n' &&
                 strchr((char const *)p + 1, '>') != NULL;
         if (angle) {
             ++p;
@@ -866,7 +867,7 @@ int macroInvoke(char const *token)
         while (n && isspace(*(uint8_t const *)(start + n - 1))) {
             --n;
         }
-        if (gCompatMode == COMPAT_LWASM && pragmaEnabled("asm09")
+        if (gCompatMode != COMPAT_VASM && pragmaEnabled("asm09")
             && n >= 2 && start[0] == '(' && start[n - 1] == ')') {
             ++start;
             n -= 2;
@@ -891,7 +892,7 @@ int macroInvoke(char const *token)
             ++p;
         }
         gLinPtr = p;
-        if (gCompatMode == COMPAT_LWASM && isspace(*gLinPtr)) {
+        if (gCompatMode != COMPAT_VASM && isspace(*gLinPtr)) {
             break;
         }
         skipSpace();
@@ -899,7 +900,7 @@ int macroInvoke(char const *token)
             break;
         }
         ++gLinPtr;
-        if (gCompatMode != COMPAT_LWASM) {
+        if (gCompatMode == COMPAT_VASM) {
             skipSpace();
         }
         if (!*gLinPtr || isspace(*gLinPtr) || *gLinPtr == ';') {
