@@ -38,6 +38,7 @@ extern int              wordCharacter;
 extern uint8_t          gCSectSw;
 extern uint16_t         gCSectBase;
 extern uint8_t          gOrgSFmt_f;
+extern uint8_t          gOrgPad;
 extern uint16_t         gStartAddr;
 extern FILE *           gObjFp;
 extern uint16_t         gObjCnt;

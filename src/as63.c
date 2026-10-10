@@ -2706,6 +2706,7 @@ static char       *oObjFName;
 static uint8_t     oList_f  ,  oSymbol_f;
 static uint8_t     oKSpecified;
 static uint8_t     oXSpecified;
+static int         oOrgPad = -1;
 
 static void printLog(void)
 {
@@ -2740,6 +2741,7 @@ static void usage(void)
     e_puts(" -m[=MOD_NAME] Set the $modnam string variable\n");
     e_puts(" -d<L>[=Val]   Define L as Val (default: 1)\n");
     e_puts(" --allmp       Allow 35 macro arguments (default: 9)\n");
+    e_puts(" --orgpad      Zero-fill ORG gaps(as63,vasm). --no-orgpad no fill(lwasm)\n");
     e_puts(" -t=<ASM>      Assembler compatibility mode: as63 lwasm vasm\n");
     e_puts(" -x[=FORMAT]   Select binary format: raw, flex, os9, fbasic. (default: flex)\n");
     e_puts(" -k[S[:E]]     Override start/entry (hex). No -x, select fbasic\n");
@@ -3044,11 +3046,19 @@ int main(int argc, char *argv[])
                 usage();
             if (!strcasecmp(p, "-allmp"))
                 gAllMacroParams = 1;
+            else if (!strcasecmp(p, "-orgpad"))
+                oOrgPad = 1;
+            else if (!strcasecmp(p, "-no-orgpad"))
+                oOrgPad = 0;
             else
                 options(p);
         }
     }
 
+    gOrgPad = oOrgPad >= 0 ? oOrgPad
+        : (gCompatMode != COMPAT_LWASM
+           && !(gOrgSFmt_f && (gOutFmt == OB_SFMT
+               || (gOutFmt == OB_BIN && gBinFmt == BIN_FLEX))));
     if (gBinFmt == BIN_OS9)
         gOs9_f = 1;
     if (gOs9_f && oKSpecified) {

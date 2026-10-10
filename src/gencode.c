@@ -31,6 +31,7 @@ static uint16_t         previousOrg;
 static uint8_t          reorgValid;
 uint16_t                gStartAddr;
 uint8_t                 gOrgSFmt_f;
+uint8_t                 gOrgPad;
 uint16_t                gCSectBase;
 uint8_t                 gCSectSw;
 static int              oPostf;
@@ -2078,10 +2079,7 @@ void    org(void)
         gCSectSw   = 1;
         gCSectBase = origin;
     } else {
-        if (gCompatMode == COMPAT_LWASM || gOprPtr->prefix || gOrg_f == 0
-            || (gOrgSFmt_f && (gOutFmt == OB_SFMT
-                || (gOutFmt == OB_BIN && gBinFmt == BIN_FLEX)))
-        ) {
+        if (!gOrgPad || gOprPtr->prefix || gOrg_f == 0) {
             flushObj();
             gObjLc = gLc = origin;
         } else if (gLc > origin) {
