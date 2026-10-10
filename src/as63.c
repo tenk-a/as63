@@ -2744,11 +2744,11 @@ static void usage(void)
     e_puts(" -u            Case-sensitive labels    -n  Case-insensitive labels\n");
     e_puts(" -j            Handle Shift_JIS characters\n");
     e_puts(" -m[=MOD_NAME] Set the $modnam string variable\n");
-    e_puts(" -d<L>[=Val]   Define L as Val (default: 1)\n");
+    e_puts(" -d<L>[=VAL]   Define L as VAL (default: 1)\n");
     e_puts(" --allmp       Allow 35 macro arguments (default: 9)\n");
     e_puts(" --orgpad      Zero-fill ORG gaps(as63,vasm). --no-orgpad no fill(lwasm)\n");
     e_puts(" -t=<ASM>      Assembler compatibility mode: as63 lwasm vasm\n");
-    e_puts(" -x[=FORMAT]   Select binary format: raw, flex, os9, fbasic. (default: flex)\n");
+    e_puts(" -x[=FORMAT]   Binary format: raw, flex, os9, fbasic. (default: flex)\n");
     e_puts(" -k[S[:E]]     Override start/entry (hex). No -x, select fbasic\n");
     e_puts(" -i[=INC_DIR]  Add an include directory (repeatable; searched in order)\n");
     e_puts(" -o[=FILE]     Write binary output using the selected binary format\n");
