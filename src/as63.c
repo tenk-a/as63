@@ -2609,7 +2609,12 @@ static void assemble(int argc, char * * argv)
             continue;
 
         strncpy(gSrcFName, argv[i], FNAMESZ);
+     #if 1 /* All command-line sources share the global label namespace. */
+        gSrcLine = 0;
+        gEOF_f   = 0;
+     #else
         ++gGrp;
+     #endif
         macroScopeBoundary();
         DEBMSGF( (STDERR, "open %s\n", gSrcFName) );
         gSrcFp = fopenE(gSrcFName, "r");
