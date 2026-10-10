@@ -751,7 +751,7 @@ static int compatibleNumber(val_t *result)
     int         digit   = 0;
     int         prefix  = 0;
     if (*start == '@' || *start == '&') {
-        if (gCompatMode == COMPAT_VASM)
+        if (gCompatMode != COMPAT_LWASM)
             return 0;
         base = *start == '@' ? 8 : 10;
         prefix = 1;
