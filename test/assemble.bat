@@ -40,6 +40,7 @@ echo:
 :: multi file test. 
 call :ase -t=as63 -otst_lwasm_compat.o tst_lwasm_compat.s
 call :ase -t=lwasm -otst_lwasm_compat-lw.o tst_lwasm_compat.s
+call :ase -p -y -otst_pcr.o tst_pcr.s
 call :ase -t=vasm -otst_vasm_macro-vasm.o tst_vasm_macro.s
 call :ase -t=as63 -otst_as63_extensions.o tst_as63_extensions.s
 call :ase --orgpad -t=lwasm -otst_orgpad.o tst_orgpad.s

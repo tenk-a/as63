@@ -483,6 +483,65 @@ static int indexZeroAllowed(val_t value, int reg)
     return (!gIdxOfs_f || reg == W) && indexSmallAllowed();
 }
 
+static int checkPcByte(val_t value)
+{
+    return gByte_f || ((!gIdxOfs_f || pragmaAutoBranch) && checkByte(value));
+}
+
+static int checkPcrByte(val_t displacement, int shortSize)
+{
+    LINE_STATE *state = lineState();
+    int shortOffset;
+    val_t distance = displacement;
+    if (gByte_f)
+        return 1;
+    if (gWord_f || (gIdxOfs_f && !pragmaAutoBranch))
+        return 0;
+    if (!pragmaForwardMax || pragmaAutoBranch)
+        requestRelaxation();
+    if (expressionForward && (pragmaAutoBranch || !pragmaForwardMax)) {
+        requestRelaxation();
+        if (gPass != 1 && expressionForward == 1 && !expressionFixedForward
+            && state->size)
+            distance -= state->address - gLinLc + state->size - shortSize;
+    }
+    if (gPass == 2 || gPass == -2)
+        return state->pcrSize == 1;
+    shortOffset = !state->pcrLong
+        && (gValid_f || (gPass != 1 && expressionForward
+                        && (pragmaAutoBranch || !pragmaForwardMax)))
+        && -128 <= distance && distance <= 127;
+    if (state->pcrSize == 1 && !shortOffset)
+        state->pcrLong = 1;
+    state->pcrSize = shortOffset ? 1 : 2;
+    return shortOffset;
+}
+
+static int checkExpandedPcrByte(val_t displacement, int shortEnd, int unitSize, int slot)
+{
+    LINE_STATE *state = lineState();
+    int shortOffset;
+    if (gByte_f)
+        return 1;
+    if (gWord_f || (gIdxOfs_f && !pragmaAutoBranch))
+        return 0;
+    if (!pragmaForwardMax || pragmaAutoBranch)
+        requestRelaxation();
+    if (gPass == 2 || gPass == -2)
+        return state->expandedPcrSize[slot] == 1;
+    if (gPass != 1 && expressionForward == 1 && !expressionFixedForward && state->size)
+        displacement -= state->address - gLinLc + state->size
+            - (shortEnd + (slot ? unitSize : 0));
+    shortOffset = !state->expandedPcrLong[slot]
+        && (gValid_f || (gPass != 1 && expressionForward
+                        && (pragmaAutoBranch || !pragmaForwardMax)))
+        && -128 <= displacement && displacement <= 127;
+    if (state->expandedPcrSize[slot] == 1 && !shortOffset)
+        state->expandedPcrLong[slot] = 1;
+    state->expandedPcrSize[slot] = shortOffset ? 1 : 2;
+    return shortOffset;
+}
+
 static void operand(int grp, int mode)
 {
     val_t   val = 0;
@@ -580,7 +639,7 @@ static void operand(int grp, int mode)
                 }
                 break;
             case PC:
-                if (checkByte(val)) {
+                if (checkPcByte(val)) {
                     indexM(0x8c, 0);
                     putByte(val);
                 } else {
@@ -589,7 +648,8 @@ static void operand(int grp, int mode)
                 }
                 break;
             case PCR:
-                if (checkByte( val -= gLinLc + 3 + (gOprPtr->prefix ? 1 : 0) )) {
+                if (checkPcrByte(val -= gLinLc + 3 + (gOprPtr->prefix ? 1 : 0),
+                                 3 + (gOprPtr->prefix ? 1 : 0))) {
                     indexM(0x8c, 0);
                     putByte(val);
                 } else {
@@ -1490,11 +1550,11 @@ void    oped(void)  /* andd  ord  eord  adcd  sbcd */
 
             case PC:
                 /* Offset is relative to the end of the complete expansion. */
-                val2 = val + 1 + ((checkByte(val) && -128 <= val && val <= 127) ? 3 : 4);
+                val2 = val + 1 + ((checkPcByte(val) && -128 <= val && val <= 127) ? 3 : 4);
                 for (i = 1; i >= 0; --i) {
                     int disp = i ? val2 : val;
                     put1Byte(gOprPtr->opcode + 0x20 + i * 0x40);
-                    if (checkByte(disp) && -128 <= disp && disp <= 127) {
+                    if (checkPcByte(disp) && -128 <= disp && disp <= 127) {
                         put1Byte(index0(0x8c, 0));
                         put1Byte(disp);
                     } else {
@@ -1508,7 +1568,7 @@ void    oped(void)  /* andd  ord  eord  adcd  sbcd */
                 val2 = gLinLc + 3;
                 for (++val, i = 1; i >= 0; --i, --val, val2 += 3) {
                     put1Byte(gOprPtr->opcode + 0x20 + i * 0x40);
-                    if (checkByte(val - val2)) {
+                    if (checkExpandedPcrByte(val - val2, val2 - gLinLc, 3, i)) {
                         put1Byte( index0(0x8c, 0) );
                         put1Byte(val - val2);
                     } else {
@@ -1652,7 +1712,7 @@ void        opeq(void)  /* addq  subq */
             case PC:
                 for (val += 2, i = 1; i >= 0; --i, val -= 2) {
                     put1Word(op[i] + 0x20);
-                    if (checkByte(val)) {
+                    if (checkPcByte(val)) {
                         put1Byte( index0(0x8c, 0) );
                         put1Byte(val);
                     } else {
@@ -1666,7 +1726,7 @@ void        opeq(void)  /* addq  subq */
                 val2 = gLinLc + 4;
                 for (val += 2, i = 1; i >= 0; --i, val -= 2, val2 += 4) {
                     put1Word(op[i] + 0x20);
-                    if (checkByte(val - val2)) {
+                    if (checkExpandedPcrByte(val - val2, val2 - gLinLc, 4, i)) {
                         put1Byte( index0(0x8c, 0) );
                         put1Byte(val - val2);
                     } else {

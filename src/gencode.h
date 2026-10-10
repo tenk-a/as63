@@ -58,6 +58,10 @@ typedef struct line_state {
     int     size;
     int     branchSize;
     int     branchLong;
+    int     pcrSize;
+    int     pcrLong;
+    int     expandedPcrSize[2];
+    int     expandedPcrLong[2];
 } LINE_STATE;
 
 /* Parsing, diagnostics, relaxation and listing services from as63.c. */
@@ -69,6 +73,7 @@ int pragmaIndexConfigured(void);
 val_t expression(void);
 uint8_t bytExpr(void);
 LINE_STATE *lineState(void);
+void requestRelaxation(void);
 FILE *openSearch(char const *name, char const *mode, int searchOnly);
 int fileOperand(char *name, int size, int *searchOnly);
 void labelValue(val_t value);

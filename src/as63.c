@@ -12,7 +12,7 @@
 #include    <stdlib.h>
 #include    "gencode.h"
 
-#define AS63_TITLE      "HD6309 cross assembler version v1.52T\n"
+#define AS63_TITLE      "HD6309 cross assembler version v1.60T\n"
 
 #ifdef _MSC_VER
  #define ITOA10(i,a)    _itoa( (i), (a), 10 )
@@ -306,6 +306,11 @@ int                 lineCode;
 static int          restoringPragmas;
 static uint8_t      pragmaConfigured[PRAGMA_KINDS];
 static uint8_t      pragmaConfigStacks[MAXLIB + 1][PRAGMA_KINDS][PRAGMA_DEPTH];
+
+void requestRelaxation(void)
+{
+    relaxRequested = 1;
+}
 
 LINE_STATE *lineState(void)
 {
@@ -2733,7 +2738,7 @@ static void usage(void)
     e_puts(" -6            Enable M6800-family mnemonic compatibility\n");
     e_puts(" -z            Enable undocumented 6809/6309 opcodes/operands\n");
     e_puts(" -p            Distinguish 0, 5, 8 and 16-bit indexed offsets\n");
-    e_puts(" -y            Enable automatic branch sizing\n");
+    e_puts(" -y            Enable automatic branch and PC-relative sizing\n");
     e_puts(" -q            Omit ORG/RMB gaps in S-record or FLEX output\n");
     e_puts(" -r            Omit trailing reserved bytes in all output formats\n");
     e_puts(" -u            Case-sensitive labels    -n  Case-insensitive labels\n");
