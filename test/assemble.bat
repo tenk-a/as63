@@ -21,8 +21,8 @@ call :ase -6 -ltst_m6800.lst -otst_m6800.o tst_m6800.s
 echo:
 
 :: FLEX binary.
-call :ase -q -xfx9hello.cmd fx9hello.s
-call :ase -q -xtst_flex.cmd tst_flex.s
+call :ase -q -x -ofx9hello.cmd fx9hello.s
+call :ase -q -x -otst_flex.cmd tst_flex.s
 
 :: OS-9 modules.
 call :ase -9 -i. -mlist -olist.o list.s

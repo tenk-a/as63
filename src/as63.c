@@ -2758,7 +2758,7 @@ static void usage(void)
     e_puts(" -t=<ASM>      Assembler compatibility mode: as63 lwasm vasm\n");
     e_puts(" -o[=FILE]     Write binary object to FILE\n");
     e_puts(" -f[=FILE]     Write S-Record object to FILE\n");
-    e_puts(" -x[=FILE]     Write a FLEX binary executable to FILE\n");
+    e_puts(" -x            Write a FLEX binary executable\n");
  #ifdef OPT_OA_FILE
     e_puts(" -a[=FILE]     Write object as FCB data to FILE\n");
  #endif
@@ -2932,8 +2932,6 @@ static void options(char const *p)
      #endif
 
         case 'O':
-            gFBasic_f      = 0;
-            gFlex_f        = 0;
             gObjct         = OB_BIN;
             goto OB;
 
@@ -2943,13 +2941,6 @@ static void options(char const *p)
             gObjct         = OB_SFMT;
             goto OB;
 
-        case 'X':
-            gFlex_f        = 1;
-         #ifdef OPT_FBAS
-            gFBasic_f      = 0;
-         #endif
-            gObjct         = OB_BIN;
-            goto OB;
        OB:
             if (*p)
                 oObjFName  = strdupAddE(p, 4);
@@ -2957,6 +2948,14 @@ static void options(char const *p)
 
         case 'Y':
             pragmaAutoBranch = 1;
+            break;
+
+        case 'X':
+            gFlex_f        = 1;
+         #ifdef OPT_FBAS
+            gFBasic_f      = 0;
+         #endif
+            gObjct         = OB_BIN;
             break;
 
         case 'K':
@@ -3069,6 +3068,9 @@ int main(int argc, char *argv[])
                         : (gObjct == OB_ASM) ? ".oa"
                       #endif
                         : gFlex_f ? ".cmd"
+                      #ifdef OPT_FBAS
+                        : gFBasic_f ? ".fm"
+                      #endif
                         : ".bin";
         oObjFName = strdupAddE(gSrcFName, 4);
         FIL_AddChgExt(oObjFName, ext, 1);
