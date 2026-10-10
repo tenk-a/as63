@@ -45,12 +45,11 @@ extern uint16_t         gEntryAddr;
 extern uint8_t          gAddressOverride;
 extern uint16_t         gOptionStartAddr;
 extern uint16_t         gOptionEntryAddr;
-extern uint8_t          gObjct;
+extern out_fmt_t        gOutFmt;
 extern int              gObjBufSz;
 extern uint8_t          gRmb_f;
 extern int              gRmb_sp;
-extern uint8_t          gFlex_f;
-extern uint8_t          gFBasic_f;
+extern bin_fmt_t        gBinFmt;
 
 /* Per-line relaxation state owned by as63.c. */
 typedef struct line_state {

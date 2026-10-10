@@ -644,7 +644,7 @@ static void checkSymbolDeclarations(void)
             continue;
         if (!label || !label->flg) {
             label = findLabel(declaration->name, 0);
-            if ((!label || !label->flg) && gObjct != OB_ASM)
+            if ((!label || !label->flg) && gOutFmt != OB_ASM)
                 errLbl("Exported label is undefined", declaration->name);
         } else if (publishedLabel(declaration->name) != label) {
             errLbl("Duplicate exported label", declaration->name);
@@ -915,7 +915,7 @@ static val_t   term(void)
             }
             return (lp->value);
         }
-        if (gObjct == OB_ASM && refLbl0(temp) )
+        if (gOutFmt == OB_ASM && refLbl0(temp) )
             gOAchk_f = 1;
         else
             errLbl("Undefined label", temp);
@@ -1474,7 +1474,7 @@ void symbolDirective(void)
             declareSymbol(name, kind);
         } while (nextComma());
     }
-    if (gObjct == OB_ASM && gPass == 2)
+    if (gOutFmt == OB_ASM && gPass == 2)
         oa_putStr(gLineBuf + LINEHEAD, 0);
 }
 
@@ -2288,7 +2288,7 @@ static void structureSymbol(char const *name, val_t value, val_t size, uint8_t g
     defLabel(name, 1, global);
     gLblPtr->value = value;
     gLblPtr->structureSize = size;
-    if (gObjct == OB_ASM && gPass == 2 && !activeStructure
+    if (gOutFmt == OB_ASM && gPass == 2 && !activeStructure
         && (global || symbolDeclared(name, gGrp, 1))) {
         oa_putStr(name, 0);
         oa_putStr(":\n", 0);
@@ -2523,7 +2523,7 @@ static uint8_t oneLine(void)
                 strcpy(declarationLabel, temp);
             } else {
                 defLabel(temp, f && !strcmp(gOprPtr->mnemonic, "SET") ? 2 : 1, gf);
-                if (gObjct == OB_ASM && gPass == 2
+                if (gOutFmt == OB_ASM && gPass == 2
                     && (gf || symbolDeclared(temp, gGrp, 1))
                     && gOAStk[gOA_sp].ll != gLineNo) {
                     if (f && gOprPtr->process == equ) {
@@ -2632,7 +2632,7 @@ static void assemble(int argc, char * * argv)
                     }
                 }
 
-                if (gObjct == OB_ASM && gPass == 2 && gOAStk[gOA_sp].ll == gLineNo) {
+                if (gOutFmt == OB_ASM && gPass == 2 && gOAStk[gOA_sp].ll == gLineNo) {
                     DEBMSGF((STDERR,"OPT_OA_FILE#2:%d line=%d size=%d / gLineNo=%d\n", gOA_sp, gOAStk[gOA_sp].ll, gOAStk[gOA_sp].nn, gLineNo) );
                     oa_putStr(gLineBuf + LINEHEAD, gOAStk[gOA_sp++].nn);
                 } else if (gPass == -2) {
@@ -2706,9 +2706,11 @@ static void getModNam(char *modnam, char const *fnam)
 
 
 /*---------------------------------------------------------------------------*/
-static char const *oLstFName, *oObjFName;
+static char const *oLstFName;
+static char       *oObjFName;
 static uint8_t     oList_f  ,  oSymbol_f;
 static uint8_t     oKSpecified;
+static uint8_t     oXSpecified;
 
 static void printLog(void)
 {
@@ -2728,35 +2730,42 @@ static void printLog(void)
 static void usage(void)
 {
     fprintf(STDERR, "usage: %s [-opts] src_file...\n", gCmdName);
-    e_puts(" -?     Show this help\n");
-    e_puts(" -3     6309 mode (default)\n");
-    e_puts(" -8     6809 mode\n");
-    e_puts(" -9     OS-9 standard ASM mode\n");
-    e_puts(" -6     Enable M6800-family mnemonic compatibility\n");
-    e_puts(" -z     Enable undocumented 6809/6309 opcodes/operands\n");
-    e_puts(" -p     Selectable 0, 5, 8, or 16-bit offsets.\n");
-    e_puts(" -y     Enable automatic branch sizing\n");
-    e_puts(" -q     Allow address gaps caused by ORG or RMB\n");
-    e_puts(" -u     Case-sensitive labels    -n  Case-insensitive labels\n");
-    e_puts(" -s     Show symbol table        -v  Show progress\n");
-    e_puts(" -j     use SJIS character.\n");
+    e_puts(" -?            Show this help\n");
+    e_puts(" -3            6309 mode (default)\n");
+    e_puts(" -8            6809 mode\n");
+    e_puts(" -9            OS-9 standard ASM mode\n");
+    e_puts(" -6            Enable M6800-family mnemonic compatibility\n");
+    e_puts(" -z            Enable undocumented 6809/6309 opcodes/operands\n");
+    e_puts(" -p            Distinguish 0, 5, 8 and 16-bit indexed offsets\n");
+    e_puts(" -y            Enable automatic branch sizing\n");
+    e_puts(" -q            Omit ORG/RMB gaps in S-record or FLEX output\n");
+    e_puts(" -r            Omit trailing reserved bytes in all output formats\n");
+    e_puts(" -u            Case-sensitive labels    -n  Case-insensitive labels\n");
+    e_puts(" -j            Handle Shift_JIS characters\n");
     e_puts(" --allmp       Allow 35 macro arguments (default: 9)\n");
     e_puts(" -m<mod_name>  Set the $modnam string variable\n");
     e_puts(" -d<L>[=Val]   Define L as Val (default: 1)\n");
     e_puts(" -t=<ASM>      Assembler compatibility mode: as63 lwasm vasm\n");
-    e_puts(" -o[=FILE]     Write binary object to FILE\n");
-    e_puts(" -f[=FILE]     Write S-Record object to FILE\n");
-    e_puts(" -x            Write a FLEX binary executable\n");
-    e_puts(" -a[=FILE]     Write object as FCB data to FILE\n");
-    e_puts(" -e[=FILE]     Write source errors to FILE\n");
     e_puts(" -i[=INC_DIR]  Add an include directory (repeatable; searched in order)\n");
+    e_puts(" -x[=FORMAT]   Select binary format: raw, flex, os9, fbasic. (default: flex)\n");
+    e_puts(" -k[S[:E]]     Override start/entry (hex). No -x, select fbasic\n");
+    e_puts(" -o[=FILE]     Write binary output using the selected binary format\n");
+    e_puts(" -f[=FILE]     Write Motorola S-record output (.s19)\n");
+    e_puts(" -a[=FILE]     Write FCB source output (.oa)\n");
+    e_puts(" -s            Show symbol table\n");
     e_puts(" -l[=LST_FILE] Write assembly listing to LIST_FILE\n");
-    e_puts(" -k[S[,E]]     Wrie F-BASIC file. S:Start/E:Entry addresses\n");
-    e_puts(" -r            Omit trailing reserved bytes\n");
+    e_puts(" -e[=FILE]     Write errors to FILE (default extension: .err)\n");
+    e_puts(" -v            Show assembly progress\n");
  #ifdef DEBUG
-    e_puts(" -c  Debug mode\n");
+    e_puts(" -c            Debug mode\n");
  #endif
     DEBMSGF( (STDERR, "Extended instructions enabled (D,Q)\n") );
+    e_puts("\nExamples:\n");
+    fprintf(STDERR, " %s -o=out.bin main.asm data.asm\n", gCmdName);
+    fprintf(STDERR, " %s -x=flex -o=out.cmd flex_cmd.asm\n", gCmdName);
+    fprintf(STDERR, " %s -x=os9 -o os9_module.asm\n", gCmdName);
+    fprintf(STDERR, " %s -k4c00:5000 -o fbasic_ml.asm\n", gCmdName);
+    fprintf(STDERR, " %s -x=flex -k1c00:2000 -f=out.s19 flex_cmd.asm\n", gCmdName);
     exit(0);
 }
 
@@ -2903,24 +2912,20 @@ static void options(char const *p)
             goto LOOPOUT;
 
         case 'A':
-            gFBasic_f      = 0;
             if ((gOAStk = (OATBL_T *)calloc(OA_MAX,sizeof(OATBL_T))) == NULL) {
                 e_puts("Not enough memory for the -a option.\n");
                 break;
             }
-            gFlex_f        = 0;
             gObjBufSz      = 16;
-            gObjct         = OB_ASM;
+            gOutFmt         = OB_ASM;
             goto OB;
 
         case 'O':
-            gObjct         = OB_BIN;
+            gOutFmt         = OB_BIN;
             goto OB;
 
         case 'F':
-            gFBasic_f      = 0;
-            gFlex_f        = 0;
-            gObjct         = OB_SFMT;
+            gOutFmt         = OB_SFMT;
             goto OB;
 
        OB:
@@ -2933,18 +2938,35 @@ static void options(char const *p)
             break;
 
         case 'X':
-            gFlex_f        = 1;
-            gFBasic_f      = 0;
-            gObjct         = OB_BIN;
+            oXSpecified = 1;
+            if (*(p - 1) == '=') {
+                if (!strcasecmp(p, "raw"))
+                    gBinFmt = BIN_RAW;
+                else if (!strcasecmp(p, "flex"))
+                    gBinFmt = BIN_FLEX;
+                else if (!strcasecmp(p, "os9"))
+                    gBinFmt = BIN_OS9;
+                else if (!strcasecmp(p, "fbasic"))
+                    gBinFmt = BIN_FBASIC;
+                else {
+                    e_puts("Unknown binary format. Use -x=raw, flex, os9 or fbasic.\n");
+                    exit(1);
+                }
+                if (!gOutFmt)
+                    gOutFmt = OB_BIN;
+                goto LOOPOUT;
+            }
+            gBinFmt = BIN_FLEX;
+            if (!gOutFmt)
+                gOutFmt = OB_BIN;
             break;
 
         case 'K':
             oKSpecified = 1;
-            if (!gObjct || !*p) {
-                gFBasic_f = 1;
-                gFlex_f   = 0;
-                gObjct = OB_BIN;
-            }
+            if (!oXSpecified)
+                gBinFmt = BIN_FBASIC;
+            if (!gOutFmt)
+                gOutFmt = OB_BIN;
 
             if (*p) {
                 gOptionStartAddr = xstrtoui((uint8_t const*)p, &pp);
@@ -2954,7 +2976,7 @@ static void options(char const *p)
                 }
                 p          = (char const*)pp;
                 gOptionEntryAddr = gOptionStartAddr;
-                if (*p == ',') {
+                if (*p != 0) {
                     ++p;
                     gOptionEntryAddr = xstrtoui((uint8_t const*)p, &pp);
                     if (pp == (uint8_t const *)p) {
@@ -3032,6 +3054,8 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (gBinFmt == BIN_OS9)
+        gOs9_f = 1;
     if (gOs9_f && oKSpecified) {
         e_puts("The -k option cannot be used in OS-9 mode (-9).\n");
         return 1;
@@ -3040,12 +3064,12 @@ int main(int argc, char *argv[])
         fprintf(STDERR, "usage: %s [-opts] src_file...(-? help)\n", gCmdName);
         return 1;
     }
-    if (!oObjFName && gObjct) {
-        char const* ext = (gObjct == OB_SFMT) ? ".s19"
-                        : (gObjct == OB_ASM) ? ".oa"
-                        : gFlex_f ? ".cmd"
-                        : gFBasic_f ? ".fm"
-                        : ".bin";
+    if (!oObjFName && gOutFmt) {
+        char const* ext = (gOutFmt == OB_SFMT)  ? ".s19"
+                        : (gOutFmt == OB_ASM )  ? ".oa"
+                        : gBinFmt == BIN_FLEX   ? ".cmd"
+                        : gBinFmt == BIN_FBASIC ? ".fm"
+                        :                         ".bin";
         oObjFName = strdupAddE(gSrcFName, 4);
         FIL_AddChgExt(oObjFName, ext, 1);
     }
@@ -3085,7 +3109,7 @@ int main(int argc, char *argv[])
         } while (relaxChanges);
     }
 
-    if (gObjct == OB_ASM) {
+    if (gOutFmt == OB_ASM) {
         gPass = -2;
         DEBMSGF( (STDERR, "enter pass 1.9\n") );
         assemble(argc, argv);
@@ -3101,9 +3125,9 @@ int main(int argc, char *argv[])
             gLstFp = stdout;
         }
     }
-    if (gObjct) {
+    if (gOutFmt) {
         DEBMSGF( (STDERR, "open %s\n", oObjFName) );
-        gObjFp = fopenE(oObjFName, (gObjct == OB_BIN) ? "wb" : "w");
+        gObjFp = fopenE(oObjFName, (gOutFmt == OB_BIN) ? "wb" : "w");
     }
 
     assemble(argc, argv);
@@ -3112,10 +3136,10 @@ int main(int argc, char *argv[])
         failSeen = 1;
     }
 
-    if (gObjct) {
+    if (gOutFmt) {
         termObj();
      #if 0 /*def OS9*/
-        if (gObjct == OB_BIN) {
+        if (gOutFmt == OB_BIN) {
             chmod(oObjFName, 0x07 /*S_EXEC|S_IWRITE|S_IREAD*/);
         }
      #endif
@@ -3125,7 +3149,7 @@ int main(int argc, char *argv[])
     printLog();
 
     DEBMSGF( (STDERR, "close all files\n") );
-    if (gObjct) {
+    if (gOutFmt) {
         fclose(gObjFp);
         if (failSeen)
             remove(oObjFName);

@@ -10,13 +10,12 @@ uint16_t                gEntryAddr;
 uint8_t                 gAddressOverride;
 uint16_t                gOptionStartAddr;
 uint16_t                gOptionEntryAddr;
-uint8_t                 gObjct;
+out_fmt_t               gOutFmt;
 int                     gObjBufSz;
 static uint8_t          gCrcBuf[3];
 uint8_t                 gRmb_f;
 int                     gRmb_sp;
-uint8_t                 gFlex_f;
-uint8_t                 gFBasic_f;
+bin_fmt_t               gBinFmt;
 static int              gImVal;
 static int              gIndirect;
 static int              lastRtsAddress = -1;
@@ -34,8 +33,8 @@ uint16_t                gStartAddr;
 uint8_t                 gOrgSFmt_f;
 uint16_t                gCSectBase;
 uint8_t                 gCSectSw;
-static int oPostf;
-static int oPos;
+static int              oPostf;
+static int              oPos;
 
 void initCodePass(void)
 {
@@ -75,7 +74,7 @@ static uint8_t hexDigit(uint8_t x)
 
 static void put2hex(int b)
 {
-    if (!gObjct)
+    if (!gOutFmt)
         return;
     b          = (uint8_t) b;
     putc(hexDigit(b >> 4), gObjFp);
@@ -94,8 +93,8 @@ static void    flushObj(void)
 {
     int i = 0;
 
-    if (gPass == 2 && gObjct && gObjPos > 0) {
-        if (gObjct == OB_SFMT) {
+    if (gPass == 2 && gOutFmt && gObjPos > 0) {
+        if (gOutFmt == OB_SFMT) {
             oChkSum = 0;
             fputs("S1", gObjFp);
             put2hex(gObjPos + 3);
@@ -105,14 +104,14 @@ static void    flushObj(void)
             put2hex(~oChkSum);
             putc('\n', gObjFp);
         }
-        else if (gFlex_f) {
+        else if (gOutFmt == OB_BIN && gBinFmt == BIN_FLEX) {
             putc(0x02, gObjFp);
             putc(gObjLc >> 8, gObjFp);
             putc(gObjLc , gObjFp);
             putc(gObjPos, gObjFp);
             fwrite(gObjBuf, gObjPos, 1, gObjFp);
         }
-        else if (gObjct == OB_ASM && gObjPos) {
+        else if (gOutFmt == OB_ASM && gObjPos) {
             fprintf(gObjFp, "\tfcb $%02x", gObjBuf[0]);
             for (i = 1; i < gObjPos; i++)
                 fprintf(gObjFp, ",$%02x", gObjBuf[i]);
@@ -129,13 +128,13 @@ static void    flushObj(void)
 void    termObj(void)
 {
     flushObj();
-    if (gObjct == OB_SFMT) {
+    if (gOutFmt == OB_SFMT) {
         fputs("S903", gObjFp);
         oChkSum = 3;
         put4hex(gEntryAddr);
         put2hex(~oChkSum);
         putc('\n', gObjFp);
-    } else if (gFlex_f) {
+    } else if (gOutFmt == OB_BIN && gBinFmt == BIN_FLEX) {
         putc(0x16, gObjFp);
         putc(gEntryAddr >> 8, gObjFp);
         putc(gEntryAddr, gObjFp);
@@ -2012,7 +2011,8 @@ void reserveBytes(val_t count, int checked)
             gLc += (uint16_t)count;
     } else if (gCSectSw) {
         gCSectBase = (uint16_t)offsetField(gCSectBase, count, checked);
-    } else if (gOrgSFmt_f && (gObjct == OB_SFMT || gFlex_f)) {
+    } else if (gOrgSFmt_f && (gOutFmt == OB_SFMT
+               || (gOutFmt == OB_BIN && gBinFmt == BIN_FLEX))) {
         flushObj();
         gLc += (uint16_t)count;
     } else if (gRmb_f) {
@@ -2079,7 +2079,8 @@ void    org(void)
         gCSectBase = origin;
     } else {
         if (gCompatMode == COMPAT_LWASM || gOprPtr->prefix || gOrg_f == 0
-            || (gOrgSFmt_f && (gObjct == OB_SFMT || gFlex_f))
+            || (gOrgSFmt_f && (gOutFmt == OB_SFMT
+                || (gOutFmt == OB_BIN && gBinFmt == BIN_FLEX)))
         ) {
             flushObj();
             gObjLc = gLc = origin;
@@ -2299,7 +2300,7 @@ void offsetSection(void)
 /* Output framing invoked by the assembly driver. */
 void beginCodeOutput(uint16_t size)
 {
-    if (gPass == 2 && gFBasic_f) {
+    if (gPass == 2 && gOutFmt == OB_BIN && gBinFmt == BIN_FBASIC) {
         putObj(0);
         put2obj(size);
         put2obj(gStartAddr);
@@ -2310,7 +2311,7 @@ void endCodeOutput(void)
 {
     gObjCnt -= (uint16_t)gRmb_sp;
     gRmb_sp = 0;
-    if (gFBasic_f && gPass == 2) {
+    if (gPass == 2 && gOutFmt == OB_BIN && gBinFmt == BIN_FBASIC) {
         putObj(0xff);
         put2obj(0x0000);
         put2obj(gEntryAddr);

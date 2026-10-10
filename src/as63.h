@@ -55,7 +55,7 @@ typedef unsigned long   uintmax_t;
 
 typedef intmax_t        val_t;  /* use int/long for constant arithmetic      */
 typedef uintmax_t       uval_t; /* unsigned val_t                            */
-#define OA_MAX          500
+
 
 #ifdef SMALL_HOST
 #define MAXCHAR         1024  /* maximum number of characters per input line */
@@ -65,6 +65,7 @@ typedef uintmax_t       uval_t; /* unsigned val_t                            */
 #define LBLSIZE         21    /* maximum label name length                   */
 #define GCO_MAX         40    /* maximum if nesting depth                    */
 #define GP1_MAX         100   /* maximum number of ifp1 uses                 */
+#define OA_MAX          500
 #define EXTRA_INCDIRS   8
 #define MACRO_BUF_SIZE  (0x8000)
 #else
@@ -75,6 +76,7 @@ typedef uintmax_t       uval_t; /* unsigned val_t                            */
 #define LBLSIZE         128   /* maximum label name length                   */
 #define GCO_MAX         256   /* maximum if nesting depth                    */
 #define GP1_MAX         1024  /* maximum number of ifp1 uses                 */
+#define OA_MAX          1024
 #define EXTRA_INCDIRS   64
 #define MACRO_BUF_SIZE  (16UL * 1024 * 1024)
 #endif
@@ -163,11 +165,13 @@ typedef uintmax_t       uval_t; /* unsigned val_t                            */
 #define WQ_DECQ         (13*4+2)
 #define WQ_NEGQ         (15*4+2)
 
-/* output file type */
-#define OB_BIN          1
-#define OB_SFMT         2
-/*#define OBJ_ROF */
-#define OB_ASM          4
+typedef enum out_fmt_t {
+    OB_NONE, OB_BIN, OB_SFMT, OB_ASM
+} out_fmt_t;
+
+typedef enum bin_fmt_t {
+    BIN_RAW, BIN_FLEX, BIN_OS9, BIN_FBASIC
+} bin_fmt_t;
 
 /* Pseudo-op prefix is the element size or mode; opcode holds behavior flags. */
 #define BLOCK_FILL      0x01  /* accept an optional fill value */
