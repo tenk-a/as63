@@ -1,34 +1,34 @@
-–½—ßÀs’¼Œã‚ÌÌ×¸Ş‚Ì•Ï‰»
+å‘½ä»¤å®Ÿè¡Œç›´å¾Œã®ï¾Œï¾—ï½¸ï¾ã®å¤‰åŒ–
 
-    .  •Ï‰»‚µ‚È‚¢
-    *  ğŒ‚É‚æ‚Á‚Ä•Ï‰»
-    0  Ø¾¯Ä
-    1  ¾¯Ä
+    .  å¤‰åŒ–ã—ãªã„
+    *  æ¡ä»¶ã«ã‚ˆã£ã¦å¤‰åŒ–
+    0  ï¾˜ï½¾ï½¯ï¾„
+    1  ï½¾ï½¯ï¾„
 
-n z v c   –½—ß( * ‚Í 0•¶šˆÈã‚Ì”CˆÓ‚Ì•¶š—ñ)
+n z v c   å‘½ä»¤( * ã¯ 0æ–‡å­—ä»¥ä¸Šã®ä»»æ„ã®æ–‡å­—åˆ—)
 . . . .   nop abx leas leau ldmd rts jmp jsr sync swi* psh*
-          pul* tfr exg band biand bor bior beor bieor ldbt <ÌŞ×İÁ–½—ß>
+          pul* tfr exg band biand bor bior beor bieor ldbt <ï¾Œï¾ï¾—ï¾ï¾å‘½ä»¤>
 . 1 . .   tfm
 . * . .   leax leay
-. * . *   mul (c ‰‰ZŒãAccB‚Ìbit7‚ª1‚È‚ç¾¯Ä)
+. * . *   mul (c æ¼”ç®—å¾ŒAccBã®bit7ãŒ1ãªã‚‰ï½¾ï½¯ï¾„)
 * * . .   sex* muld stq ldq stbt
 * * * .   inc* dec*
 * * 0 .   ld* st* tst* and* or* bit* aim oim tim
 * * . *   asr* ror*
 0 * . *   lsr*
 * * * *   add* adc* sub* sbc* cmp* lsl*/asl* rol* neg*
-          div* (c 0:¤‚ª‹ô” 1:Šï”)
-          daa (v=Vc xor VAccA.bit7)
+          div* (c 0:å•†ãŒå¶æ•° 1:å¥‡æ•°)
+          daa (v=æ–°c xor æ–°AccA.bit7)
 0 1 0 0   clr*
 * * 0 1   com*
 
- ’¼Úcc‚ğ•Ï‰»‚³‚¹‚é–½—ß
+ ç›´æ¥ccã‚’å¤‰åŒ–ã•ã›ã‚‹å‘½ä»¤
    andcc orcc
-   cwai(e µÍß×İÄŞ‚ÉŠÖŒW‚È‚­¾¯Ä)
-   iµÍß×İÄŞ‚É cc‚ğw’è‚µ‚½‚Æ‚«‚Ì‚İ
+   cwai(e ï½µï¾ï¾Ÿï¾—ï¾ï¾„ï¾ã«é–¢ä¿‚ãªãï½¾ï½¯ï¾„)
+   ï¼ˆï½µï¾ï¾Ÿï¾—ï¾ï¾„ï¾ã« ccã‚’æŒ‡å®šã—ãŸã¨ãã®ã¿
      tfr exg band biand bor bior beor bieor ldbt
-     ( addr adcr subr sbcr andr orr eorr cmpr ) j
+     ( addr adcr subr sbcr andr orr eorr cmpr ) ï¼‰
 
- ½¯À¸‚©‚çcc‚ğpull‚·‚é–½—ß
+ ï½½ï½¯ï¾€ï½¸ã‹ã‚‰ccã‚’pullã™ã‚‹å‘½ä»¤
    rti
-   (cc‚ğw’è‚µ‚½‚Æ‚«‚Ì puls pulu)
+   (ccã‚’æŒ‡å®šã—ãŸã¨ãã® puls pulu)

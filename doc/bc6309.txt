@@ -1,10 +1,10 @@
-6309 Native mode�ł��޲Đ���ϼݥ����
+6309 Native modeでのﾊﾞｲﾄ数とﾏｼﾝ･ｻｲｸﾙ
 
-  ��  �޲Đ�
-  �`  ϼݥ����
+  ＃  ﾊﾞｲﾄ数
+  ～  ﾏｼﾝ･ｻｲｸﾙ
 
-�����گ�ݸޥӰ�ނ�1�̖���
-�� �`   ����
+□ｱﾄﾞﾚｯｼﾝｸﾞ･ﾓｰﾄﾞが1個の命令
+＃ ～   命令
 1  1    abx sex nop
         (a,b):clr neg com inc dec tst lsl|asl lsr asr rol ror
 1  2    sync daa
@@ -36,18 +36,18 @@
 4  7    stbt
 
 
-�������̱��گ�ݸޥӰ�ނ�������
-   �� �`    �� �`    �� �`     �� �`
+□複数のｱﾄﾞﾚｯｼﾝｸﾞ･ﾓｰﾄﾞを持つ命令
+   ＃ ～    ＃ ～    ＃ ～     ＃ ～
 Dir 2 2  Ext 3 3  Imm - -  Ind 2+ 3+
         jmp
 
 Dir 2 3  Ext 3 4  Imm 2 2  Ind 2+ 4+
-        (a,b):ld add adc sub sbc cmp and or eor bit st(Imm��)
+        (a,b):ld add adc sub sbc cmp and or eor bit st(Imm無)
 
 Dir 2 4  Ext 3 5  Imm 3 3  Ind 2+ 5+
-        (d,x,u):ld st(Imm��)
+        (d,x,u):ld st(Imm無)
         (d):add sub
-        cmpx tst(Imm��)
+        cmpx tst(Imm無)
 
 Dir 2 5  Ext 3 6  Imm - -  Ind 2+ 6+
         lsl|asl lsr asr rol ror clr com neg dec inc
@@ -56,11 +56,11 @@ Dir 2 6  Ext 3 7  Imm - -  Ind 2+ 6+
         jsr
 
 Dir 3 4  Ext 4 5  Imm 3 3  Ind 3+ 5+
-        (e,f):ld add sub cmp st(Imm��)
-        tim(Imm��)
+        (e,f):ld add sub cmp st(Imm無)
+        tim(Imm無)
 
 Dir 3 5  Ext 4 6  Imm 4 4  Ind 3+ 6+
-        (y,s,w):ld st(Imm��)
+        (y,s,w):ld st(Imm無)
         (d,y,u,s,w):cmp
         (d):adc sbc and or eor bit
         (w):add sub
@@ -80,12 +80,12 @@ Dir 3 29 Ext 4 30 Imm 4 28 Ind 3+ 30+
 Dir 3 35 Ext 4 36 Imm 4 34 Ind 3+ 36+
         divq
 
-��   (Imm��)�̂��Ă��閽�߂ɂͲ��ި��ĥ���گ�ݸޥӰ�ނ�����܂���
+註   (Imm無)のついている命令にはｲﾐﾃﾞｨｴｲﾄ･ｱﾄﾞﾚｯｼﾝｸﾞ･ﾓｰﾄﾞがありません
 
 
 
-�����ޯ������گ�ݸޥӰ�ނ��߽ĥ�޲�
-�� �`
+□ｲﾝﾃﾞｯｸｽ･ｱﾄﾞﾚｯｼﾝｸﾞ･ﾓｰﾄﾞのﾎﾟｽﾄ･ﾊﾞｲﾄ
+＃ ～
 +0 +0  ,r ,w
 +0 +1  n5,r a,r b,r e,r f,r w,r ,r+ ,-r ,w++ ,--w
 +0 +2  d,r ,r++ ,--r
@@ -100,9 +100,9 @@ Dir 3 35 Ext 4 36 Imm 4 34 Ind 3+ 36+
 +2 +5  [n16,w]
 +2 +6  [n16,r] [n16,pcr]
 
-��   r      x y u s
-     n5     5�ޯĥ�̾��
-     n8     8�ޯĥ�̾��
-     n16    16�ޯĥ�̾��
-     [n16]  ���޲ڸĂ̴�����ޥ���گ�ݸ�
+註   r      x y u s
+     n5     5ﾋﾞｯﾄ･ｵﾌｾｯﾄ
+     n8     8ﾋﾞｯﾄ･ｵﾌｾｯﾄ
+     n16    16ﾋﾞｯﾄ･ｵﾌｾｯﾄ
+     [n16]  ｲﾝﾀﾞｲﾚｸﾄのｴｸｽﾃﾝﾄﾞ･ｱﾄﾞﾚｯｼﾝｸﾞ
 

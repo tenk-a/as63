@@ -1,36 +1,36 @@
-�����ߎ��s������׸ނ̕ω�
+□命令実行直後のﾌﾗｸﾞの変化
 
-    �  �ω����Ȃ�
-    *  �����ɂ���ĕω�
-    0  ؾ��
-    1  ���
+    ･  変化しない
+    *  条件によって変化
+    0  ﾘｾｯﾄ
+    1  ｾｯﾄ
 
-n z v c   ����( * �� 0�����ȏ�̔C�ӂ̕�����)
-� � � �   nop abx leas leau rts jmp jsr sync swi* psh*
-          pul* tfr exg <���������>
-� * � �   leax leay
-� * � *   mul (c ���Z��AccB��bit7��1�Ȃ羯�)
-* * � �   sex
-* * * �   inc* dec*
-* * 0 �   ld* st* tst* and* or* bit*
-* * � *   asr* ror*
-0 * � *   lsr*
+n z v c   命令( * は 0文字以上の任意の文字列)
+･ ･ ･ ･   nop abx leas leau rts jmp jsr sync swi* psh*
+          pul* tfr exg <ﾌﾞﾗﾝﾁ命令>
+･ * ･ ･   leax leay
+･ * ･ *   mul (c 演算後AccBのbit7が1ならｾｯﾄ)
+* * ･ ･   sex
+* * * ･   inc* dec*
+* * 0 ･   ld* st* tst* and* or* bit*
+* * ･ *   asr* ror*
+0 * ･ *   lsr*
 * * * *   add* adc* sub* sbc* cmp* lsl*/asl* rol* neg*
-          daa (v=�Vc xor �VAccA.bit7)
+          daa (v=新c xor 新AccA.bit7)
 0 1 0 0   clr*
 * * 0 1   com*
 
- ����cc��ω������閽��
+ 直接ccを変化させる命令
    andcc orcc
-   cwai(e ������ނɊ֌W�Ȃ����)
-   (������ނ� cc���w�肵���Ƃ��̂� tfr exg)
+   cwai(e ｵﾍﾟﾗﾝﾄﾞに関係なくｾｯﾄ)
+   (ｵﾍﾟﾗﾝﾄﾞに ccを指定したときのみ tfr exg)
 
- ��������cc��pull���閽��
+ ｽｯﾀｸからccをpullする命令
    rti
-   (cc���w�肵���Ƃ��� puls pulu)
+   (ccを指定したときの puls pulu)
 
 
-���t���O���Q�Ƃ��閽��
+□フラグを参照する命令
   c     adc* sbc* rol* ror*
         bcc/bhs bcs/blo bhi bls
   z     beq bne bhi ble bls
