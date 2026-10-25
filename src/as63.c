@@ -13,7 +13,7 @@
 #include    "gencode.h"
 #include    "objout.h"
 
-#define AS63_TITLE      "HD6309 cross assembler version v1.70\n"
+#define AS63_TITLE      "HD6309 cross assembler version v2.00\n"
 
 #ifdef _MSC_VER
  #define ITOA10(i,a)    _itoa( (i), (a), 10 )
