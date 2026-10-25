@@ -166,11 +166,14 @@ typedef uintmax_t       uval_t; /* unsigned val_t                            */
 #define WQ_NEGQ         (15*4+2)
 
 typedef enum out_fmt_t {
-    OB_NONE, OB_BIN, OB_SFMT, OB_ASM, OB_LWOBJ,
+    OB_NONE, OB_BIN, OB_SFMT, OB_ASM, OB_LWOBJ, OB_VOBJ,
 } out_fmt_t;
 
+/* Relocatable object output (sections and relocations). */
+#define IS_RELOBJ(f)    ((f) == OB_LWOBJ || (f) == OB_VOBJ)
+
 typedef enum bin_fmt_t {
-    BIN_RAW, BIN_FLEX, BIN_OS9, BIN_LWOBJ, BIN_FBASIC,
+    BIN_RAW, BIN_FLEX, BIN_OS9, BIN_LWOBJ, BIN_VOBJ, BIN_FBASIC,
 } bin_fmt_t;
 
 /* Pseudo-op prefix is the element size or mode; opcode holds behavior flags. */

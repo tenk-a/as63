@@ -2935,7 +2935,7 @@ static void usage(void)
     e_puts(" --allmp       Allow 35 macro arguments (default: 9)\n");
     e_puts(" --orgpad      Zero-fill ORG gaps(as63,vasm). --no-orgpad no fill(lwasm)\n");
     e_puts(" -t=<ASM>      Assembler compatibility mode: as63 lwasm vasm\n");
-    e_puts(" -x[=FORMAT]   Binary format: raw,flex,os9,lwobj,fbasic.(default: flex)\n");
+    e_puts(" -x[=FORMAT]   Binary format: raw,flex,os9,lwobj,vobj,fbasic.(default: flex)\n");
     e_puts(" -k[S[:E]]     Override start/entry (hex). No -x, select fbasic\n");
     e_puts(" -i[=INC_DIR]  Add an include directory (repeatable; searched in order)\n");
     e_puts(" -o[=FILE]     Write binary output using the selected binary format\n");
@@ -3139,10 +3139,12 @@ static void options(char const *p)
                     gBinFmt = BIN_OS9;
                 } else if (!strcasecmp(p, "lwobj")) {
                     gBinFmt = BIN_LWOBJ;
+                } else if (!strcasecmp(p, "vobj")) {
+                    gBinFmt = BIN_VOBJ;
                 } else if (!strcasecmp(p, "fbasic")) {
                     gBinFmt = BIN_FBASIC;
                 } else {
-                    e_puts("Unknown binary format. Use -x=raw, flex, os9, lwobj or fbasic.\n");
+                    e_puts("Unknown binary format. Use -x=raw, flex, os9, lwobj, vobj or fbasic.\n");
                     exit(1);
                 }
                 if (!gOutFmt)
@@ -3258,12 +3260,12 @@ int main(int argc, char *argv[])
                || (gOutFmt == OB_BIN && gBinFmt == BIN_FLEX))));
     if (gBinFmt == BIN_OS9)
         gOs9_f = 1;
-    if (gBinFmt == BIN_LWOBJ) {
+    if (gBinFmt == BIN_LWOBJ || gBinFmt == BIN_VOBJ) {
         if (gOutFmt != OB_BIN || gOs9_f || oKSpecified) {
-            e_puts("-x=lwobj requires -o and cannot be used with -f, -a, -9 or -k.\n");
+            e_puts("-x=lwobj and -x=vobj require -o and cannot be used with -f, -a, -9 or -k.\n");
             return 1;
         }
-        gOutFmt    = OB_LWOBJ;
+        gOutFmt    = gBinFmt == BIN_LWOBJ ? OB_LWOBJ : OB_VOBJ;
         gRelActive = 1;
     }
     if (gOs9_f && oKSpecified) {
@@ -3278,6 +3280,7 @@ int main(int argc, char *argv[])
         char const* ext = (gOutFmt == OB_SFMT)  ? ".s19"
                         : (gOutFmt == OB_ASM )  ? ".oa"
                         : (gOutFmt == OB_LWOBJ )  ? ".o"
+                        : (gOutFmt == OB_VOBJ  )  ? ".vo"
                         : gBinFmt == BIN_FLEX   ? ".cmd"
                         : gBinFmt == BIN_FBASIC ? ".fm"
                         :                         ".bin";
@@ -3338,7 +3341,7 @@ int main(int argc, char *argv[])
     }
     if (gOutFmt) {
         DEBMSGF( (STDERR, "open %s\n", oObjFName) );
-        gObjFp = fopenE(oObjFName, (gOutFmt == OB_BIN || gOutFmt == OB_LWOBJ) ? "wb" : "w");
+        gObjFp = fopenE(oObjFName, (gOutFmt == OB_BIN || IS_RELOBJ(gOutFmt)) ? "wb" : "w");
     }
 
     assemble(argc, argv);
@@ -3348,7 +3351,7 @@ int main(int argc, char *argv[])
     }
 
     if (gOutFmt) {
-        if (gOutFmt == OB_LWOBJ)
+        if (IS_RELOBJ(gOutFmt))
             objSymbols();
         termObj();
      #if 0 /*def OS9*/

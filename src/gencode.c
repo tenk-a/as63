@@ -129,7 +129,7 @@ static void    flushObj(void)
 
 void    termObj(void)
 {
-    if (gOutFmt == OB_LWOBJ) {
+    if (IS_RELOBJ(gOutFmt)) {
         objWrite(gObjFp);
         return;
     }
@@ -172,7 +172,7 @@ static void    putObj(int b)
 {
     if (gPass != 2)
         return;
-    if (gOutFmt == OB_LWOBJ) {
+    if (IS_RELOBJ(gOutFmt)) {
         objPutByte(gLc, (uint8_t)b);
         return;
     }
@@ -1337,10 +1337,12 @@ static void automaticBranch(int originallyLong)
     if (size == 2) {
         op.prefix = 0;
         op.opcode = shortOpcode;
-        if (gPass == 2 && relPending())
-            error("Short branch target is outside this section.");
-        else if (gPass == 2 && (target - gLinLc - 2 < -128 || target - gLinLc - 2 > 127))
+        if (gPass == 2 && relPending()) {
+            if (!relShortPcrAllowed())
+                error("Short branch target is outside this section.");
+        } else if (gPass == 2 && (target - gLinLc - 2 < -128 || target - gLinLc - 2 > 127)) {
             error("Short branch target is out of range.");
+        }
         if (originallyLong)
             ++branchChanges;
     } else {
@@ -1432,14 +1434,14 @@ void    branch(void)
     val = expression();
     relPcr();
     val -= gLinLc + 2;
-    if (relPending()) {
+    if (relPending() && !relShortPcrAllowed()) {
         error("Short branch target is outside this section.");
         relDiscard();
-    } else if (val < -128 || 127 < val) {
+    } else if (!relPending() && (val < -128 || 127 < val)) {
         error("Short branch target is out of range.");
     }
     putCode(GROUP0, NO_MODE);
-    putByte(val);
+    relByte(val);
 }
 
 void    lbranch(void)
@@ -2122,7 +2124,7 @@ void reserveBytes(val_t count, int checked)
             gLc += (uint16_t)count;
     } else if (gCSectSw) {
         gCSectBase = (uint16_t)offsetField(gCSectBase, count, checked);
-    } else if (gOutFmt == OB_LWOBJ) {
+    } else if (IS_RELOBJ(gOutFmt)) {
         printWord(gLc, 5);
         gObjCnt += (uint16_t)count;
         gLc     += (uint16_t)count;
@@ -2159,7 +2161,7 @@ void    org(void)
 {
     uint16_t origin = 0;
 
-    if (gOutFmt == OB_LWOBJ && objSection()) {
+    if (IS_RELOBJ(gOutFmt) && objSection()) {
         error("ORG is not allowed in a section.");
         return;
     }
@@ -2233,7 +2235,7 @@ void    endsct(void)
         offsetActive = 0;
     } else if (gCSectSw > 1) {
         gCSectSw = 0;
-    } else if (gOutFmt == OB_LWOBJ && objSection()) {
+    } else if (IS_RELOBJ(gOutFmt) && objSection()) {
         gLc = objLeaveSection(gLc);
         lastRtsAddress = -1;
     } else if (gPSect_f) {
@@ -2248,19 +2250,21 @@ void    psct(void)
     gPSect_f = 1;
 }
 
-/* lwasm SECTION name[,bss|!bss|constant|!constant] for object output. */
+/* SECTION name[,bss|!bss|constant|!constant] for lwobj, name[,"attr"|bss] for vobj. */
 void    sectionDirective(void)
 {
     static char const *const flags[] = { "bss", "!bss", "constant", "!constant" };
     char    name[LBLSIZE + 1];
     char    flag[16];
+    char    attr[16];
+    char const *attribute = NULL;
     int     option = 0;
     int     n = 0;
 
     skipSpace();
     clearAddress();
-    if (gOutFmt != OB_LWOBJ) {
-        error("SECTION requires object output (-x=lwobj).");
+    if (!IS_RELOBJ(gOutFmt)) {
+        error("SECTION requires object output (-x=lwobj or -x=vobj).");
         while (*gLinPtr && *gLinPtr != '\n' && !isspace(*gLinPtr))
             ++gLinPtr;
         return;
@@ -2273,22 +2277,37 @@ void    sectionDirective(void)
         return;
     }
     if (checkChar(',')) {
-        for (n = 0; *gLinPtr && !isspace(*gLinPtr) && n < (int)sizeof(flag) - 1; )
-            flag[n++] = *gLinPtr++;
-        flag[n] = '\0';
-        for (n = 0; n < 4 && strcasecmp(flag, flags[n]); ++n)
-            ;
-        if (n == 4) {
-            error("Unknown section flag.");
-            return;
+        if (gOutFmt == OB_VOBJ && checkChar('"')) {
+            for (n = 0; *gLinPtr && *gLinPtr != '"' && *gLinPtr != '\n'
+                        && n < (int)sizeof(attr) - 1; )
+                attr[n++] = *gLinPtr++;
+            attr[n] = '\0';
+            if (*gLinPtr != '"' || !n) {
+                error("Invalid section attributes.");
+                return;
+            }
+            ++gLinPtr;
+            attribute = attr;
+        } else {
+            for (n = 0; *gLinPtr && !isspace(*gLinPtr) && n < (int)sizeof(flag) - 1; )
+                flag[n++] = *gLinPtr++;
+            flag[n] = '\0';
+            for (n = 0; n < 4 && strcasecmp(flag, flags[n]); ++n)
+                ;
+            if (gOutFmt == OB_VOBJ && n == 0) {
+                attribute = "aurw";
+            } else if (gOutFmt == OB_VOBJ || n == 4) {
+                error("Unknown section flag.");
+                return;
+            }
+            option = n + 1;
         }
-        option = n + 1;
     }
     if (offsetActive) {
         error("SECTION is not allowed in an OFFSET block.");
         return;
     }
-    gLc = objEnterSection(name, option, gLc);
+    gLc = objEnterSection(name, option, attribute, gLc);
     lastRtsAddress = -1;
     printAddress(gLc);
 }
@@ -2296,8 +2315,8 @@ void    sectionDirective(void)
 void    endSectionDirective(void)
 {
     clearAddress();
-    if (gOutFmt != OB_LWOBJ) {
-        error("ENDSECTION requires object output (-x=lwobj).");
+    if (!IS_RELOBJ(gOutFmt)) {
+        error("ENDSECTION requires object output (-x=lwobj or -x=vobj).");
     } else if (!objSection()) {
         error("ENDSECTION without a matching SECTION.");
     } else {
@@ -2505,7 +2524,7 @@ void endCodeSection(void)
         gLc = savedCodeLc;
         offsetActive = 0;
     }
-    if (gOutFmt == OB_LWOBJ)
+    if (IS_RELOBJ(gOutFmt))
         gLc = objLeaveSection(gLc);
 }
 

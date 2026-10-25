@@ -57,6 +57,11 @@ call :ase -t=lwasm -x=lwobj -otst_obj1_lib.o tst_obj1_lib.s
 call :ase -t=lwasm -x=lwobj -otst_obj2.o tst_obj2.s
 call :ase -t=lwasm -x=lwobj -otst_obj2_lib.o tst_obj2_lib.s
 
+:: vasm object output. Link the objects with vlink.
+call :ase -t=vasm -x=vobj -otst_vobj1.vo tst_vobj1.s
+call :ase -t=vasm -x=vobj -otst_vobj1_lib.vo tst_vobj1_lib.s
+call :ase -t=vasm -x=vobj -otst_vobj2.vo tst_vobj2.s
+
 goto END
 
 :asm

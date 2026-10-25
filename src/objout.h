@@ -1,4 +1,4 @@
-/* Relocatable expressions, sections and LWOBJ16 object output. */
+/* Relocatable expressions, sections and LWOBJ16 / VOBJ object output. */
 #ifndef OBJOUT_H_INCLUDED
 #define OBJOUT_H_INCLUDED
 
@@ -30,11 +30,14 @@
 #define REL_TERMS       4     /* section bases and externals in a linear value */
 #define REL_CODE        160   /* postfix bytes of a non-linear value         */
 
-/* A value is constant + sum(scale * symbol); constants live in val_t. */
+/* A value is constant + sum(scale * symbol); constants live in val_t.
+   VOBJ output also keeps (value & mask) >> shift, with the unmasked constant. */
 typedef struct rel_value {
     uint8_t     terms;
     uint8_t     complex;      /* code holds the complete expression */
     uint8_t     length;
+    unsigned long mask;       /* VOBJ bit selection; 0 means the whole value */
+    long        premask;      /* constant part before the mask is applied   */
     int16_t     symbol[REL_TERMS];
     long        scale[REL_TERMS];
     uint8_t     code[REL_CODE];
@@ -60,6 +63,7 @@ void    relBinary(int op, val_t left, val_t right);
 int     relPending(void);
 void    relDiscard(void);
 void    relPcr(void);
+int     relShortPcrAllowed(void);
 void    relocField(int size, val_t value);
 void    relEndLine(void);
 REL_VALUE const *relStore(REL_VALUE const *old);
@@ -67,11 +71,12 @@ REL_VALUE const *relReplace(REL_VALUE const *old, REL_VALUE const *value);
 REL_VALUE const *relLabelBase(void);
 unsigned long relSignature(REL_VALUE const *v);
 
-/* Sections; option is 1:bss 2:!bss 3:constant 4:!constant. */
+/* Sections; option is 1:bss 2:!bss 3:constant 4:!constant (LWOBJ), attr is the
+   VOBJ attribute string such as "acrx" or NULL for the default. */
 void    objInitPass(void);
 int     objSection(void);
 int     objSectionFlags(void);
-uint16_t objEnterSection(char const *name, int option, uint16_t lc);
+uint16_t objEnterSection(char const *name, int option, char const *attr, uint16_t lc);
 uint16_t objLeaveSection(uint16_t lc);
 void    objPutByte(uint16_t offset, uint8_t b);
 void    objTrack(uint16_t lc);

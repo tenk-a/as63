@@ -1,4 +1,4 @@
-/* Relocatable expressions, sections and LWOBJ16 object output. */
+/* Relocatable expressions, sections and LWOBJ16 / VOBJ object output. */
 #include "gencode.h"
 #include "objout.h"
 #include <stdlib.h>
@@ -15,17 +15,22 @@ typedef struct obj_reloc {
     uint16_t            offset;
     uint8_t             size;
     uint8_t             length;
+    uint8_t             pc;         /* VOBJ: relative to the field address */
+    int                 symbol;     /* VOBJ: section index or REL_EXTERNAL + n */
+    unsigned long       mask;       /* VOBJ: bits taken from symbol + addend */
+    long                addend;
     uint8_t             code[REL_CODE];
 } OBJ_RELOC;
 
 typedef struct obj_symbol {
     struct obj_symbol * next;
-    uint16_t            value;
+    long                value;
     char *              name;
 } OBJ_SYMBOL;
 
 typedef struct obj_section {
     char *              name;
+    char *              attr;           /* VOBJ attribute letters */
     uint8_t             flags;
     int                 pass;           /* pass number of the last entry */
     uint16_t            lc;
@@ -47,6 +52,7 @@ static int              currentSection;     /* index + 1; 0 outside sections */
 static int              passNumber;
 static char **          externals;
 static int              externalCount;
+static OBJ_SYMBOL *     absExports;         /* VOBJ exported constants */
 
 static REL_VALUE        relStack[REL_STACK];
 static int              relSp;
@@ -82,6 +88,11 @@ static void *growArray(void *data, int count, size_t size)
 static int isAbsolute(REL_VALUE const *v)
 {
     return !v->complex && !v->terms;
+}
+
+static int plain(REL_VALUE const *v)
+{
+    return !v->complex && !v->mask;
 }
 
 static int isBase(REL_VALUE const *v)
@@ -214,6 +225,8 @@ static REL_VALUE *relPush(void)
         v = &relStack[relSp++];
     }
     v->terms = v->complex = v->length = 0;
+    v->mask  = 0;
+    v->premask = 0;
     return v;
 }
 
@@ -247,6 +260,7 @@ void relFinish(void)
             error("Relocatable expression is too complex.");
         relOverflow = 0;
         relResult.terms = relResult.complex = relResult.length = 0;
+        relResult.mask  = 0;
         gValid_f = 0;
     }
     if (!isAbsolute(&relResult)) {
@@ -314,7 +328,7 @@ void relUnary(int op, val_t value)
     r = relPush();
     if (isAbsolute(&v))
         return;
-    if (op == REL_NEG && !v.complex) {
+    if (op == REL_NEG && plain(&v)) {
         *r = v;
         for (i = 0; i < r->terms; ++i)
             r->scale[i] = -r->scale[i];
@@ -330,6 +344,72 @@ void relUnary(int op, val_t value)
     }
 }
 
+static int lowestBit(unsigned long m)
+{
+    int n = 0;
+    while (!(m & 1)) {
+        m >>= 1;
+        ++n;
+    }
+    return n;
+}
+
+/* VOBJ keeps "value & 2^k-1" and "value >> n" as one mask: (v & mask) >> ctz(mask). */
+static int relMasked(int op, REL_VALUE const *l, REL_VALUE const *r, val_t left, val_t right, REL_VALUE *v)
+{
+    REL_VALUE const *x;
+    val_t k, xv;
+    unsigned long base, mask;
+    int shift, n;
+    if (isAbsolute(l)) {
+        x = r; k = left; xv = right;
+    } else if (isAbsolute(r)) {
+        x = l; k = right; xv = left;
+    } else {
+        return 0;
+    }
+    if (x->complex)
+        return 0;
+    if (x == r && op != REL_BWAND)
+        return 0;
+    base  = x->mask ? x->mask : 0xffffUL;
+    shift = x->mask ? lowestBit(x->mask) : 0;
+    switch (op) {
+    case REL_SHR:
+        if (k < 0 || k > 15)
+            return 0;
+        n = (int)k;
+        break;
+    case REL_DIVIDE:
+        for (n = 1; n < 16 && ((val_t)1 << n) != k; ++n)
+            ;
+        if (n >= 16)
+            return 0;
+        break;
+    case REL_BWAND:
+        if (k <= 0 || (k & (k + 1)))
+            return 0;
+        mask = base & ((unsigned long)k << shift);
+        goto done;
+    default:
+        return 0;
+    }
+    mask = base & (~0UL << (shift + n));
+  done:
+    if (!mask)
+        return 0;
+    *v = *x;
+    v->mask = mask;
+    if (!x->mask)
+        v->premask = (long)xv;
+    return 1;
+}
+
+int relShortPcrAllowed(void)
+{
+    return gOutFmt == OB_VOBJ;
+}
+
 void relBinary(int op, val_t left, val_t right)
 {
     REL_VALUE l;
@@ -343,22 +423,24 @@ void relBinary(int op, val_t left, val_t right)
     v = relPush();
     if (isAbsolute(&l) && isAbsolute(&r))
         return;
+    if (gOutFmt == OB_VOBJ && relMasked(op, &l, &r, left, right, v))
+        return;
     switch (op) {
     case REL_PLUS:
     case REL_MINUS:
-        if (!l.complex && !r.complex) {
+        if (plain(&l) && plain(&r)) {
             *v = l;
             addValue(v, &r, op == REL_MINUS ? -1 : 1);
             return;
         }
         break;
     case REL_TIMES:
-        if (isAbsolute(&l) && !r.complex) {
+        if (isAbsolute(&l) && plain(&r)) {
             *v = r;
             scaleValue(v, (long)left);
             return;
         }
-        if (isAbsolute(&r) && !l.complex) {
+        if (isAbsolute(&r) && plain(&l)) {
             *v = l;
             scaleValue(v, (long)right);
             return;
@@ -371,7 +453,7 @@ void relBinary(int op, val_t left, val_t right)
                 error("Relocatable shift is not supported.");
             return;
         }
-        if (op == REL_SHL && !l.complex) {
+        if (op == REL_SHL && plain(&l)) {
             *v = l;
             scaleValue(v, 1L << right);
             return;
@@ -388,7 +470,7 @@ void relBinary(int op, val_t left, val_t right)
     case REL_GT:
     case REL_GE:
         /* Values in the same section compare by their offsets. */
-        if (!l.complex && !r.complex) {
+        if (plain(&l) && plain(&r)) {
             d = l;
             addValue(&d, &r, -1);
             if (isAbsolute(&d))
@@ -441,6 +523,8 @@ unsigned long relSignature(REL_VALUE const *v)
     if (!v)
         return 0;
     h = v->complex ? 0x9e37UL : 1;
+    h = h * 31 + v->mask;
+    h = h * 31 + (unsigned long)v->premask;
     for (i = 0; i < v->terms; ++i)
         h = h * 31 + (unsigned long)v->symbol[i] * 17 + (unsigned long)v->scale[i];
     for (i = 0; i < v->length; ++i)
@@ -464,6 +548,7 @@ void relPcr(void)
         return;
     if (!relResultSet) {
         relResult.terms = relResult.complex = relResult.length = 0;
+        relResult.mask  = 0;
         relResultSet = 1;
         relValid     = gValid_f;
         gValid_f     = 0;
@@ -480,6 +565,41 @@ void relPcr(void)
     }
 }
 
+/* VOBJ relocations are one symbol plus an addend, optionally PC-relative. */
+static void vobjReloc(OBJ_SECTION *s, int size, val_t value)
+{
+    REL_VALUE const *v = &relResult;
+    OBJ_RELOC *r;
+    int plus = -1;
+    int minus = -1;
+    int ok = !v->complex;
+    int i;
+    for (i = 0; ok && i < v->terms; ++i) {
+        if (v->scale[i] == 1 && plus < 0)
+            plus = v->symbol[i];
+        else if (v->scale[i] == -1 && minus < 0)
+            minus = v->symbol[i];
+        else
+            ok = 0;
+    }
+    if (plus < 0 || (minus >= 0 && (minus != currentSection - 1 || v->mask)))
+        ok = 0;
+    if (!ok) {
+        error("Relocation is not supported by the vobj format.");
+        return;
+    }
+    r = mallocE(sizeof(*r));
+    memset(r, 0, sizeof(*r));
+    r->offset = gLc;
+    r->size   = (uint8_t)size;
+    r->pc     = minus >= 0;
+    r->symbol = plus;
+    r->mask   = v->mask;
+    r->addend = (v->mask ? v->premask : (long)value) + (r->pc ? (long)gLc : 0L);
+    *s->relocTail = r;
+    s->relocTail  = &r->next;
+}
+
 void relocField(int size, val_t value)
 {
     OBJ_SECTION *s;
@@ -493,6 +613,10 @@ void relocField(int size, val_t value)
     s = sections[currentSection - 1];
     if (s->flags & (SECTION_BSS | SECTION_CONSTANT))
         return;
+    if (gOutFmt == OB_VOBJ) {
+        vobjReloc(s, size, value);
+        return;
+    }
     code.length = 0;
     relOverflow = 0;
     codeValue(&code, &relResult, value);
@@ -502,7 +626,7 @@ void relocField(int size, val_t value)
         return;
     }
     r = mallocE(sizeof(*r));
-    r->next    = NULL;
+    memset(r, 0, sizeof(*r));
     r->offset  = gLc;
     r->size    = (uint8_t)size;
     r->length  = code.length;
@@ -545,7 +669,16 @@ int objSectionFlags(void)
     return currentSection ? sections[currentSection - 1]->flags : 0;
 }
 
-uint16_t objEnterSection(char const *name, int option, uint16_t lc)
+static char const *defaultAttr(char const *name)
+{
+    if (!strcasecmp(name, "bss") || !strcasecmp(name, ".bss"))
+        return "aurw";
+    if (!strcasecmp(name, "data") || !strcasecmp(name, ".data"))
+        return "adrw";
+    return "acrx";
+}
+
+uint16_t objEnterSection(char const *name, int option, char const *attr, uint16_t lc)
 {
     OBJ_SECTION *s = NULL;
     int i;
@@ -557,22 +690,28 @@ uint16_t objEnterSection(char const *name, int option, uint16_t lc)
             break;
         }
     }
-    if (s && option && s->pass == passNumber)
+    if (s && (option || attr) && s->pass == passNumber)
         warning("[WARNING] Section flags of an existing section are ignored.");
     if (!s) {
         s = mallocE(sizeof(*s));
         memset(s, 0, sizeof(*s));
         s->name      = copyName(name);
         s->relocTail = &s->relocs;
-        if (!strcasecmp(name, "bss") || !strcasecmp(name, ".bss"))
-            s->flags |= SECTION_BSS;
-        if (!strcasecmp(name, "_constant") || !strcasecmp(name, "_constants"))
-            s->flags |= SECTION_CONSTANT;
-        switch (option) {
-        case 1: s->flags |=  SECTION_BSS;      break;
-        case 2: s->flags &= ~SECTION_BSS;      break;
-        case 3: s->flags |=  SECTION_CONSTANT; break;
-        case 4: s->flags &= ~SECTION_CONSTANT; break;
+        if (gOutFmt == OB_VOBJ) {
+            s->attr = copyName(attr ? attr : defaultAttr(name));
+            if (strchr(s->attr, 'u'))
+                s->flags |= SECTION_BSS;
+        } else {
+            if (!strcasecmp(name, "bss") || !strcasecmp(name, ".bss"))
+                s->flags |= SECTION_BSS;
+            if (!strcasecmp(name, "_constant") || !strcasecmp(name, "_constants"))
+                s->flags |= SECTION_CONSTANT;
+            switch (option) {
+            case 1: s->flags |=  SECTION_BSS;      break;
+            case 2: s->flags &= ~SECTION_BSS;      break;
+            case 3: s->flags |=  SECTION_CONSTANT; break;
+            case 4: s->flags &= ~SECTION_CONSTANT; break;
+            }
         }
         addTerm(&s->base, i, 1);
         sections = growArray(sections, sectionCount, sizeof(*sections));
@@ -649,7 +788,8 @@ static int symbolSection(REL_VALUE const *rel, int section)
 {
     if (!rel)
         return (section && (sections[section - 1]->flags & SECTION_CONSTANT)) ? section : 0;
-    if (rel->complex || rel->terms != 1 || rel->scale[0] != 1 || rel->symbol[0] >= REL_EXTERNAL)
+    if (rel->complex || rel->mask || rel->terms != 1 || rel->scale[0] != 1
+        || rel->symbol[0] >= REL_EXTERNAL)
         return 0;
     return rel->symbol[0] + 1;
 }
@@ -658,7 +798,7 @@ static void addSymbol(OBJ_SYMBOL **list, char const *name, val_t value)
 {
     OBJ_SYMBOL *p = mallocE(sizeof(*p));
     p->name  = copyName(name);
-    p->value = (uint16_t)value;
+    p->value = (long)value;
     p->next  = NULL;
     while (*list)
         list = &(*list)->next;
@@ -684,6 +824,14 @@ void objExportSymbol(char const *name, REL_VALUE const *rel, int section, val_t 
     char buf[LBLSIZE + 64];
     OBJ_SYMBOL const *p;
     int s = symbolSection(rel, section);
+    if (!s && gOutFmt == OB_VOBJ && !rel) {
+        /* An absolute constant. */
+        for (p = absExports; p; p = p->next)
+            if (!strcmp(p->name, name))
+                return;
+        addSymbol(&absExports, name, value);
+        return;
+    }
     if (!s) {
         sprintf(buf, "[WARNING] Exported symbol is not in a section(%s)", name);
         warning(buf);
@@ -707,7 +855,7 @@ static void writeWord(FILE *fp, long w)
     putc((int)(w & 0xff), fp);
 }
 
-void objWrite(FILE *fp)
+static void lwobjWrite(FILE *fp)
 {
     static uint8_t const zero[256];
     OBJ_SECTION const *s;
@@ -769,4 +917,147 @@ void objWrite(FILE *fp)
         }
     }
     putc(0, fp);
+}
+
+
+/*---------------------------------------------------------------------------*/
+/* The VOBJ file, as read by vlink. */
+
+#define V_LABSYM        1
+#define V_IMPORT        2
+#define V_EXPRESSION    3
+#define V_EXPORT        8
+#define V_TYPE_SECTION  3
+#define V_REL_ABS       1
+#define V_REL_PC        2
+
+/* Numbers 0..127 take a byte; others 0x84 and four little-endian bytes. */
+static void vNumber(FILE *fp, long n)
+{
+    unsigned long u;
+    if (n >= 0 && n <= 127) {
+        putc((int)n, fp);
+        return;
+    }
+    u = (unsigned long)n;
+    putc(0x84, fp);
+    putc((int)(u & 0xff), fp);
+    putc((int)((u >> 8) & 0xff), fp);
+    putc((int)((u >> 16) & 0xff), fp);
+    putc((int)((u >> 24) & 0xff), fp);
+}
+
+static void vSymbol(FILE *fp, char const *name, int type, int flags, int section, long value)
+{
+    writeName(fp, name);
+    vNumber(fp, type);
+    vNumber(fp, flags);
+    vNumber(fp, section);
+    vNumber(fp, value);
+    vNumber(fp, 0);
+}
+
+static int hasName(OBJ_SYMBOL const *list, char const *name)
+{
+    for (; list; list = list->next)
+        if (!strcmp(list->name, name))
+            return 1;
+    return 0;
+}
+
+static void vobjWrite(FILE *fp)
+{
+    static uint8_t const zero[256];
+    OBJ_SECTION *s;
+    OBJ_SYMBOL const *p;
+    OBJ_RELOC *r;
+    long n;
+    long count;
+    int i;
+
+    count = sectionCount + externalCount;
+    for (i = 0; i < sectionCount; ++i) {
+        for (p = sections[i]->locals; p; p = p->next)
+            count += !hasName(sections[i]->exports, p->name);
+        for (p = sections[i]->exports; p; p = p->next)
+            ++count;
+    }
+    for (p = absExports; p; p = p->next)
+        ++count;
+
+    fwrite("VOBJ", 4, 1, fp);
+    putc(1, fp);                        /* big endian */
+    vNumber(fp, 8);                     /* bits per byte */
+    vNumber(fp, 2);                     /* bytes per address */
+    writeName(fp, "6809");
+    vNumber(fp, sectionCount);
+    vNumber(fp, count);
+
+    /* Symbol indices: sections first, then externals, then labels. */
+    for (i = 0; i < sectionCount; ++i)
+        vSymbol(fp, sections[i]->name, V_LABSYM, V_TYPE_SECTION, i + 1, 0);
+    for (i = 0; i < externalCount; ++i)
+        vSymbol(fp, externals[i], V_IMPORT, V_EXPORT, 0, 0);
+    for (i = 0; i < sectionCount; ++i) {
+        for (p = sections[i]->locals; p; p = p->next) {
+            if (!hasName(sections[i]->exports, p->name))
+                vSymbol(fp, p->name, V_LABSYM, 0, i + 1, p->value);
+        }
+        for (p = sections[i]->exports; p; p = p->next)
+            vSymbol(fp, p->name, V_LABSYM, V_EXPORT, i + 1, p->value);
+    }
+    for (p = absExports; p; p = p->next)
+        vSymbol(fp, p->name, V_EXPRESSION, V_EXPORT, 0, p->value);
+
+    for (i = 0; i < sectionCount; ++i) {
+        s = sections[i];
+        if (s->size > 0xffff)
+            error("Section exceeds 65535 bytes.");
+        n = 0;
+        for (r = s->relocs; r; r = r->next) {
+            ++n;
+            /* The field of a PC-relative relocation holds its addend. */
+            if (r->pc && !(s->flags & SECTION_BSS) && r->offset + r->size <= s->capacity) {
+                if (r->size == 2) {
+                    s->code[r->offset]     = (uint8_t)(r->addend >> 8);
+                    s->code[r->offset + 1] = (uint8_t)r->addend;
+                } else {
+                    s->code[r->offset]     = (uint8_t)r->addend;
+                }
+            }
+        }
+        writeName(fp, s->name);
+        writeName(fp, s->attr);
+        vNumber(fp, (s->locals || s->exports) ? 1 : 0);
+        vNumber(fp, 1);                 /* alignment */
+        vNumber(fp, s->size);
+        vNumber(fp, n);
+        vNumber(fp, (s->flags & SECTION_BSS) ? 0 : s->size);
+        if (!(s->flags & SECTION_BSS)) {
+            long stored = s->capacity < s->size ? s->capacity : s->size;
+            if (stored > 0)
+                fwrite(s->code, (size_t)stored, 1, fp);
+            for (n = s->size - stored; n > 0; n -= (long)sizeof(zero))
+                fwrite(zero, (size_t)(n < (long)sizeof(zero) ? n : (long)sizeof(zero)), 1, fp);
+        }
+        for (r = s->relocs; r; r = r->next) {
+            vNumber(fp, r->pc ? V_REL_PC : V_REL_ABS);
+            vNumber(fp, r->offset);
+            vNumber(fp, 0);             /* bit offset */
+            vNumber(fp, r->size * 8);
+            vNumber(fp, r->mask ? (long)r->mask : -1L);
+            vNumber(fp, r->addend);
+            vNumber(fp, r->symbol >= REL_EXTERNAL
+                        ? sectionCount + 1 + (r->symbol - REL_EXTERNAL)
+                        : r->symbol + 1);
+        }
+    }
+}
+
+void objWrite(FILE *fp)
+{
+    if (gOutFmt == OB_VOBJ)
+        vobjWrite(fp);
+    else
+        lwobjWrite(fp);
 }
