@@ -11,8 +11,9 @@
 #include    <string.h>
 #include    <stdlib.h>
 #include    "gencode.h"
+#include    "objout.h"
 
-#define AS63_TITLE      "HD6309 cross assembler version v1.60T\n"
+#define AS63_TITLE      "HD6309 cross assembler version v1.70\n"
 
 #ifdef _MSC_VER
  #define ITOA10(i,a)    _itoa( (i), (a), 10 )
@@ -36,6 +37,10 @@ typedef struct lbltbl_t {
     uint8_t nocase;
     val_t   structureSize;
     int     region;
+    REL_VALUE const *rel;  /* relocation in object output, NULL if absolute */
+    int     sect;          /* defining object section + 1 */
+    val_t   equValue;      /* last EQU result, to detect changes between passes */
+    unsigned long equRel;
     char    name[LBLSIZE + 1];
 } LBLTBL_T;
 
@@ -297,6 +302,7 @@ static int          relaxRequested;
 static int          relaxChanges;
 int                 branchChanges;
 static int          relaxFailed;
+static uint8_t      forwardEqu;     /* pass 1 EQU depended on later labels */
 int                 addressRegion;
 int                 expressionForward;
 int                 expressionFixedForward;
@@ -562,6 +568,8 @@ void    defLabel(char const *temp, uint8_t f, uint8_t gf)
             gLblPtr = label;
             if (f) {
                 label->value  = gLinLc;
+                label->rel    = relReplace(label->rel, relLabelBase());
+                label->sect   = objSection();
                 label->hidden = pragmaNoList || pragmaNoListCode;
                 label->region = addressRegion;
                 label->nocase = gUpLo_f || pragmaSymbolNoCase;
@@ -599,6 +607,10 @@ void    defLabel(char const *temp, uint8_t f, uint8_t gf)
     label->nocase   = f && (gUpLo_f || pragmaSymbolNoCase);
     label->structureSize = -1;
     label->region   = addressRegion;
+    label->rel      = f ? relLabelBase() : NULL;
+    label->sect     = f ? objSection() : 0;
+    label->equValue = 0;
+    label->equRel   = 0;
     label->flg      = f;
     label->line     = f ? gLineNo : 0x7fff;
     strcpy(label->name, temp);
@@ -652,6 +664,33 @@ static void checkSymbolDeclarations(void)
         } else if (publishedLabel(declaration->name) != label) {
             errLbl("Duplicate exported label", declaration->name);
         }
+    }
+}
+
+static void objLocals(LBLTBL_T const * lp, int groups)
+{
+    if (lp == NULL)
+        return;
+    objLocals(lp->left, groups);
+    if (lp->flg == 1)
+        objLocalSymbol(lp->name, groups > 1 ? lp->grp : 0, lp->rel, lp->sect, lp->value);
+    objLocals(lp->right, groups);
+}
+
+/* Collects section symbols and exports for the object file after pass 2. */
+static void objSymbols(void)
+{
+    SYMBOL_DECLARATION const *declaration = symbolDeclarations;
+    objLocals(oLabel->left, gGrp);
+    objLocals(oLabel->right, gGrp);
+    for (; declaration; declaration = declaration->next) {
+        LBLTBL_T const *label = findLabel(declaration->name, declaration->group);
+        if (declaration->kind != 1)
+            continue;
+        if (!label || !label->flg)
+            label = findLabel(declaration->name, 0);
+        if (label && label->flg)
+            objExportSymbol(declaration->name, label->rel, label->sect, label->value);
     }
 }
 
@@ -797,7 +836,9 @@ static int compatibleNumber(val_t *result)
     return 1;
 }
 
-static val_t   term(void)
+static val_t   term(void);
+
+static val_t   termValue(void)
 {
     char        temp[LBLSIZE + 1];
     LBLTBL_T *  lp;
@@ -810,18 +851,25 @@ static val_t   term(void)
     case '+':
         return term();
     case '-':
-        return -term();
+        tv = term();
+        relUnary(REL_NEG, tv);
+        return -tv;
     case '^':
         /* if (!gOs9_f) break; */
     case '~':
-        return ~term();
+        tv = term();
+        relUnary(REL_COM, tv);
+        return ~tv;
     case '!':
      #ifdef DRC
         if (gDrc_f)
             return ~term();
      #endif
-        return (term() == 0);
+        tv = term();
+        relUnary(REL_NOT, tv);
+        return (tv == 0);
     case '*':
+        relPushHere();
         return gLinLc;
     case '.':
         if (gOs9_f && !isSymbl3(*gLinPtr) )
@@ -905,8 +953,13 @@ static val_t   term(void)
                 lp = refLbl0(temp);
             checkCh_e(')');
             return (lp != NULL);
+        } else if (gRelActive && !refLabel(temp) && symbolDeclared(temp, gGrp, 2)) {
+            relPushExternal(temp);
+            return 0;
         } else if (gPass == 1 && refLbl0(temp) == NULL) {
+            LBLTBL_T *saved = gLblPtr;
             defLabel(temp, 0, 0);
+            gLblPtr = saved;
         } else if (( lp = refLabel(temp) ) != NULL) {
             if (gLineNo < lp->line) {
                 ++expressionForward;
@@ -916,6 +969,7 @@ static val_t   term(void)
                     || pragmaForwardMax || gPass == 1)
                     gValid_f = 0;
             }
+            relPushValue(lp->rel);
             return (lp->value);
         }
         if (gOutFmt == OB_ASM && refLbl0(temp) )
@@ -945,6 +999,14 @@ static val_t   term(void)
     }
 }
 
+static val_t   term(void)
+{
+    int     depth = relDepth();
+    val_t   value = termValue();
+    relSettle(depth);
+    return value;
+}
+
 static val_t   expMUL(void)
 {
     val_t   val;
@@ -954,8 +1016,11 @@ static val_t   expMUL(void)
     for (;;) {
         c = *gLinPtr;
         if (c == '*') {
+            val_t v;
             gLinPtr++;
-            val *= term();
+            v = term();
+            relBinary(REL_TIMES, val, v);
+            val *= v;
         } else if (c == '/' || c == '%') {
             val_t v;
             gLinPtr++;
@@ -964,6 +1029,7 @@ static val_t   expMUL(void)
                 error("Division by zero.");
                 v = 1;
             }
+            relBinary(c == '/' ? REL_DIVIDE : REL_MOD, val, v);
             if (c == '/')
                 val /= v;
             else
@@ -978,15 +1044,20 @@ static val_t   expMUL(void)
 static val_t   expADD(void)
 {
     val_t val;
+    val_t v;
 
     val = expMUL();
     for (;;) {
         if (*gLinPtr == '+') {
             gLinPtr++;
-            val += expMUL();
+            v = expMUL();
+            relBinary(REL_PLUS, val, v);
+            val += v;
         } else if (*gLinPtr == '-') {
             gLinPtr++;
-            val -= expMUL();
+            v = expMUL();
+            relBinary(REL_MINUS, val, v);
+            val -= v;
         } else {
             break;
         }
@@ -997,15 +1068,20 @@ static val_t   expADD(void)
 static val_t   expSHIFT(void)
 {
     val_t val;
+    val_t v;
 
     val = expADD();
     for (;;) {
         if (*gLinPtr == '<' && *(gLinPtr + 1) == '<') {
             gLinPtr   += 2;
-            val      <<= expADD();
+            v          = expADD();
+            relBinary(REL_SHL, val, v);
+            val      <<= v;
         } else if (*gLinPtr == '>' && *(gLinPtr + 1) == '>') {
             gLinPtr   += 2;
-            val      >>= expADD();
+            v          = expADD();
+            relBinary(REL_SHR, val, v);
+            val      >>= v;
         } else {
             break;
         }
@@ -1016,6 +1092,7 @@ static val_t   expSHIFT(void)
 static val_t   expCO(void)
 {
     val_t   val;
+    val_t   v;
     uint8_t c;
 
     val = expSHIFT();
@@ -1025,19 +1102,27 @@ static val_t   expCO(void)
         case '<':
             if (c == '=') {
                 gLinPtr   += 2;
-                val        = ( val <= expSHIFT() );
+                v          = expSHIFT();
+                relBinary(REL_LE, val, v);
+                val        = ( val <= v );
             } else {
                 gLinPtr++;
-                val = ( val < expSHIFT() );
+                v   = expSHIFT();
+                relBinary(REL_LT, val, v);
+                val = ( val < v );
             }
             break;
         case '>':
             if (c == '=') {
                 gLinPtr   += 2;
-                val        = ( val >= expSHIFT() );
+                v          = expSHIFT();
+                relBinary(REL_GE, val, v);
+                val        = ( val >= v );
             } else {
                 gLinPtr++;
-                val = ( val > expSHIFT() );
+                v   = expSHIFT();
+                relBinary(REL_GT, val, v);
+                val = ( val > v );
             }
             break;
         default:
@@ -1052,6 +1137,7 @@ static val_t   expCO(void)
 static val_t   expEQEQ(void)
 {
     val_t   val;
+    val_t   v;
     uint8_t c;
 
     val = expCO();
@@ -1062,13 +1148,17 @@ static val_t   expEQEQ(void)
             if (c != '=')
                 goto J1;
             gLinPtr   += 2;
-            val        = ( val != expCO() );
+            v          = expCO();
+            relBinary(REL_NE, val, v);
+            val        = ( val != v );
             break;
         case '=':
             if (c != '=')
                 goto J1;
             gLinPtr   += 2;
-            val        = ( val == expCO() );
+            v          = expCO();
+            relBinary(REL_EQ, val, v);
+            val        = ( val == v );
             break;
         default:
             goto J1;
@@ -1082,11 +1172,14 @@ static val_t   expEQEQ(void)
 static val_t   expAND(void)
 {
     val_t val;
+    val_t v;
 
     val = expEQEQ();
     while (*gLinPtr == '&' && *(gLinPtr + 1) != '&') {
         gLinPtr++;
-        val &= expEQEQ();
+        v = expEQEQ();
+        relBinary(REL_BWAND, val, v);
+        val &= v;
     }
     return val;
 }
@@ -1094,11 +1187,14 @@ static val_t   expAND(void)
 static val_t   expEOR(void)
 {
     val_t val;
+    val_t v;
 
     val = expAND();
     while ( *gLinPtr == '^' || (*gLinPtr == '?' /* && gOs9_f */ )) {
         gLinPtr++;
-        val ^= expAND();
+        v = expAND();
+        relBinary(REL_BWXOR, val, v);
+        val ^= v;
     }
     return val;
 }
@@ -1106,13 +1202,16 @@ static val_t   expEOR(void)
 static val_t   expOR(void)
 {
     val_t val;
+    val_t v;
 
     val = expEOR();
     while ( (*gLinPtr == '|' && *(gLinPtr + 1) != '|')
          || (*gLinPtr == '!' && *(gLinPtr + 1) != '=' /* && gOs9_f */ ) )
     {
         gLinPtr++;
-        val |= expEOR();
+        v = expEOR();
+        relBinary(REL_BWOR, val, v);
+        val |= v;
     }
     return val;
 }
@@ -1120,11 +1219,14 @@ static val_t   expOR(void)
 static val_t   expLAND(void)
 {
     val_t val;
+    val_t v;
 
     val = expOR();
     while (*gLinPtr == '&' && *(gLinPtr + 1) == '&') {
         gLinPtr   += 2;
-        val        = (expOR() && val);
+        v          = expOR();
+        relBinary(REL_AND, val, v);
+        val        = (v && val);
     }
     return val;
 }
@@ -1132,11 +1234,14 @@ static val_t   expLAND(void)
 static val_t   expLOR(void)
 {
     val_t val;
+    val_t v;
 
     val = expLAND();
     while (*gLinPtr == '|' && *(gLinPtr + 1) == '|') {
         gLinPtr   += 2;
-        val        = (expLAND() || val);
+        v          = expLAND();
+        relBinary(REL_OR, val, v);
+        val        = (v || val);
     }
     return val;
 }
@@ -1152,6 +1257,7 @@ val_t   expression(void)
         expressionForward = expressionFixedForward = 0;
         gValid_f = 1;
         gByte_f = gWord_f = 0;
+        relBegin();
     }
     ++expressionDepth;
     if (checkChar('<') )
@@ -1162,8 +1268,10 @@ val_t   expression(void)
     val = expLOR();
     gByte_f |= byteForced;
     gWord_f |= wordForced;
-    if (!--expressionDepth)
+    if (!--expressionDepth) {
         expressionLiteralZero = *start == '0' && gLinPtr == start + 1;
+        relFinish();
+    }
     switch (*gLinPtr) {
     case ' ':
     case '\t':
@@ -1185,7 +1293,7 @@ uint8_t    bytExpr(void)
     val_t val;
 
     val = expression();
-    if (val < -128 || 255 < val)
+    if (!relPending() && (val < -128 || 255 < val))
         error("Value does not fit in one uint8_t.");
     return (uint8_t) (val & 0xff);
 }
@@ -1195,8 +1303,12 @@ val_t   invExpr(void)
     val_t r;
 
     r = expression();
-    if (!gValid_f)
+    if (relPending()) {
+        error("Relocatable value is not allowed here.");
+        relDiscard();
+    } else if (!gValid_f) {
         error("Constant expression is unresolved.");
+    }
     return r;
 }
 
@@ -1372,7 +1484,16 @@ void pragmaDirective(void)
 void labelValue(val_t value)
 {
     if (gLblPtr) {
+        unsigned long rel;
         gLblPtr->value = value;
+        gLblPtr->rel   = relStore(gLblPtr->rel);
+        rel = relSignature(gLblPtr->rel);
+        if (gLblPtr->flg == 1 && gLblPtr->line == gLineNo) {
+            if (gPass == -1 && (gLblPtr->equValue != value || gLblPtr->equRel != rel))
+                ++relaxChanges;
+            gLblPtr->equValue = value;
+            gLblPtr->equRel   = rel;
+        }
         macroSetValue(gLblPtr->name, value);
     }
     clearAddress();
@@ -1386,6 +1507,8 @@ void    equ(void)
     val_t value;
     skipSpace();
     value = (gOprPtr->opcode & EQU_RESOLVED) ? invExpr() : expression();
+    if (gPass == 1 && (expressionForward || !gValid_f))
+        forwardEqu = relaxRequested = 1;
     labelValue(value);
 }
 
@@ -1703,6 +1826,7 @@ void    endop(void)
     skipSpace();
     if (*gLinPtr && *gLinPtr != '\n' && !isCommentChar(*gLinPtr)) {
         w = (uint16_t)expression();
+        relDiscard();
         if (endAddressSeen++)
             warning("[WARNING] Multiple END addresses; using the last address.");
         if (gAddressOverride && w != gOptionEntryAddr)
@@ -2291,6 +2415,8 @@ static void structureSymbol(char const *name, val_t value, val_t size, uint8_t g
     defLabel(name, 1, global);
     gLblPtr->value = value;
     gLblPtr->structureSize = size;
+    if (activeStructure)
+        gLblPtr->rel = relReplace(gLblPtr->rel, NULL);
     if (gOutFmt == OB_ASM && gPass == 2 && !activeStructure
         && (global || symbolDeclared(name, gGrp, 1))) {
         oa_putStr(name, 0);
@@ -2565,6 +2691,7 @@ static void initPass(void)
     memset(pragmaDepth, 0, sizeof(pragmaDepth));
     macroReset();
     resetStructures();
+    objInitPass();
     initCodePass();
     while (gIncDirCount > gIncDirExtraTop)
         free((void *)gIncDirs[--gIncDirCount]);
@@ -2657,6 +2784,7 @@ static void assemble(int argc, char * * argv)
                                    , *gLinPtr, *gLinPtr));
                 }
             }
+            relEndLine();
             finishLine();
             putLine();
         }
@@ -2712,6 +2840,7 @@ static uint8_t     oList_f  ,  oSymbol_f;
 static uint8_t     oKSpecified;
 static uint8_t     oXSpecified;
 static int         oOrgPad = -1;
+static int         oUpLo = -1;      /* -u/-n/-9; otherwise follows -t */
 
 static void printLog(void)
 {
@@ -2748,7 +2877,7 @@ static void usage(void)
     e_puts(" --allmp       Allow 35 macro arguments (default: 9)\n");
     e_puts(" --orgpad      Zero-fill ORG gaps(as63,vasm). --no-orgpad no fill(lwasm)\n");
     e_puts(" -t=<ASM>      Assembler compatibility mode: as63 lwasm vasm\n");
-    e_puts(" -x[=FORMAT]   Binary format: raw, flex, os9, fbasic. (default: flex)\n");
+    e_puts(" -x[=FORMAT]   Binary format: raw,flex,os9,lwobj,fbasic.(default: flex)\n");
     e_puts(" -k[S[:E]]     Override start/entry (hex). No -x, select fbasic\n");
     e_puts(" -i[=INC_DIR]  Add an include directory (repeatable; searched in order)\n");
     e_puts(" -o[=FILE]     Write binary output using the selected binary format\n");
@@ -2768,6 +2897,7 @@ static void usage(void)
     fprintf(STDERR, " %s -x=os9 -o os9_module.asm\n", gCmdName);
     fprintf(STDERR, " %s -k4c00:5000 -o fbasic_ml.asm\n", gCmdName);
     fprintf(STDERR, " %s -x=flex -k1c00:2000 -f=out.s19 flex_cmd.asm\n", gCmdName);
+    fprintf(STDERR, " %s -t=lwasm -x=lwobj -o=module.o module.asm\n", gCmdName);
     exit(0);
 }
 
@@ -2838,11 +2968,11 @@ static void options(char const *p)
             break;
 
         case 'U':
-            gUpLo_f    = 0;
+            oUpLo      = 0;
             break;
 
         case 'N':
-            gUpLo_f    = 1;
+            oUpLo      = 1;
             break;
 
         case 'V':
@@ -2866,7 +2996,8 @@ static void options(char const *p)
             break;
 
         case '9':
-            gOs9_f     = gUpLo_f = 1;
+            gOs9_f     = 1;
+            oUpLo      = 1;
             break;
 
         case 'S':
@@ -2942,16 +3073,18 @@ static void options(char const *p)
         case 'X':
             oXSpecified = 1;
             if (*(p - 1) == '=') {
-                if (!strcasecmp(p, "raw"))
+                if (!strcasecmp(p, "raw")) {
                     gBinFmt = BIN_RAW;
-                else if (!strcasecmp(p, "flex"))
+                } else if (!strcasecmp(p, "flex")) {
                     gBinFmt = BIN_FLEX;
-                else if (!strcasecmp(p, "os9"))
+                } else if (!strcasecmp(p, "os9")) {
                     gBinFmt = BIN_OS9;
-                else if (!strcasecmp(p, "fbasic"))
+                } else if (!strcasecmp(p, "lwobj")) {
+                    gBinFmt = BIN_LWOBJ;
+                } else if (!strcasecmp(p, "fbasic")) {
                     gBinFmt = BIN_FBASIC;
-                else {
-                    e_puts("Unknown binary format. Use -x=raw, flex, os9 or fbasic.\n");
+                } else {
+                    e_puts("Unknown binary format. Use -x=raw, flex, os9, lwobj or fbasic.\n");
                     exit(1);
                 }
                 if (!gOutFmt)
@@ -3060,12 +3193,21 @@ int main(int argc, char *argv[])
         }
     }
 
+    gUpLo_f = oUpLo >= 0 ? oUpLo : gCompatMode == COMPAT_AS63;
     gOrgPad = oOrgPad >= 0 ? oOrgPad
         : (gCompatMode != COMPAT_LWASM
            && !(gOrgSFmt_f && (gOutFmt == OB_SFMT
                || (gOutFmt == OB_BIN && gBinFmt == BIN_FLEX))));
     if (gBinFmt == BIN_OS9)
         gOs9_f = 1;
+    if (gBinFmt == BIN_LWOBJ) {
+        if (gOutFmt != OB_BIN || gOs9_f || oKSpecified) {
+            e_puts("-x=lwobj requires -o and cannot be used with -f, -a, -9 or -k.\n");
+            return 1;
+        }
+        gOutFmt    = OB_LWOBJ;
+        gRelActive = 1;
+    }
     if (gOs9_f && oKSpecified) {
         e_puts("The -k option cannot be used in OS-9 mode (-9).\n");
         return 1;
@@ -3077,6 +3219,7 @@ int main(int argc, char *argv[])
     if (!oObjFName && gOutFmt) {
         char const* ext = (gOutFmt == OB_SFMT)  ? ".s19"
                         : (gOutFmt == OB_ASM )  ? ".oa"
+                        : (gOutFmt == OB_LWOBJ )  ? ".o"
                         : gBinFmt == BIN_FLEX   ? ".cmd"
                         : gBinFmt == BIN_FBASIC ? ".fm"
                         :                         ".bin";
@@ -3112,7 +3255,7 @@ int main(int argc, char *argv[])
         DEBMSGF( (STDERR, "enter pass 1.5\n") );
         do {
             assemble(argc, argv);
-            if (relaxRequested && ++relaxationPasses >= 1024 && relaxChanges) {
+            if (++relaxationPasses >= 1024 && relaxChanges) {
                 relaxFailed = 1;
                 break;
             }
@@ -3137,7 +3280,7 @@ int main(int argc, char *argv[])
     }
     if (gOutFmt) {
         DEBMSGF( (STDERR, "open %s\n", oObjFName) );
-        gObjFp = fopenE(oObjFName, (gOutFmt == OB_BIN) ? "wb" : "w");
+        gObjFp = fopenE(oObjFName, (gOutFmt == OB_BIN || gOutFmt == OB_LWOBJ) ? "wb" : "w");
     }
 
     assemble(argc, argv);
@@ -3147,6 +3290,8 @@ int main(int argc, char *argv[])
     }
 
     if (gOutFmt) {
+        if (gOutFmt == OB_LWOBJ)
+            objSymbols();
         termObj();
      #if 0 /*def OS9*/
         if (gOutFmt == OB_BIN) {

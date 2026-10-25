@@ -166,11 +166,11 @@ typedef uintmax_t       uval_t; /* unsigned val_t                            */
 #define WQ_NEGQ         (15*4+2)
 
 typedef enum out_fmt_t {
-    OB_NONE, OB_BIN, OB_SFMT, OB_ASM
+    OB_NONE, OB_BIN, OB_SFMT, OB_ASM, OB_LWOBJ,
 } out_fmt_t;
 
 typedef enum bin_fmt_t {
-    BIN_RAW, BIN_FLEX, BIN_OS9, BIN_FBASIC
+    BIN_RAW, BIN_FLEX, BIN_OS9, BIN_LWOBJ, BIN_FBASIC,
 } bin_fmt_t;
 
 /* Pseudo-op prefix is the element size or mode; opcode holds behavior flags. */
@@ -223,6 +223,7 @@ void
     rzb(void),  fcb(void),  fdb(void),      fqb(void),
     fcc(void),  fcs(void), fcn(void),  org(void),      setdp(void),
     vsct(void), psct(void), csct(void),     endsct(void),
+    sectionDirective(void), endSectionDirective(void),
     opt(void), pragmaDirective(void),
     alignData(void), rsOffset(void),        argumentOffsets(void),
     ignoreOperand(void), commentBlock(void), failDirective(void), assertDirective(void), symbolDirective(void),

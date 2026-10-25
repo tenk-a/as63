@@ -1,5 +1,6 @@
 /* HD6309 instruction encoding, data generation and object output. */
 #include "gencode.h"
+#include "objout.h"
 #include <ctype.h>
 
 /* Object buffers, section state and instruction-local state. */
@@ -128,6 +129,10 @@ static void    flushObj(void)
 
 void    termObj(void)
 {
+    if (gOutFmt == OB_LWOBJ) {
+        objWrite(gObjFp);
+        return;
+    }
     flushObj();
     if (gOutFmt == OB_SFMT) {
         fputs("S903", gObjFp);
@@ -167,6 +172,10 @@ static void    putObj(int b)
 {
     if (gPass != 2)
         return;
+    if (gOutFmt == OB_LWOBJ) {
+        objPutByte(gLc, (uint8_t)b);
+        return;
+    }
     if (gObjPos >= gObjBufSz)
         flushObj();
     gObjBuf[gObjPos++] = (uint8_t) b;
@@ -282,6 +291,18 @@ static void    postByte(int b)
 static void    putWord(int w)
 {
     printWord(put2B(w), oPostf);
+}
+
+static void    relByte(int b)
+{
+    relocField(1, b);
+    putByte(b);
+}
+
+static void    relWord(int w)
+{
+    relocField(2, w);
+    putWord(w);
 }
 
 static void    imm4Expr(int16_t * v1, int16_t * v2)
@@ -505,6 +526,10 @@ static int checkPcrByte(val_t displacement, int shortSize)
             && state->size)
             distance -= state->address - gLinLc + state->size - shortSize;
     }
+    if (relPending()) {
+        state->pcrSize = 2;
+        return 0;
+    }
     if (gPass == 2 || gPass == -2)
         return state->pcrSize == 1;
     shortOffset = !state->pcrLong
@@ -551,10 +576,10 @@ static void operand(int grp, int mode)
     if (( mode & (IMMEDIATE | IMMEDIATE2) ) && checkChar('#')) {
         putCode(grp, IMMEDIATE_MODE);
         if (mode & IMMEDIATE) {
-            putByte(bytExpr());
+            relByte(bytExpr());
         } else {
             wordCharacter = 1;
-            putWord(expression());
+            relWord(expression());
             wordCharacter = 0;
         }
         return;
@@ -632,43 +657,44 @@ static void operand(int grp, int mode)
                     indexM(val & 0x1f, reg);
                 } else if (checkByte(val)) {
                     indexM(0x88, reg);
-                    putByte(val);
+                    relByte(val);
                 } else {
                     indexM(0x89, reg);
-                    putWord(val);
+                    relWord(val);
                 }
                 break;
             case PC:
                 if (checkPcByte(val)) {
                     indexM(0x8c, 0);
-                    putByte(val);
+                    relByte(val);
                 } else {
                     indexM(0x8d, 0);
-                    putWord(val);
+                    relWord(val);
                 }
                 break;
             case PCR:
+                relPcr();
                 if (checkPcrByte(val -= gLinLc + 3 + (gOprPtr->prefix ? 1 : 0),
                                  3 + (gOprPtr->prefix ? 1 : 0))) {
                     indexM(0x8c, 0);
-                    putByte(val);
+                    relByte(val);
                 } else {
                     indexM(0x8d, 0);
-                    putWord(val - 1);
+                    relWord(val - 1);
                 }
             }
         } else if ((mode & INDEX) && gIndirect) {
             putCode(grp, INDEX_MODE);
             postByte(0x9f);
-            putWord(val);
+            relWord(val);
         } else if ((mode & DIRECT)
             && ( gByte_f || ( (uint16_t)( val - (gDp << 8) ) <= 255 && gValid_f && !gWord_f ) ) )
         {
             putCode(grp, DIRECT_MODE);
-            putByte( val - (gDp << 8) );
+            relByte( val - (gDp << 8) );
         } else if (mode & EXTEND) {
             putCode(grp, EXTEND_MODE);
-            putWord(val);
+            relWord(val);
         } else {
             error("Invalid addressing mode.");
         }
@@ -745,12 +771,12 @@ void bitTransfer(void)
     offset  = address - (gDp << 8);
     if (gWord_f)
         error("Bit operations require direct addressing.");
-    else if (!gByte_f && (gValid_f || gPass == 2) && (offset < 0 || offset > 255))
+    else if (!gByte_f && !relPending() && (gValid_f || gPass == 2) && (offset < 0 || offset > 255))
         error("Bit operation address is outside the direct page.");
     putCode(GROUP0, NO_MODE);
     postByte( (reg == A ? 0x40 : reg == B ? 0x80 : 0)
              |((source & 7) << 3) | (destination & 7) );
-    putByte(offset);
+    relByte(offset);
 }
 
 void undoc_imm8(void)
@@ -759,7 +785,7 @@ void undoc_imm8(void)
     if (!checkCh_e('#') )
         return;
     putCode(GROUP0, NO_MODE);
-    putByte( bytExpr() );
+    relByte( bytExpr() );
 }
 
 void undoc_imm16(void)
@@ -768,7 +794,7 @@ void undoc_imm16(void)
     if (!checkCh_e('#') )
         return;
     putCode(GROUP0, NO_MODE);
-    putWord( expression() );
+    relWord( expression() );
 }
 
 void undoc_flag(void)
@@ -783,14 +809,14 @@ void undoc_flag(void)
     val                = expression();
 
     gOprPtr = &selected;
-    if (gWord_f || ( !gByte_f && (val < -128 || 255 < val) )) {
+    if (gWord_f || ( !gByte_f && (relPending() || val < -128 || 255 < val) )) {
         selected.opcode = 0x8f;
         putCode(GROUP0, NO_MODE);
-        putWord(val);
+        relWord(val);
     } else {
         selected.opcode = 0x87;
         putCode(GROUP0, NO_MODE);
-        putByte(val);
+        relByte(val);
     }
     gOprPtr = saved;
 }
@@ -1006,6 +1032,7 @@ void    hc11BitBranch(void)
     if (!hc11Mem(&m) || !hc11Mask(&mask) || !checkCh_e(',') )
         return;
     target = expression();
+    relPcr();
     put1Byte(0x34); put1Byte(0x03);                 /* pshs a,cc */
     hc11MemOp(0x96, 0xa6, 0xb6, &m);                /* lda */
     put1Byte(0x84); put1Byte(mask);                 /* anda #mask */
@@ -1289,7 +1316,8 @@ static void automaticBranch(int originallyLong)
     int resolved = 0;
     skipSpace();
     target   = expression();
-    resolved = gValid_f || (gPass != 1 && expressionForward && !pragmaForwardMax);
+    relPcr();
+    resolved = (gValid_f || (gPass != 1 && expressionForward && !pragmaForwardMax)) && !relPending();
     distance = target - gLinLc - 2;
     if (gPass != 2 && gPass != -2) {
         if (gPass != 1 && expressionForward == 1 && !expressionFixedForward
@@ -1309,7 +1337,9 @@ static void automaticBranch(int originallyLong)
     if (size == 2) {
         op.prefix = 0;
         op.opcode = shortOpcode;
-        if (gPass == 2 && (target - gLinLc - 2 < -128 || target - gLinLc - 2 > 127))
+        if (gPass == 2 && relPending())
+            error("Short branch target is outside this section.");
+        else if (gPass == 2 && (target - gLinLc - 2 < -128 || target - gLinLc - 2 > 127))
             error("Short branch target is out of range.");
         if (originallyLong)
             ++branchChanges;
@@ -1322,9 +1352,9 @@ static void automaticBranch(int originallyLong)
     gOprPtr = &op;
     putCode(GROUP0, NO_MODE);
     if (size == 2) {
-        putByte(target - gLinLc - size);
+        relByte(target - gLinLc - size);
     } else {
-        putWord(target - gLinLc - size);
+        relWord(target - gLinLc - size);
     }
     gOprPtr = original;
 }
@@ -1399,8 +1429,15 @@ void    branch(void)
         return;
     }
     skipSpace();
-    if ((val = expression() - gLinLc - 2) < -128 || 127 < val )
+    val = expression();
+    relPcr();
+    val -= gLinLc + 2;
+    if (relPending()) {
+        error("Short branch target is outside this section.");
+        relDiscard();
+    } else if (val < -128 || 127 < val) {
         error("Short branch target is out of range.");
+    }
     putCode(GROUP0, NO_MODE);
     putByte(val);
 }
@@ -1416,11 +1453,12 @@ void    lbranch(void)
     }
     skipSpace();
     target = expression();
+    relPcr();
     if (pragmaOperandSizeWarning && gPass == 2 && (gValid_f || expressionForward)
         && target - gLinLc - 2 >= -128 && target - gLinLc - 2 <= 127)
         warning("A short branch can be used.");
     putCode(GROUP0, NO_MODE);
-    putWord(target - gLinLc - (gOprPtr->prefix ? 4 : 3));
+    relWord(target - gLinLc - (gOprPtr->prefix ? 4 : 3));
 }
 
 
@@ -1565,6 +1603,7 @@ void    oped(void)  /* andd  ord  eord  adcd  sbcd */
                 break;
 
             case PCR:
+                relPcr();
                 val2 = gLinLc + 3;
                 for (++val, i = 1; i >= 0; --i, --val, val2 += 3) {
                     put1Byte(gOprPtr->opcode + 0x20 + i * 0x40);
@@ -1723,6 +1762,7 @@ void        opeq(void)  /* addq  subq */
                 break;
 
             case PCR:
+                relPcr();
                 val2 = gLinLc + 4;
                 for (val += 2, i = 1; i >= 0; --i, val -= 2, val2 += 4) {
                     put1Word(op[i] + 0x20);
@@ -1804,6 +1844,8 @@ void    emod(void)
 
 static void dataValue(val_t value, int size, int listing)
 {
+    if (size <= 2)
+        relocField(size, value);
     if (size == 4) {
         uint16_t high = (uint16_t)((uval_t)value >> 16);
         if (listing)
@@ -1882,6 +1924,10 @@ void    fcb(void)
             if (gCompatMode == COMPAT_LWASM) {
                 error("FCB > prefix is not supported in lwasm mode.");
             } else if (gCompatMode == COMPAT_VASM) {
+                if (relPending()) {
+                    error("Relocatable value cannot be used here.");
+                    relDiscard();
+                }
                 dataValue((value >> 8) & 255, 1, 0);
             } else {
                 dataValue(value, 2, 1);
@@ -2005,6 +2051,10 @@ static int blockCount(val_t count, int size)
 
 static void fillBlock(val_t count, val_t fill, int size, int mode)
 {
+    if (relPending()) {
+        error("Relocatable value cannot be used here.");
+        relDiscard();
+    }
     if (mode & BLOCK_CHECK) {
         if (!blockCount(count, size))
             return;
@@ -2072,6 +2122,11 @@ void reserveBytes(val_t count, int checked)
             gLc += (uint16_t)count;
     } else if (gCSectSw) {
         gCSectBase = (uint16_t)offsetField(gCSectBase, count, checked);
+    } else if (gOutFmt == OB_LWOBJ) {
+        printWord(gLc, 5);
+        gObjCnt += (uint16_t)count;
+        gLc     += (uint16_t)count;
+        objTrack(gLc);
     } else if (gOrgSFmt_f && (gOutFmt == OB_SFMT
                || (gOutFmt == OB_BIN && gBinFmt == BIN_FLEX))) {
         flushObj();
@@ -2104,6 +2159,10 @@ void    org(void)
 {
     uint16_t origin = 0;
 
+    if (gOutFmt == OB_LWOBJ && objSection()) {
+        error("ORG is not allowed in a section.");
+        return;
+    }
     if (gRmb_sp)
         emitReservedBytes();
 
@@ -2174,6 +2233,9 @@ void    endsct(void)
         offsetActive = 0;
     } else if (gCSectSw > 1) {
         gCSectSw = 0;
+    } else if (gOutFmt == OB_LWOBJ && objSection()) {
+        gLc = objLeaveSection(gLc);
+        lastRtsAddress = -1;
     } else if (gPSect_f) {
         gPSect_f = 0;
     } else {
@@ -2184,6 +2246,64 @@ void    endsct(void)
 void    psct(void)
 {
     gPSect_f = 1;
+}
+
+/* lwasm SECTION name[,bss|!bss|constant|!constant] for object output. */
+void    sectionDirective(void)
+{
+    static char const *const flags[] = { "bss", "!bss", "constant", "!constant" };
+    char    name[LBLSIZE + 1];
+    char    flag[16];
+    int     option = 0;
+    int     n = 0;
+
+    skipSpace();
+    clearAddress();
+    if (gOutFmt != OB_LWOBJ) {
+        error("SECTION requires object output (-x=lwobj).");
+        while (*gLinPtr && *gLinPtr != '\n' && !isspace(*gLinPtr))
+            ++gLinPtr;
+        return;
+    }
+    while (*gLinPtr && *gLinPtr != ',' && !isspace(*gLinPtr) && n < LBLSIZE)
+        name[n++] = *gLinPtr++;
+    name[n] = '\0';
+    if (!n) {
+        error("Missing section name.");
+        return;
+    }
+    if (checkChar(',')) {
+        for (n = 0; *gLinPtr && !isspace(*gLinPtr) && n < (int)sizeof(flag) - 1; )
+            flag[n++] = *gLinPtr++;
+        flag[n] = '\0';
+        for (n = 0; n < 4 && strcasecmp(flag, flags[n]); ++n)
+            ;
+        if (n == 4) {
+            error("Unknown section flag.");
+            return;
+        }
+        option = n + 1;
+    }
+    if (offsetActive) {
+        error("SECTION is not allowed in an OFFSET block.");
+        return;
+    }
+    gLc = objEnterSection(name, option, gLc);
+    lastRtsAddress = -1;
+    printAddress(gLc);
+}
+
+void    endSectionDirective(void)
+{
+    clearAddress();
+    if (gOutFmt != OB_LWOBJ) {
+        error("ENDSECTION requires object output (-x=lwobj).");
+    } else if (!objSection()) {
+        error("ENDSECTION without a matching SECTION.");
+    } else {
+        gLc = objLeaveSection(gLc);
+        lastRtsAddress = -1;
+    }
 }
 
 void    vsct(void)
@@ -2312,8 +2432,9 @@ void relativeData(void)
     skipSpace();
     do {
         skipSpace();
-        value = expression() - gLc;
-        dataValue(value, gOprPtr->prefix, 1);
+        value = expression();
+        relPcr();
+        dataValue(value - gLc, gOprPtr->prefix, 1);
     } while (nextComma());
 }
 
@@ -2384,4 +2505,11 @@ void endCodeSection(void)
         gLc = savedCodeLc;
         offsetActive = 0;
     }
+    if (gOutFmt == OB_LWOBJ)
+        gLc = objLeaveSection(gLc);
+}
+
+int offsetBlockActive(void)
+{
+    return offsetActive;
 }

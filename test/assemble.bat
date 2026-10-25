@@ -51,6 +51,12 @@ call :asm -ltst_mf_1.lst tst_mf.s
 call :ase -a -ltst_mf_2.lst tst_mf2.s
 call :ase -ltst_mf.lst tst_mf.s tst_mf2.oa
 
+:: lwasm object output. Link the objects with lwlink.
+call :ase -t=lwasm -x=lwobj -otst_obj1.o tst_obj1.s
+call :ase -t=lwasm -x=lwobj -otst_obj1_lib.o tst_obj1_lib.s
+call :ase -t=lwasm -x=lwobj -otst_obj2.o tst_obj2.s
+call :ase -t=lwasm -x=lwobj -otst_obj2_lib.o tst_obj2_lib.s
+
 goto END
 
 :asm

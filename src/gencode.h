@@ -89,6 +89,7 @@ void initCodeLine(void);
 void beginCodeOutput(uint16_t size);
 void endCodeOutput(void);
 void endCodeSection(void);
+int offsetBlockActive(void);
 void reserveBytes(val_t count, int checked);
 void termObj(void);
 void oa_putStr(char const *s, int n);

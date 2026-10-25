@@ -524,6 +524,10 @@ OPTBL_T const gOpTab[] = {
     { "ENDSECT",  0,          0,       0,              endsct       },
     { "VSECT",    0,          0,       0,              vsct         },
     { "PSECT",    0,          0,       0,              psct         },
+    { "SECTION",  0,          0,       0,              sectionDirective    },
+    { "SECT",     0,          0,       0,              sectionDirective    },
+    { ".AREA",    0,          0,       0,              sectionDirective    },
+    { "ENDSECTION", 0,        0,       0,              endSectionDirective },
 
     { "ORG",      0,          0,       0,              org          },
     { "REORG",    1,          0,       0,              org          },
