@@ -142,8 +142,33 @@ static OATBL_T *        gOAStk;
 static uint8_t          gOAchk_f;
 static int              gOA_sp;
 
-/* Assembly settings. */
-#define PRAGMA_KINDS    22
+/* Assembly settings */
+
+enum pragma_kind {
+    PRAGMA_6309,
+    PRAGMA_6309CONV,
+    PRAGMA_6800COMPAT,
+    PRAGMA_6809,
+    PRAGMA_6809CONV,
+    PRAGMA_ASM09,
+    PRAGMA_AUTOBRANCHLENGTH,
+    PRAGMA_CESCAPES,
+    PRAGMA_CONDUNDEFZERO,
+    PRAGMA_DOLLARLOCAL,
+    PRAGMA_EMUEXT,
+    PRAGMA_EXPORT,
+    PRAGMA_FORWARDREFMAX,
+    PRAGMA_INDEX0TONONE,
+    PRAGMA_M80EXT,
+    PRAGMA_NOLIST,
+    PRAGMA_NOLISTCODE,
+    PRAGMA_OPERANDSIZEWARNING,
+    PRAGMA_PCASPCR,
+    PRAGMA_QRTS,
+    PRAGMA_SHADOW,
+    PRAGMA_SYMBOLNOCASE,
+    PRAGMA_KINDS
+};
 #define PRAGMA_DEPTH    64
 uint8_t                 pragmaEscapes;
 uint8_t                 pragmaPcAsPcr;
@@ -965,7 +990,7 @@ static val_t   termValue(void)
                 ++expressionForward;
                 if (lp->region != addressRegion)
                     expressionFixedForward = 1;
-                if ((!pragmaConfigured[6] && gCompatMode != COMPAT_LWASM)
+                if ((!pragmaConfigured[PRAGMA_FORWARDREFMAX] && gCompatMode != COMPAT_LWASM)
                     || pragmaForwardMax || gPass == 1)
                     gValid_f = 0;
             }
@@ -1312,71 +1337,104 @@ val_t   invExpr(void)
     return r;
 }
 
+typedef struct pragma_name {
+    char const *    name;
+    uint8_t         kind;
+    uint8_t         enabled;
+} PRAGMA_NAME;
+
+static PRAGMA_NAME const pragmaNames[PRAGMA_KINDS] = {
+    { "6309",               PRAGMA_6309,                1 },
+    { "6309conv",           PRAGMA_6309CONV,            1 },
+    { "6800compat",         PRAGMA_6800COMPAT,          1 },
+    { "6809",               PRAGMA_6809,                1 },
+    { "6809conv",           PRAGMA_6809CONV,            1 },
+    { "asm09",              PRAGMA_ASM09,               1 },
+    { "autobranchlength",   PRAGMA_AUTOBRANCHLENGTH,    1 },
+    { "cescapes",           PRAGMA_CESCAPES,            1 },
+    { "condundefzero",      PRAGMA_CONDUNDEFZERO,       1 },
+    { "dollarlocal",        PRAGMA_DOLLARLOCAL,         1 },
+    { "emuext",             PRAGMA_EMUEXT,              1 },
+    { "export",             PRAGMA_EXPORT,              1 },
+    { "forwardrefmax",      PRAGMA_FORWARDREFMAX,       1 },
+    { "index0tonone",       PRAGMA_INDEX0TONONE,        1 },
+    { "m80ext",             PRAGMA_M80EXT,              1 },
+    { "nolist",             PRAGMA_NOLIST,              1 },
+    { "nolistcode",         PRAGMA_NOLISTCODE,          1 },
+    { "operandsizewarning", PRAGMA_OPERANDSIZEWARNING,  1 },
+    { "pcaspcr",            PRAGMA_PCASPCR,             1 },
+    { "qrts",               PRAGMA_QRTS,                1 },
+    { "shadow",             PRAGMA_SHADOW,              1 },
+    { "symbolnocase",       PRAGMA_SYMBOLNOCASE,        1 },
+};
+
+static PRAGMA_NAME const pragmaAliases[] = {
+    { "dollarnotlocal",     PRAGMA_DOLLARLOCAL,         0 },
+    { "list",               PRAGMA_NOLIST,              0 },
+    { "listcode",           PRAGMA_NOLISTCODE,          0 },
+    { "nodollarnotlocal",   PRAGMA_DOLLARLOCAL,         1 },
+    { "nonosymbolcase",     PRAGMA_SYMBOLNOCASE,        0 },
+    { "nosymbolcase",       PRAGMA_SYMBOLNOCASE,        1 },
+    { "symbolcase",         PRAGMA_SYMBOLNOCASE,        0 },
+};
+
+static PRAGMA_NAME const *findPragma(PRAGMA_NAME const *table, int count, char const *name)
+{
+    int low  = 0;
+    int high = count;
+    while (low < high) {
+        int middle = (low + high) / 2;
+        int order  = strcmp(name, table[middle].name);
+        if (!order)
+            return &table[middle];
+        if (order < 0)
+            high = middle;
+        else
+            low  = middle + 1;
+    }
+    return NULL;
+}
+
 static int pragmaName(char const *name, int *enabled)
 {
-    static char const * const names[] = {
-        "6809", "6309", "6800compat", "cescapes", "pcaspcr",
-        "index0tonone", "forwardrefmax", "autobranchlength", "nolist", "nolistcode", "shadow",
-        "dollarlocal", "asm09", "m80ext", "condundefzero", "symbolnocase",
-        "export", "operandsizewarning", "qrts", "emuext", "6809conv", "6309conv"
-    };
-    int     i;
-    *enabled = 1;
-    if (!strcmp(name, "nosymbolcase"))
-        return 15;
-    if (!strcmp(name, "symbolcase") || !strcmp(name, "nonosymbolcase")) {
-        *enabled = 0;
-        return 15;
+    PRAGMA_NAME const *p = findPragma(pragmaNames, PRAGMA_KINDS, name);
+    if (!p)
+        p = findPragma(pragmaAliases, sizeof(pragmaAliases) / sizeof(*pragmaAliases), name);
+    if (p) {
+        *enabled = p->enabled;
+        return p->kind;
     }
-    if (!strcmp(name, "dollarnotlocal")) {
-        *enabled = 0;
-        return 11;
-    }
-    if (!strcmp(name, "nodollarnotlocal"))
-        return 11;
-    for (i = 0; i < PRAGMA_KINDS; ++i) {
-        if (!strcmp(name, names[i]))
-            return i;
-    }
-    if (!strcmp(name, "list") || !strcmp(name, "listcode")) {
-        *enabled = 0;
-        return !strcmp(name, "list") ? 8 : 9;
-    }
-    if (!strncmp(name, "no", 2)) {
-        name    += 2;
-        *enabled = 0;
-    }
-    for (i = 0; i < PRAGMA_KINDS; ++i)
-        if (!strcmp(name, names[i]))
-            return i;
-    return -1;
+    *enabled = 0;
+    if (strncmp(name, "no", 2) || !(p = findPragma(pragmaNames, PRAGMA_KINDS, name + 2)))
+        return -1;
+    return p->kind;
 }
 
 static int pragmaValue(int kind)
 {
     switch (kind) {
-    case 0: return gM6809_f                 != 0;
-    case 1: return gM6809_f                 == 0;
-    case 2: return gM6800_f                 != 0;
-    case 3: return pragmaEscapes            != 0;
-    case 4: return pragmaPcAsPcr            != 0;
-    case 5: return pragmaIndex0             != 0;
-    case 6: return pragmaForwardMax         != 0;
-    case 7: return pragmaAutoBranch         != 0;
-    case 8: return pragmaNoList             != 0;
-    case 9: return pragmaNoListCode         != 0;
-    case 10:return pragmaShadow             != 0;
-    case 11:return pragmaDollarLocal        != 0;
-    case 12:return pragmaAsm09              != 0;
-    case 13:return pragmaM80Ext             != 0;
-    case 14:return pragmaCondUndefZero      != 0;
-    case 15:return pragmaSymbolNoCase       != 0;
-    case 16:return pragmaExport             != 0;
-    case 17:return pragmaOperandSizeWarning != 0;
-    case 18:return pragmaQrts               != 0;
-    case 19:return pragmaEmuExt             != 0;
-    case 20:return pragma6809Conv           != 0;
-    case 21:return pragma6309Conv           != 0;
+    case PRAGMA_6309:               return gM6809_f                 == 0;
+    case PRAGMA_6309CONV:           return pragma6309Conv           != 0;
+    case PRAGMA_6800COMPAT:         return gM6800_f                 != 0;
+    case PRAGMA_6809:               return gM6809_f                 != 0;
+    case PRAGMA_6809CONV:           return pragma6809Conv           != 0;
+    case PRAGMA_ASM09:              return pragmaAsm09              != 0;
+    case PRAGMA_AUTOBRANCHLENGTH:   return pragmaAutoBranch         != 0;
+    case PRAGMA_CESCAPES:           return pragmaEscapes            != 0;
+    case PRAGMA_CONDUNDEFZERO:      return pragmaCondUndefZero      != 0;
+    case PRAGMA_DOLLARLOCAL:        return pragmaDollarLocal        != 0;
+    case PRAGMA_EMUEXT:             return pragmaEmuExt             != 0;
+    case PRAGMA_EXPORT:             return pragmaExport             != 0;
+    case PRAGMA_FORWARDREFMAX:      return pragmaForwardMax         != 0;
+    case PRAGMA_INDEX0TONONE:       return pragmaIndex0             != 0;
+    case PRAGMA_M80EXT:             return pragmaM80Ext             != 0;
+    case PRAGMA_NOLIST:             return pragmaNoList             != 0;
+    case PRAGMA_NOLISTCODE:         return pragmaNoListCode         != 0;
+    case PRAGMA_OPERANDSIZEWARNING: return pragmaOperandSizeWarning != 0;
+    case PRAGMA_PCASPCR:            return pragmaPcAsPcr            != 0;
+    case PRAGMA_QRTS:               return pragmaQrts               != 0;
+    case PRAGMA_SHADOW:             return pragmaShadow             != 0;
+    case PRAGMA_SYMBOLNOCASE:       return pragmaSymbolNoCase       != 0;
     }
     return 0;
 }
@@ -1386,36 +1444,36 @@ static void pragmaSet(int kind, int enabled)
     if (!restoringPragmas)
         pragmaConfigured[kind]        = 1;
     switch (kind) {
-    case 0: gM6809_f                  = enabled; break;
-    case 1: gM6809_f                  = !enabled;break;
-    case 2: gM6800_f                  = enabled; break;
-    case 3: pragmaEscapes             = enabled; break;
-    case 4: pragmaPcAsPcr             = enabled; break;
-    case 5: pragmaIndex0              = enabled; break;
-    case 6:
-        pragmaForwardMax              = enabled;
-        if (!enabled && !restoringPragmas)
-            relaxRequested            = 1;
-        break;
-    case 7:
-        pragmaAutoBranch              = enabled;
+    case PRAGMA_6309:               gM6809_f                 = !enabled; break;
+    case PRAGMA_6309CONV:           pragma6309Conv           = enabled;  break;
+    case PRAGMA_6800COMPAT:         gM6800_f                 = enabled;  break;
+    case PRAGMA_6809:               gM6809_f                 = enabled;  break;
+    case PRAGMA_6809CONV:           pragma6809Conv           = enabled;  break;
+    case PRAGMA_ASM09:              pragmaAsm09              = enabled;  break;
+    case PRAGMA_AUTOBRANCHLENGTH:
+        pragmaAutoBranch = enabled;
         if (enabled)
-            relaxRequested            = 1;
+            relaxRequested = 1;
         break;
-    case 8: pragmaNoList              = enabled; break;
-    case 9: pragmaNoListCode          = enabled; break;
-    case 10:pragmaShadow              = enabled; break;
-    case 11:pragmaDollarLocal         = enabled; break;
-    case 12:pragmaAsm09               = enabled; break;
-    case 13:pragmaM80Ext              = enabled; break;
-    case 14:pragmaCondUndefZero       = enabled; break;
-    case 15:pragmaSymbolNoCase        = enabled; break;
-    case 16:pragmaExport              = enabled; break;
-    case 17:pragmaOperandSizeWarning  = enabled; break;
-    case 18:pragmaQrts                = enabled; break;
-    case 19:pragmaEmuExt              = enabled; break;
-    case 20:pragma6809Conv            = enabled; break;
-    case 21:pragma6309Conv            = enabled; break;
+    case PRAGMA_CESCAPES:           pragmaEscapes            = enabled;  break;
+    case PRAGMA_CONDUNDEFZERO:      pragmaCondUndefZero      = enabled;  break;
+    case PRAGMA_DOLLARLOCAL:        pragmaDollarLocal        = enabled;  break;
+    case PRAGMA_EMUEXT:             pragmaEmuExt             = enabled;  break;
+    case PRAGMA_EXPORT:             pragmaExport             = enabled;  break;
+    case PRAGMA_FORWARDREFMAX:
+        pragmaForwardMax = enabled;
+        if (!enabled && !restoringPragmas)
+            relaxRequested = 1;
+        break;
+    case PRAGMA_INDEX0TONONE:       pragmaIndex0             = enabled;  break;
+    case PRAGMA_M80EXT:             pragmaM80Ext             = enabled;  break;
+    case PRAGMA_NOLIST:             pragmaNoList             = enabled;  break;
+    case PRAGMA_NOLISTCODE:         pragmaNoListCode         = enabled;  break;
+    case PRAGMA_OPERANDSIZEWARNING: pragmaOperandSizeWarning = enabled;  break;
+    case PRAGMA_PCASPCR:            pragmaPcAsPcr            = enabled;  break;
+    case PRAGMA_QRTS:               pragmaQrts               = enabled;  break;
+    case PRAGMA_SHADOW:             pragmaShadow             = enabled;  break;
+    case PRAGMA_SYMBOLNOCASE:       pragmaSymbolNoCase       = enabled;  break;
     }
 }
 
@@ -1428,7 +1486,7 @@ int pragmaEnabled(char const *name)
 
 int pragmaIndexConfigured(void)
 {
-    return pragmaConfigured[5] != 0;
+    return pragmaConfigured[PRAGMA_INDEX0TONONE] != 0;
 }
 
 static int readPragma(int *enabled)
@@ -2853,7 +2911,7 @@ static void printLog(void)
     fprintf(STDERR, "    Total Errors %d\n", gErrors);
     if (gVerbos_f)
         fprintf(STDERR, "    Total labels %d\n", gLabels);
-    if (pragmaDefaults[7] || branchChanges)
+    if (pragmaDefaults[PRAGMA_AUTOBRANCHLENGTH] || branchChanges)
         fprintf(STDERR, "    Total Optimized Branch %d\n", branchChanges);
 }
 
