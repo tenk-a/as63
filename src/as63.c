@@ -13,7 +13,7 @@
 #include    "gencode.h"
 #include    "objout.h"
 
-#define AS63_TITLE      "HD6309 cross assembler version v2.00\n"
+#define AS63_TITLE      "HD6309 cross assembler version v2.01\n"
 
 #ifdef _MSC_VER
  #define ITOA10(i,a)    _itoa( (i), (a), 10 )
@@ -167,6 +167,7 @@ enum pragma_kind {
     PRAGMA_QRTS,
     PRAGMA_SHADOW,
     PRAGMA_SYMBOLNOCASE,
+    PRAGMA_UNDOC,
     PRAGMA_KINDS
 };
 #define PRAGMA_DEPTH    64
@@ -1368,6 +1369,7 @@ static PRAGMA_NAME const pragmaNames[PRAGMA_KINDS] = {
     { "qrts",               PRAGMA_QRTS,                1 },
     { "shadow",             PRAGMA_SHADOW,              1 },
     { "symbolnocase",       PRAGMA_SYMBOLNOCASE,        1 },
+    { "undoc",              PRAGMA_UNDOC,               1 },
 };
 
 static PRAGMA_NAME const pragmaAliases[] = {
@@ -1437,6 +1439,7 @@ static int pragmaValue(int kind)
     case PRAGMA_QRTS:               return pragmaQrts               != 0;
     case PRAGMA_SHADOW:             return pragmaShadow             != 0;
     case PRAGMA_SYMBOLNOCASE:       return pragmaSymbolNoCase       != 0;
+    case PRAGMA_UNDOC:              return gUndoc_f                 != 0;
     }
     return 0;
 }
@@ -1476,6 +1479,7 @@ static void pragmaSet(int kind, int enabled)
     case PRAGMA_QRTS:               pragmaQrts               = enabled;  break;
     case PRAGMA_SHADOW:             pragmaShadow             = enabled;  break;
     case PRAGMA_SYMBOLNOCASE:       pragmaSymbolNoCase       = enabled;  break;
+    case PRAGMA_UNDOC:              gUndoc_f                 = enabled;  break;
     }
 }
 
