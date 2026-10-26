@@ -190,12 +190,12 @@ typedef enum bin_fmt_t {
 #define OPR_UNDOC6809  0x02
 #define OPR_M6800      0x04
 
-typedef struct optbl_t {
+typedef struct OPTBL_T {
         char const* mnemonic;
-        uint8_t prefix;
-        uint8_t opcode;
-        uint8_t option;
-        void  (*process)(void);
+        uint8_t     prefix;
+        uint8_t     opcode;
+        uint8_t     option;
+        void      (*process)(void);
 } OPTBL_T;
 
 #define COMPAT_AS63     0

@@ -32,7 +32,7 @@
 
 /* A value is constant + sum(scale * symbol); constants live in val_t.
    VOBJ output also keeps (value & mask) >> shift, with the unmasked constant. */
-typedef struct rel_value {
+typedef struct REL_VALUE {
     uint8_t     terms;
     uint8_t     complex;      /* code holds the complete expression */
     uint8_t     length;

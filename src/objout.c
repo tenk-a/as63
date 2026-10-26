@@ -10,8 +10,8 @@
 #endif
 #define REL_EXTERNAL    0x4000    /* symbol ids from here name externals */
 
-typedef struct obj_reloc {
-    struct obj_reloc *  next;
+typedef struct OBJ_RELOC {
+    struct OBJ_RELOC *  next;
     uint16_t            offset;
     uint8_t             size;
     uint8_t             length;
@@ -22,13 +22,13 @@ typedef struct obj_reloc {
     uint8_t             code[REL_CODE];
 } OBJ_RELOC;
 
-typedef struct obj_symbol {
-    struct obj_symbol * next;
+typedef struct OBJ_SYMBOL {
+    struct OBJ_SYMBOL * next;
     long                value;
     char *              name;
 } OBJ_SYMBOL;
 
-typedef struct obj_section {
+typedef struct OBJ_SECTION {
     char *              name;
     char *              attr;           /* VOBJ attribute letters */
     uint8_t             flags;

@@ -6,8 +6,8 @@
 #define MAC_ARGS        35
 #define MAC_SCOPE       256
 
-typedef struct macro_def {
-    struct macro_def *  next;
+typedef struct MAC_DEF {
+    struct MAC_DEF*     next;
     char *              name;
     char *              body;
     int                 noexpand;
@@ -16,8 +16,8 @@ typedef struct macro_def {
 typedef unsigned long   serial_t;
 //typedef intmax_t      serial_t;
 
-typedef struct macro_frame {
-    struct macro_frame* parent;
+typedef struct MAC_FRAME {
+    struct MAC_FRAME*   parent;
     char const *        body;
     char const *        cursor;
     char **             args;

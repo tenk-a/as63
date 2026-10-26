@@ -879,7 +879,7 @@ void    mnm68hc11(void)
         put1Byte(tbl[gOprPtr->opcode].code[j]);
 }
 
-typedef struct {
+typedef struct HC11MEM_T {
     uint8_t indexed;
     uint8_t extended;
     uint8_t len;
@@ -1312,7 +1312,7 @@ static void automaticBranch(int originallyLong)
         ? (op.opcode == 0x16 ? 0x20 : op.opcode == 0x17 ? 0x8d : op.opcode)
         : op.opcode;
     int longSize = (shortOpcode == 0x20 || shortOpcode == 0x8d) ? 3 : 4;
-    int size     = state->branchSize;
+    int size     = state->branchSet ? state->branchSize : longSize;
     int resolved = 0;
     skipSpace();
     target   = expression();
@@ -1320,13 +1320,24 @@ static void automaticBranch(int originallyLong)
     resolved = (gValid_f || (gPass != 1 && expressionForward && !pragmaForwardMax)) && !relPending();
     distance = target - gLinLc - 2;
     if (gPass != 2 && gPass != -2) {
-        if (gPass != 1 && expressionForward == 1 && !expressionFixedForward
-            && state->branchSize)
+        if (gPass != 1 && expressionForward == 1 && !expressionFixedForward && state->branchSet)
             distance = target - state->address - state->branchSize;
-        size = (!state->branchLong && resolved && -128 <= distance && distance <= 127)
-            ? 2 : longSize;
+        size = (!state->branchLong && resolved && -128 <= distance && distance <= 127) ? 2 : longSize;
         if (state->branchSize == 2 && size != 2 && !gByte_f)
             state->branchLong = 1;
+        if (shortOpcode != 0x8d && gOptLevel >= 2 && resolved && !gByte_f && !gWord_f
+            && !state->skipFailed) {
+            int   previous = state->branchSet ? state->branchSize : 2;
+            val_t ahead    = (gPass != 1 && expressionForward == 1 && !expressionFixedForward && state->branchSet)
+                              ? target - state->address - state->branchSize
+                              : target - gLinLc - previous;
+            if (ahead == 0)
+                size = 0;
+            else if (ahead == 1 && shortOpcode == 0x20)
+                size = 1;
+            else if (state->branchSet && state->branchSize < 2)
+                state->skipFailed = 1;
+        }
     }
     if (gByte_f) {
         size = 2;
@@ -1334,7 +1345,20 @@ static void automaticBranch(int originallyLong)
         size = longSize;
     }
     state->branchSize = size;
-    if (size == 2) {
+    state->branchSet  = 1;
+    if (size == 0) {
+        if (gPass == 2 && target != gLinLc)
+            error("Removed branch target is not the next instruction.");
+        ++branchChanges;
+        return;
+    }
+    if (size == 1) {
+        op.prefix = 0;
+        op.opcode = 0x21;
+        if (gPass == 2 && target != gLinLc + 2)
+            error("Skipping BRN target is not one byte ahead.");
+        ++branchChanges;
+    } else if (size == 2) {
         op.prefix = 0;
         op.opcode = shortOpcode;
         if (gPass == 2 && relPending()) {
@@ -1355,7 +1379,7 @@ static void automaticBranch(int originallyLong)
     putCode(GROUP0, NO_MODE);
     if (size == 2) {
         relByte(target - gLinLc - size);
-    } else {
+    } else if (size != 1) {
         relWord(target - gLinLc - size);
     }
     gOprPtr = original;

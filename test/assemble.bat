@@ -62,6 +62,15 @@ call :ase -t=vasm -x=vobj -otst_vobj1.vo tst_vobj1.s
 call :ase -t=vasm -x=vobj -otst_vobj1_lib.vo tst_vobj1_lib.s
 call :ase -t=vasm -x=vobj -otst_vobj2.vo tst_vobj2.s
 
+:: -y levels: -y2 also skips one byte with BRN and ignores forwardrefmax.
+call :ase -y1 -otst_brn1.o tst_brn.s
+call :ase -y2 -otst_brn.o tst_brn.s
+call :ase -y2 -otst_brn2.o tst_brn2.s
+call :ase -y2 -otst_brn0.o tst_brn0.s
+call :ase -y2 -otst_fwdopt.o tst_fwdopt.s
+call :ase -t=lwasm -y2 -otst_fwdopt-lw.o tst_fwdopt.s
+call :ase -t=vasm -y2 -otst_fwdopt-vasm.o tst_fwdopt.s
+
 goto END
 
 :asm

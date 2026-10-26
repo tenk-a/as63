@@ -26,46 +26,46 @@
 
 /*--------------------------------------------------------------------------*/
 
-typedef struct lbltbl_t {
-    int     line;
-    val_t   value;
-    struct lbltbl_t *left;
-    struct lbltbl_t *right;
-    char    flg;           /* 0:used  1:EQU  2:SET */
-    int     grp;
-    uint8_t hidden;
-    uint8_t nocase;
-    val_t   structureSize;
-    int     region;
+typedef struct LBLTBL_T {
+    int             line;
+    val_t           value;
+    struct LBLTBL_T *left;
+    struct LBLTBL_T *right;
+    char            flg;           /* 0:used  1:EQU  2:SET */
+    int             grp;
+    uint8_t         hidden;
+    uint8_t         nocase;
+    val_t           structureSize;
+    int             region;
     REL_VALUE const *rel;  /* relocation in object output, NULL if absolute */
-    int     sect;          /* defining object section + 1 */
-    val_t   equValue;      /* last EQU result, to detect changes between passes */
-    unsigned long equRel;
-    char    name[LBLSIZE + 1];
+    int             sect;          /* defining object section + 1 */
+    val_t           equValue;      /* last EQU result, to detect changes between passes */
+    unsigned long   equRel;
+    char            name[LBLSIZE + 1];
 } LBLTBL_T;
 
-typedef struct FILSTK2_tag {
+typedef struct FILSTK2_T {
     int     srcline;
     char    srcname[FNAMESZ + 1];
 } FILSTK2_T;
 
-typedef struct {
+typedef struct OATBL_T {
     int     ll;
     uint8_t nn;
 } OATBL_T;
 
-typedef struct structure_field {
-    struct structure_field* next;
-    char                    name[LBLSIZE + 1];
-    val_t                   offset;
-    val_t                   size;
+typedef struct STRUCT_FIELD {
+    struct STRUCT_FIELD* next;
+    char                 name[LBLSIZE + 1];
+    val_t                offset;
+    val_t                size;
 } STRUCT_FIELD;
 
-typedef struct structure_definition {
-    struct structure_definition* next;
-    char                         name[LBLSIZE + 1];
-    STRUCT_FIELD *               fields;
-    val_t size;
+typedef struct STRUCT_DEF {
+    struct STRUCT_DEF*  next;
+    char                name[LBLSIZE + 1];
+    STRUCT_FIELD *      fields;
+    val_t               size;
 } STRUCT_DEF;
 
 static STRUCT_DEF *     structures;
@@ -175,6 +175,7 @@ uint8_t                 pragmaPcAsPcr;
 uint8_t                 pragmaIndex0;
 uint8_t                 pragmaForwardMax;
 uint8_t                 pragmaAutoBranch;
+uint8_t                 gOptLevel;      /* -y level: 0 off, 1 auto branch, 2 maximum */
 static uint8_t          pragmaNoList;
 static uint8_t          pragmaNoListCode;
 static uint8_t          pragmaShadow;
@@ -495,8 +496,8 @@ static void    initNode(void)
     memset(oLabel, 0, sizeof(*oLabel));
 }
 
-typedef struct symbol_declaration {
-    struct symbol_declaration*  next;
+typedef struct SYMBOL_DECLARATION {
+    struct SYMBOL_DECLARATION*  next;
     int                         group;
     int                         kind;
     char                        name[LBLSIZE + 1];
@@ -990,7 +991,8 @@ static val_t   termValue(void)
                 ++expressionForward;
                 if (lp->region != addressRegion)
                     expressionFixedForward = 1;
-                if ((!pragmaConfigured[PRAGMA_FORWARDREFMAX] && gCompatMode != COMPAT_LWASM)
+                if ((!pragmaConfigured[PRAGMA_FORWARDREFMAX] && gCompatMode != COMPAT_LWASM
+                     && gOptLevel < 2)
                     || pragmaForwardMax || gPass == 1)
                     gValid_f = 0;
             }
@@ -1337,7 +1339,7 @@ val_t   invExpr(void)
     return r;
 }
 
-typedef struct pragma_name {
+typedef struct PRAGMA_NAME {
     char const *    name;
     uint8_t         kind;
     uint8_t         enabled;
@@ -2070,7 +2072,7 @@ static void initOpTbl(void)
 
 /*---------------------------------------------------------------------------*/
 
-typedef struct conditional_result {
+typedef struct CONDITIONAL_RESULT {
     int kind;
     int depth;
     int state;
@@ -2734,7 +2736,7 @@ static void initPass(void)
     if (gPass == 1) {
         conditionalCount = 0;
         pragmaIndex0 = gCompatMode != COMPAT_VASM;
-        pragmaForwardMax = gCompatMode == COMPAT_LWASM;
+        pragmaForwardMax = gCompatMode == COMPAT_LWASM && gOptLevel < 2;
         pragmaShadow = gCompatMode == COMPAT_VASM;
         pragmaDollarLocal = !gOs9_f;
         for (kind = 0; kind < PRAGMA_KINDS; ++kind)
@@ -2925,7 +2927,8 @@ static void usage(void)
     e_puts(" -6            Enable M6800-family mnemonic compatibility\n");
     e_puts(" -z            Enable undocumented 6809/6309 opcodes/operands\n");
     e_puts(" -p            Distinguish 0, 5, 8 and 16-bit indexed offsets\n");
-    e_puts(" -y            Enable automatic branch and PC-relative sizing\n");
+    e_puts(" -y[N]         Branch and PC-relative sizing: 0 off, 1 automatic (default),\n");
+    e_puts("               2 also skip one byte with BRN and ignore forwardrefmax\n");
     e_puts(" -q            Omit ORG/RMB gaps in S-record or FLEX output\n");
     e_puts(" -r            Omit trailing reserved bytes in all output formats\n");
     e_puts(" -u            Case-sensitive labels    -n  Case-insensitive labels\n");
@@ -3125,7 +3128,11 @@ static void options(char const *p)
             goto LOOPOUT;
 
         case 'Y':
-            pragmaAutoBranch = 1;
+            /* -y0, -y1 and -y2 select the level; other digits stay separate options. */
+            gOptLevel = 1;
+            if (*p >= '0' && *p <= '2')
+                gOptLevel = (uint8_t)(*p++ - '0');
+            pragmaAutoBranch = gOptLevel != 0;
             break;
 
         case 'X':

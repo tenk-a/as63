@@ -24,6 +24,7 @@ extern uint8_t          pragmaPcAsPcr;
 extern uint8_t          pragmaIndex0;
 extern uint8_t          pragmaForwardMax;
 extern uint8_t          pragmaAutoBranch;
+extern uint8_t          gOptLevel;
 extern uint8_t          pragmaOperandSizeWarning;
 extern uint8_t          pragmaQrts;
 extern int              branchChanges;
@@ -53,33 +54,35 @@ extern int              gRmb_sp;
 extern bin_fmt_t        gBinFmt;
 
 /* Per-line relaxation state owned by as63.c. */
-typedef struct line_state {
+typedef struct LINE_STATE {
     int     address;
     int     size;
     int     branchSize;
-    int     branchLong;
-    int     pcrSize;
-    int     pcrLong;
-    int     expandedPcrSize[2];
-    int     expandedPcrLong[2];
+    uint8_t branchLong;
+    uint8_t pcrSize;
+    uint8_t pcrLong;
+    uint8_t expandedPcrSize[2];
+    uint8_t expandedPcrLong[2];
+    uint8_t skipFailed;
+    uint8_t branchSet;
 } LINE_STATE;
 
 /* Parsing, diagnostics, relaxation and listing services from as63.c. */
 void warning(char const *s);
-int isSymbl3(int c);
-int checkChar(uint8_t c);
-int checkCh_e(uint8_t c);
-int pragmaIndexConfigured(void);
-val_t expression(void);
+int  isSymbl3(int c);
+int  checkChar(uint8_t c);
+int  checkCh_e(uint8_t c);
+int  pragmaIndexConfigured(void);
+val_t   expression(void);
 uint8_t bytExpr(void);
 LINE_STATE *lineState(void);
 void requestRelaxation(void);
 FILE *openSearch(char const *name, char const *mode, int searchOnly);
-int fileOperand(char *name, int size, int *searchOnly);
+int  fileOperand(char *name, int size, int *searchOnly);
 void labelValue(val_t value);
-int nextComma(void);
+int  nextComma(void);
 void printAddress(int a);
-int isKanji(int c);
+int  isKanji(int c);
 void printByte(int b, int c);
 void printWord(int w, int c);
 
@@ -89,7 +92,7 @@ void initCodeLine(void);
 void beginCodeOutput(uint16_t size);
 void endCodeOutput(void);
 void endCodeSection(void);
-int offsetBlockActive(void);
+int  offsetBlockActive(void);
 void reserveBytes(val_t count, int checked);
 void termObj(void);
 void oa_putStr(char const *s, int n);
